@@ -1,14 +1,15 @@
 name: Publiceer op GitHub Pages
 
+# Bij elke push naar main worden index.html, css/ en js/ naar de
+# gh-pages-branch gekopieerd. GitHub Pages serveert die branch op
+# https://lukasvaneck-coder.github.io/catwalk-sterren/
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -17,21 +18,16 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Pages inschakelen (als dat nog niet is gebeurd)
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Spelbestanden verzamelen
         run: |
           mkdir -p _site
           cp -r index.html css js _site/
-      - uses: actions/upload-pages-artifact@v3
+      - name: Naar gh-pages pushen
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: _site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          commit_message: "Publiceer ${{ github.sha }}"
