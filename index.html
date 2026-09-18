@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catwalk Sterren</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Startscherm: wie speelt er? -->
+  <section id="screen-start" class="screen start">
+    <div class="hero">
+      <div class="logo">✨ <span class="t1">Catwalk</span> <span class="t2">Sterren</span></div>
+      <p class="tagline">Kleed je model aan, verover de jury en speel steeds meer vrij!</p>
+    </div>
+    <h2 class="h">Wie gaat er spelen?</h2>
+    <div id="profiles" class="profiles"></div>
+  </section>
+
+  <!-- Model maken of aanpassen -->
+  <section id="screen-create" class="screen create" hidden>
+    <h2 class="h" id="create-title">Maak je model</h2>
+    <div class="create-grid">
+      <div class="preview card" id="create-preview"></div>
+      <div class="options">
+        <label class="field" for="name-input"><span>Hoe heet je?</span><input id="name-input" maxlength="16" placeholder="Jouw naam" autocomplete="off"></label>
+        <div class="field"><span>Huidskleur</span><div id="skin-swatches" class="swatches"></div></div>
+        <div class="field"><span>Ogen</span><div id="eye-swatches" class="swatches"></div></div>
+        <div class="field"><span>Kapsel</span><div id="hair-styles" class="mini-grid"></div></div>
+        <div class="field"><span>Haarkleur</span><div id="hair-swatches" class="swatches"></div></div>
+        <div class="row wrap">
+          <button class="btn ghost" id="create-cancel" type="button">Terug</button>
+          <button class="btn big" id="create-done" type="button">Klaar! ✨</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- De kleedkamer -->
+  <section id="screen-game" class="screen game" hidden>
+    <header class="hud">
+      <button class="chip" id="hud-profile" type="button" title="Wissel van speler">
+        <span id="hud-avatar" class="mini"></span>
+        <span class="chip-text"><b id="hud-name"></b><small id="hud-level"></small></span>
+      </button>
+      <div class="xp"><div class="xp-bar"><div id="xp-fill"></div></div><small id="xp-text"></small></div>
+      <div class="hud-stars">⭐ <span id="hud-stars">0</span></div>
+      <button class="btn ghost sm" id="btn-look" type="button">🪞 Uiterlijk</button>
+    </header>
+
+    <div class="challenge card" id="challenge"></div>
+
+    <main class="room">
+      <div class="stage card">
+        <div id="stage"></div>
+        <div class="stage-tools">
+          <button class="btn ghost sm" id="btn-random" type="button">🎲 Verras me</button>
+          <button class="btn ghost sm" id="btn-photo" type="button">📸 Foto</button>
+          <button class="btn ghost sm" id="btn-clear" type="button">🧺 Alles uit</button>
+        </div>
+      </div>
+      <aside class="closet card">
+        <nav class="tabs" id="tabs" aria-label="Kledingkast"></nav>
+        <div class="grid" id="grid"></div>
+      </aside>
+    </main>
+
+    <footer class="actions">
+      <button class="btn big gold" id="btn-jury" type="button">Naar de jury! ✨</button>
+    </footer>
+  </section>
+
+</div>
+<div id="overlay" class="overlay" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="js/data.js"></script>
+<script src="js/bg.js"></script>
+<script src="js/avatar.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
