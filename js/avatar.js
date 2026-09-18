@@ -61,6 +61,8 @@ const Avatar = (() => {
     const eye = EYES.find(e => e.id === look.eyes) || EYES[0];
     const hc = HAIR_COLORS.find(h => h.id === look.hairColor) || HAIR_COLORS[0];
     const ctx = { id, defs, skin: skin.c, skinShade: skin.shade, eye: eye.c, expr: opts.expr || 'smile', face: FACES[look.face] ? look.face : 'ovaal', sx: buildScale(look.build) };
+    ctx.hx = HAIR_SCALE[ctx.face] || 1;
+    ctx.hairWrap = s => (!s || ctx.hx === 1) ? s : `<g transform="translate(150 0) scale(${ctx.hx} 1) translate(-150 0)">${s}</g>`;
     ctx.pat = (type, c1, c2) => { const pid = `p${id}_${defs.length}`; defs.push(PATTERNS[type](pid, c1, c2)); return `url(#${pid})`; };
     ctx.grad = (c1, c2, horiz = false) => { const gid = `g${id}_${defs.length}`; defs.push(`<linearGradient id="${gid}" x1="0" y1="0" x2="${horiz ? 1 : 0}" y2="${horiz ? 0 : 1}"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`); return `url(#${gid})`; };
     ctx.rgrad = (c1, c2) => { const gid = `g${id}_${defs.length}`; defs.push(`<radialGradient id="${gid}"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>`); return `url(#${gid})`; };
@@ -82,6 +84,8 @@ const Avatar = (() => {
     vierkant: '<path d="M100 110 Q98 44 150 40 Q202 44 200 110 Q200 140 188 160 Q170 166 150 166 Q130 166 112 160 Q100 140 100 110 Z"/>',
     smal:     '<ellipse cx="150" cy="100" rx="49" ry="62"/>',
   };
+  // haar en hoedjes schalen mee met de breedte van het hoofd
+  const HAIR_SCALE = { ovaal: 1, rond: 1.04, hart: 1, vierkant: 1, smal: 0.9 };
   // postuur 0 (dun) … 100 (dik) → horizontale schaal van lichaam en kleding; 40 = normaal
   function buildScale(b) {
     const v = typeof b === 'number' && !isNaN(b) ? Math.max(0, Math.min(100, b)) : 40;
@@ -479,8 +483,8 @@ const Avatar = (() => {
     const L = [];
     if (opts.bg !== false) { const b = outfit.bg ? SETTING_BY_ID[outfit.bg] : null; L.push(b && Backgrounds[b.shape] ? Backgrounds[b.shape](ctx) : `<rect width="300" height="520" fill="${opts.plainBg || 'transparent'}"/>`); }
     L.push(S([partOf(ctx, get('back'), 'back'), partOf(ctx, get('bag'), 'back')]));
-    L.push(partOf(ctx, get('hat'), 'back'));
-    L.push(H.back ? H.back(ctx) : '');
+    L.push(ctx.hairWrap(partOf(ctx, get('hat'), 'back')));
+    L.push(ctx.hairWrap(H.back ? H.back(ctx) : ''));
     const bodyParts = [body(ctx)];
     // niets aan? dan een simpel wit hemdje en short
     if (!dress && !get('bottom') && !(top && top.full)) bodyParts.push(BOTTOMS.shorts(ctx, { c: ['#fdfdfd', '#e6e6ee'] }));
@@ -492,8 +496,8 @@ const Avatar = (() => {
     L.push(S(bodyParts));
     L.push(headOnly(ctx));
     L.push(face(ctx, outfit));
-    L.push(H.front(ctx));
-    L.push(partOf(ctx, get('hat'), 'front'), partOf(ctx, get('glasses'), 'front'), partOf(ctx, get('pet'), 'front'));
+    L.push(ctx.hairWrap(H.front(ctx)));
+    L.push(ctx.hairWrap(partOf(ctx, get('hat'), 'front')), partOf(ctx, get('glasses'), 'front'), partOf(ctx, get('pet'), 'front'));
     const cls = opts.className ? ` class="${opts.className}"` : '';
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 520"${cls} role="img" aria-label="Jouw model"><defs>${ctx.defs.join('')}</defs>${L.join('')}</svg>`;
   }
@@ -504,11 +508,11 @@ const Avatar = (() => {
     let inner = '';
     if (item.cat === 'hair') {
       const H = HAIR[item.shape];
-      inner = (H.back ? H.back(ctx) : '') + headOnly(ctx) + H.front(ctx);
+      inner = ctx.hairWrap(H.back ? H.back(ctx) : '') + headOnly(ctx) + ctx.hairWrap(H.front(ctx));
     } else if (item.cat === 'bg') {
       inner = Backgrounds[item.shape] ? Backgrounds[item.shape](ctx) : '';
     } else if (item.cat.startsWith('mk_')) {
-      inner = headOnly(ctx) + HAIR.kort.front(ctx) + face(ctx, { [item.cat]: item.id });
+      inner = headOnly(ctx) + ctx.hairWrap(HAIR.kort.front(ctx)) + face(ctx, { [item.cat]: item.id });
     } else {
       inner = partOf(ctx, item, 'back') + partOf(ctx, item, 'front');
     }
