@@ -24,23 +24,38 @@
     compleet: 'Een outfit is compleet met een top én een broek of rok (of een jurk) én schoenen.',
     glamour: 'Is de opdracht chic? Kies glitter en jurken. Sportief of casual? Houd het simpel.',
     accessoires: 'Voeg een hoedje, bril, ketting, tas of iets in je hand toe.',
-    setting: 'Kies bij Setting een achtergrond die bij de opdracht past.',
   };
 
   /* ---------- opslag ---------- */
-  function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.profiles)) DB = d; } } catch (e) { /* geen opslag beschikbaar */ } }
+  function load() {
+    try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.profiles)) DB = d; } } catch (e) { /* geen opslag beschikbaar */ }
+    // oude spelers meenemen naar de nieuwe versie
+    DB.profiles.forEach(p => {
+      p.look = p.look || {};
+      if (!FACE_SHAPES.some(f => f.id === p.look.face)) p.look.face = 'ovaal';
+      if (typeof p.look.build !== 'number') p.look.build = 40;
+      if (!HAIR_COLORS.some(c => c.id === p.look.hairColor)) p.look.hairColor = 'bruin';
+      p.outfit = p.outfit || {};
+      delete p.outfit.bg;
+      for (const slot of Object.keys(p.outfit)) if (!ITEM_BY_ID[p.outfit[slot]]) delete p.outfit[slot];
+      if (!p.outfit.hair) p.outfit.hair = 'hair_lang';
+      if (!SETTING_BY_ID[p.freeBg]) p.freeBg = 'kamer';
+      p.done = p.done || {};
+      p.level = levelFromXp(p.xp || 0);
+    });
+  }
   function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(DB)); } catch (e) { /* stil doorgaan */ } }
 
   function levelFromXp(xp) { let l = 1; while (l < MAX_LEVEL && xp >= xpForLevel(l + 1)) l++; return l; }
   const unlocked = it => it.lvl <= P.level;
-  const itemsOf = slot => ITEMS.filter(i => i.cat === slot).sort((a, b) => a.lvl - b.lvl);
+  const itemsOf = slot => ITEMS.filter(i => i.cat === slot && unlocked(i)).sort((a, b) => a.lvl - b.lvl || a.name.localeCompare(b.name));
 
   function newProfile(name, look, hairStyle) {
     return {
       id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       name, look,
-      outfit: { hair: hairStyle, top: 'top_tshirt_blauw', bottom: 'bot_jeans', shoes: 'sh_sneakers', bg: 'bg_kamer' },
-      xp: 0, level: 1, done: {}, shows: 0, stars: 0, themeId: null, created: Date.now(),
+      outfit: { hair: hairStyle, top: 'top_tshirt_blauw', bottom: 'bot_jeans', shoes: 'sh_sneakers' },
+      freeBg: 'kamer', xp: 0, level: 1, done: {}, shows: 0, stars: 0, themeId: null, created: Date.now(),
     };
   }
 
@@ -82,7 +97,7 @@
     box.appendChild(add);
   }
   function confirmDelete(p) {
-    openOverlay(`<h2 class="h center">Speler verwijderen?</h2><p class="center">Wil je <b>${esc(p.name)}</b> echt verwijderen? Alle sterren en vrijgespeelde spullen gaan dan weg.</p><div class="row center"><button class="btn ghost" id="del-no">Nee, laat maar</button><button class="btn" id="del-yes">Ja, verwijderen</button></div>`);
+    openOverlay(`<h2 class="h center">Speler verwijderen?</h2><p class="center">Wil je <b>${esc(p.name)}</b> echt verwijderen? Alle sterren en vrijgespeelde spullen gaan dan weg.</p><div class="row center"><button class="btn ghost" id="del-no" type="button">Nee, laat maar</button><button class="btn" id="del-yes" type="button">Ja, verwijderen</button></div>`);
     $('#del-no').onclick = closeOverlay;
     $('#del-yes').onclick = () => { DB.profiles = DB.profiles.filter(x => x.id !== p.id); save(); closeOverlay(); renderStart(); };
   }
@@ -91,26 +106,34 @@
   function openCreate(profile) {
     ui.editMode = !!profile;
     ui.temp = profile
-      ? { skin: profile.look.skin, eyes: profile.look.eyes, hairColor: profile.look.hairColor, hairStyle: profile.outfit.hair || 'hair_lang', name: profile.name }
-      : { skin: 's2', eyes: 'e1', hairStyle: 'hair_lang', hairColor: 'bruin', name: '' };
+      ? { skin: profile.look.skin, eyes: profile.look.eyes, face: profile.look.face, build: profile.look.build, hairColor: profile.look.hairColor, hairStyle: profile.outfit.hair || 'hair_lang', name: profile.name }
+      : { skin: 's2', eyes: 'e1', face: 'ovaal', build: 40, hairStyle: 'hair_lang', hairColor: 'bruin', name: '' };
     $('#create-title').textContent = profile ? 'Pas je uiterlijk aan' : 'Maak je model';
     $('#create-done').textContent = profile ? 'Opslaan ✨' : 'Klaar! ✨';
     $('#name-input').value = ui.temp.name;
+    $('#build-range').value = ui.temp.build;
     renderCreate();
     showScreen('screen-create');
     if (!profile) setTimeout(() => $('#name-input').focus(), 50);
   }
-  function renderCreate() {
+  function renderCreate(previewOnly = false) {
     const t = ui.temp;
     const lvl = ui.editMode ? P.level : 1;
     const outfit = ui.editMode ? { ...P.outfit, hair: t.hairStyle } : { hair: t.hairStyle, top: 'top_tshirt_blauw', bottom: 'bot_jeans', shoes: 'sh_sneakers' };
     $('#create-preview').innerHTML = Avatar.render(t, outfit, { bg: false });
+    if (previewOnly) return;
     swatches($('#skin-swatches'), SKINS.map(s => ({ id: s.id, c: s.c, title: 'Huidskleur' })), t.skin, id => { t.skin = id; renderCreate(); });
     swatches($('#eye-swatches'), EYES.map(e => ({ id: e.id, c: e.c, title: e.name })), t.eyes, id => { t.eyes = id; renderCreate(); });
+    const fs = $('#face-shapes'); fs.innerHTML = '';
+    FACE_SHAPES.forEach(f => {
+      const b = h('button', { class: 'face' + (f.id === t.face ? ' selected' : ''), type: 'button', title: f.name }, Avatar.headThumb({ ...t, face: f.id }) + `<span>${f.name}</span>`);
+      b.onclick = () => { Sound.play('pop'); t.face = f.id; renderCreate(); };
+      fs.appendChild(b);
+    });
     const hs = $('#hair-styles'); hs.innerHTML = '';
     ITEMS.filter(i => i.cat === 'hair' && i.lvl <= lvl).forEach(it => {
       const b = h('button', { class: 'item' + (it.id === t.hairStyle ? ' selected' : ''), type: 'button' }, Avatar.thumb(it, t) + `<span class="name">${it.name}</span>`);
-      b.onclick = () => { t.hairStyle = it.id; renderCreate(); };
+      b.onclick = () => { Sound.play('pop'); t.hairStyle = it.id; renderCreate(); };
       hs.appendChild(b);
     });
     swatches($('#hair-swatches'), HAIR_COLORS.filter(c => c.lvl <= lvl).map(c => ({ id: c.id, c: c.c === 'rainbow' ? HUES.multi.swatch : c.c, title: c.name })), t.hairColor, id => { t.hairColor = id; renderCreate(); });
@@ -119,7 +142,7 @@
     box.innerHTML = '';
     list.forEach(s => {
       const b = h('button', { class: 'swatch' + (s.id === sel ? ' selected' : ''), type: 'button', title: s.title || '', 'aria-label': s.title || '', style: `background:${s.c}` });
-      b.onclick = () => onPick(s.id);
+      b.onclick = () => { Sound.play('pop'); onPick(s.id); };
       box.appendChild(b);
     });
   }
@@ -127,13 +150,14 @@
   /* ---------- kleedkamer ---------- */
   function startGame(p) {
     P = p; ui.free = false;
+    if (ui.tab === 'bg') ui.tab = 'dress';
     if (!currentTheme()) pickTheme();
     renderAll();
     renderTabs();
     showScreen('screen-game');
   }
   function renderAll() { renderHUD(); renderChallenge(); renderStage(); renderGrid(); }
-  function currentTheme() { const t = THEMES.find(x => x.id === P.themeId); return t && t.lvl <= P.level ? t : null; }
+  function currentTheme() { const t = THEME_BY_ID[P.themeId]; return t && t.lvl <= P.level ? t : null; }
   function pickTheme(exclude) {
     const avail = THEMES.filter(t => t.lvl <= P.level && t.id !== exclude);
     const fresh = avail.filter(t => !P.done[t.id]);
@@ -141,12 +165,14 @@
     P.themeId = t.id; save();
     return t;
   }
+  // de setting hoort bij de opdracht; alleen bij vrij spelen kies je zelf
+  function currentBg() { if (ui.free) return P.freeBg || 'kamer'; const t = currentTheme(); return t ? t.bg : 'kamer'; }
+  const outfitForStage = () => ({ ...P.outfit, bg: currentBg() });
 
   function renderHUD() {
     $('#hud-name').textContent = P.name;
     $('#hud-level').textContent = 'Level ' + P.level;
     $('#hud-stars').textContent = P.stars;
-    $('#hud-avatar').innerHTML = Avatar.render(P.look, P.outfit, { bg: false });
     const cur = xpForLevel(P.level), next = P.level < MAX_LEVEL ? xpForLevel(P.level + 1) : null;
     const pct = next ? clamp((P.xp - cur) / (next - cur)) * 100 : 100;
     $('#xp-fill').style.width = pct + '%';
@@ -156,7 +182,7 @@
   function renderChallenge() {
     const box = $('#challenge');
     if (ui.free) {
-      box.innerHTML = `<div class="ch-emoji">🎨</div><div class="ch-body"><small>Vrij spelen</small><b>Kleed je aan zoals jij wilt</b><p>Geen jury vandaag, wel een modeshow! Alles wat je hebt vrijgespeeld mag aan.</p></div><div class="ch-actions"><button class="btn violet sm" id="btn-free" type="button">🏆 Terug naar opdrachten</button></div>`;
+      box.innerHTML = `<div class="ch-emoji">🎨</div><div class="ch-body"><small>Vrij spelen</small><b>Kleed je aan zoals jij wilt</b><p>Geen jury vandaag, wel een modeshow! Kies bij Setting zelf waar je staat.</p></div><div class="ch-actions"><button class="btn violet sm" id="btn-free" type="button">🏆 Terug naar opdrachten</button></div>`;
     } else {
       const t = currentTheme() || pickTheme();
       const hints = t.wants.map(w => `<span class="tag">${TAGS[w].emoji} ${TAGS[w].label}</span>`).join('');
@@ -164,21 +190,21 @@
         : t.colors ? t.colors.map(c => `<span class="tag col"><i style="background:${HUES[c].swatch}"></i> ${HUES[c].label}</span>`).join('') : '';
       const glam = t.glam >= 2.5 ? '💎 super chic' : t.glam >= 1.5 ? '✨ een beetje glamour' : t.glam >= 1 ? '🙂 gewoon leuk' : '👟 lekker simpel';
       const best = P.done[t.id] ? `beste score ${'⭐'.repeat(P.done[t.id])}` : 'nieuw!';
-      box.innerHTML = `<div class="ch-emoji">${t.emoji}</div><div class="ch-body"><small>Opdracht · ${best}</small><b>${t.name}</b><p>${t.desc}</p><div class="tags">${hints}${col}<span class="tag">${glam}</span></div></div><div class="ch-actions"><button class="btn ghost sm" id="btn-other" type="button">🔄 Andere opdracht</button><button class="btn ghost sm" id="btn-free" type="button">🎨 Vrij spelen</button></div>`;
-      $('#btn-other').onclick = () => { pickTheme(t.id); renderChallenge(); };
+      box.innerHTML = `<div class="ch-emoji">${t.emoji}</div><div class="ch-body"><small>Opdracht · ${best} · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p><div class="tags">${hints}${col}<span class="tag">${glam}</span></div></div><div class="ch-actions"><button class="btn ghost sm" id="btn-other" type="button">🔄 Andere opdracht</button><button class="btn ghost sm" id="btn-free" type="button">🎨 Vrij spelen</button></div>`;
+      $('#btn-other').onclick = () => { Sound.play('klik'); pickTheme(t.id); renderChallenge(); renderStage(); };
     }
-    $('#btn-free').onclick = () => { ui.free = !ui.free; renderChallenge(); };
+    $('#btn-free').onclick = () => { Sound.play('klik'); ui.free = !ui.free; if (!ui.free && ui.tab === 'bg') ui.tab = 'dress'; renderChallenge(); renderStage(); renderTabs(); renderGrid(); };
     $('#btn-jury').textContent = ui.free ? '🎉 Modeshow!' : 'Naar de jury! ✨';
   }
 
   function renderStage() {
-    $('#stage').innerHTML = Avatar.render(P.look, P.outfit);
+    $('#stage').innerHTML = Avatar.render(P.look, outfitForStage());
     $('#hud-avatar').innerHTML = Avatar.render(P.look, P.outfit, { bg: false });
   }
 
   function renderTabs() {
     const nav = $('#tabs'); nav.innerHTML = '';
-    CATEGORIES.forEach(c => {
+    CATEGORIES.filter(c => !c.freeOnly || ui.free).forEach(c => {
       const b = h('button', { class: 'tab' + (c.id === ui.tab ? ' active' : ''), type: 'button', 'aria-pressed': c.id === ui.tab }, `<span class="ti">${c.emoji}</span><span>${c.name}</span>`);
       b.onclick = () => { Sound.play('klik'); ui.tab = c.id; renderTabs(); renderGrid(); };
       nav.appendChild(b);
@@ -187,18 +213,28 @@
 
   function renderGrid() {
     const grid = $('#grid'); grid.innerHTML = '';
-    const cat = CATEGORIES.find(c => c.id === ui.tab);
+    const cat = CATEGORIES.find(c => c.id === ui.tab) || CATEGORIES[2];
     if (cat.id === 'hair') {
       grid.appendChild(section('Kapsel'));
       itemsOf('hair').forEach(it => grid.appendChild(itemCard(it)));
       grid.appendChild(section('Haarkleur'));
-      HAIR_COLORS.forEach(c => grid.appendChild(colorCard(c)));
+      HAIR_COLORS.filter(c => c.lvl <= P.level).forEach(c => grid.appendChild(colorCard(c)));
+      return;
+    }
+    if (cat.id === 'bg') {
+      grid.appendChild(section('Waar sta je?'));
+      const ids = [...new Set(THEMES.filter(t => t.lvl <= P.level).map(t => t.bg))];
+      ids.map(id => SETTING_BY_ID[id]).forEach(s => {
+        const b = h('button', { class: 'item' + (P.freeBg === s.id ? ' selected' : ''), type: 'button', title: s.name }, Avatar.thumb({ cat: 'bg', shape: s.shape }, P.look) + `<span class="name">${s.name}</span>`);
+        b.onclick = () => { Sound.play('pop'); P.freeBg = s.id; save(); renderStage(); renderGrid(); };
+        grid.appendChild(b);
+      });
       return;
     }
     const slots = cat.slots || [cat.id];
     slots.forEach(slot => {
       if (slots.length > 1) grid.appendChild(section(SLOT_NAMES[slot]));
-      if (slot !== 'bg') grid.appendChild(noneCard(slot));
+      grid.appendChild(noneCard(slot));
       itemsOf(slot).forEach(it => grid.appendChild(itemCard(it)));
     });
   }
@@ -209,22 +245,20 @@
     return b;
   }
   function itemCard(it) {
-    const isSel = P.outfit[it.cat] === it.id, lock = !unlocked(it);
-    const b = h('button', { class: 'item' + (isSel ? ' selected' : '') + (lock ? ' locked' : ''), type: 'button', title: lock ? `${it.name} (level ${it.lvl})` : it.name });
-    b.innerHTML = Avatar.thumb(it, P.look) + `<span class="name">${it.name}</span>` + (lock ? `<span class="lock">🔒</span><span class="lvl">Lvl ${it.lvl}</span>` : '');
-    b.onclick = () => { if (lock) { Sound.play('fout'); toast(`🔒 ${it.name} speel je vrij op level ${it.lvl}`); return; } Sound.play('pop'); wear(it); };
+    const b = h('button', { class: 'item' + (P.outfit[it.cat] === it.id ? ' selected' : ''), type: 'button', title: it.name });
+    b.innerHTML = Avatar.thumb(it, P.look) + `<span class="name">${it.name}</span>`;
+    b.onclick = () => { Sound.play('pop'); wear(it); };
     return b;
   }
   function colorCard(c) {
-    const isSel = P.look.hairColor === c.id, lock = c.lvl > P.level;
-    const b = h('button', { class: 'item color' + (isSel ? ' selected' : '') + (lock ? ' locked' : ''), type: 'button' },
-      `<span class="swatch big" style="background:${c.c === 'rainbow' ? HUES.multi.swatch : c.c}"></span><span class="name">${c.name}</span>` + (lock ? `<span class="lock">🔒</span><span class="lvl">Lvl ${c.lvl}</span>` : ''));
-    b.onclick = () => { if (lock) { Sound.play('fout'); toast(`🔒 Haarkleur ${c.name} speel je vrij op level ${c.lvl}`); return; } Sound.play('pop'); P.look.hairColor = c.id; save(); renderStage(); renderGrid(); };
+    const b = h('button', { class: 'item color' + (P.look.hairColor === c.id ? ' selected' : ''), type: 'button' },
+      `<span class="swatch big" style="background:${c.c === 'rainbow' ? HUES.multi.swatch : c.c}"></span><span class="name">${c.name}</span>`);
+    b.onclick = () => { Sound.play('pop'); P.look.hairColor = c.id; save(); renderStage(); renderGrid(); };
     return b;
   }
   function wear(it) {
     const slot = it.cat;
-    if (P.outfit[slot] === it.id && slot !== 'hair' && slot !== 'bg') delete P.outfit[slot];
+    if (P.outfit[slot] === it.id && slot !== 'hair') delete P.outfit[slot];
     else {
       P.outfit[slot] = it.id;
       if (slot === 'dress') { delete P.outfit.top; delete P.outfit.bottom; }
@@ -233,14 +267,14 @@
     save(); renderStage(); renderGrid();
   }
   function randomOutfit() {
-    const pick = (slot, prob = 1) => { const opts = itemsOf(slot).filter(unlocked); if (opts.length && Math.random() < prob) P.outfit[slot] = rand(opts).id; else delete P.outfit[slot]; };
-    if (Math.random() < 0.5 && itemsOf('dress').some(unlocked)) { pick('dress'); delete P.outfit.top; delete P.outfit.bottom; }
+    const pick = (slot, prob = 1) => { const opts = itemsOf(slot); if (opts.length && Math.random() < prob) P.outfit[slot] = rand(opts).id; else delete P.outfit[slot]; };
+    if (Math.random() < 0.45 && itemsOf('dress').length) { pick('dress'); delete P.outfit.top; delete P.outfit.bottom; }
     else { delete P.outfit.dress; pick('top'); pick('bottom'); }
     pick('shoes'); pick('hat', .5); pick('glasses', .3); pick('neck', .45); pick('bag', .3); pick('hand', .35); pick('back', .25); pick('pet', .3);
-    pick('mk_eyes', .4); pick('mk_lips', .4); pick('mk_blush', .5); pick('mk_face', .25); pick('bg'); pick('hair');
+    pick('mk_eyes', .4); pick('mk_lips', .4); pick('mk_blush', .5); pick('mk_face', .25); pick('hair');
     save(); renderStage(); renderGrid();
   }
-  function clearOutfit() { P.outfit = { hair: P.outfit.hair, bg: P.outfit.bg }; save(); renderStage(); renderGrid(); }
+  function clearOutfit() { P.outfit = { hair: P.outfit.hair }; save(); renderStage(); renderGrid(); }
 
   /* ---------- de jury ---------- */
   const wheelDist = (a, b) => { const d = Math.abs(a - b) % 6; return Math.min(d, 6 - d); };
@@ -275,7 +309,8 @@
     if (theme.colors) { const hits = hues.filter(hh => theme.colors.includes(hh)).length; kleur = clamp(kleur * 0.65 + clamp(hits / 2) * 0.35); }
 
     // Compleet
-    const hasTop = !!outfit.dress || !!outfit.top, hasBottom = !!outfit.dress || !!outfit.bottom, hasShoes = !!outfit.shoes;
+    const top = get('top');
+    const hasTop = !!outfit.dress || !!top, hasBottom = !!outfit.dress || !!outfit.bottom || !!(top && top.full), hasShoes = !!outfit.shoes;
     const compleet = (hasTop ? 0.35 : 0) + (hasBottom ? 0.35 : 0) + (hasShoes ? 0.3 : 0);
 
     // Glamour: past de hoeveelheid glans bij de opdracht?
@@ -286,11 +321,7 @@
     // Accessoires
     const accessoires = clamp(ACC_SLOTS.filter(s => outfit[s]).length / 4);
 
-    // Setting
-    const bg = get('bg');
-    const setting = bg ? (bg.tags.some(t => theme.wants.includes(t)) ? 1 : bg.tags.some(t => theme.avoid.includes(t)) ? 0.05 : 0.4) : 0.2;
-
-    const factors = { thema, kleur, compleet, glamour, accessoires, setting };
+    const factors = { thema, kleur, compleet, glamour, accessoires };
     const judges = JUDGES.map(j => {
       let score = 0;
       for (const [f, w] of Object.entries(j.weights)) score += w * factors[f];
@@ -307,6 +338,17 @@
     const weakest = Object.entries(factors).sort((a, b) => a[1] - b[1])[0][0];
     return { factors, judges, total, stars, weakest };
   }
+  // wat komt er vrij tussen twee levels? (aantallen, de spullen zelf blijven een verrassing)
+  function unlockSummary(fromLevel, toLevel) {
+    const counts = {};
+    ITEMS.filter(i => i.lvl > fromLevel && i.lvl <= toLevel).forEach(i => { const k = i.cat.startsWith('mk_') ? 'makeup' : i.cat; counts[k] = (counts[k] || 0) + 1; });
+    const colors = HAIR_COLORS.filter(c => c.lvl > fromLevel && c.lvl <= toLevel).length;
+    const themes = THEMES.filter(t => t.lvl > fromLevel && t.lvl <= toLevel);
+    const labels = { hair: ['kapsel', 'kapsels', '💇'], top: ['top', 'tops', '👕'], bottom: ['broek of rok', 'broeken & rokken', '👖'], dress: ['jurk of pakje', 'jurken & pakjes', '👗'], shoes: ['paar schoenen', 'paar schoenen', '👟'], hat: ['hoedje', 'hoedjes', '👒'], glasses: ['bril', 'brillen', '🕶️'], neck: ['ketting of sjaal', 'kettingen & sjaals', '📿'], bag: ['tas', 'tassen', '👜'], hand: ['ding voor in je hand', 'dingen voor in je hand', '🎈'], back: ['ding voor op je rug', 'dingen voor op je rug', '🦋'], pet: ['huisdier', 'huisdieren', '🐶'], makeup: ['make-up', 'make-up', '💄'] };
+    const parts = Object.entries(counts).map(([k, n]) => ({ n, label: labels[k][n === 1 ? 0 : 1], emoji: labels[k][2] }));
+    if (colors) parts.push({ n: colors, label: colors === 1 ? 'haarkleur' : 'haarkleuren', emoji: '🎨' });
+    return { parts, themes };
+  }
   function award(res, theme) {
     let xp = XP_PER_STARS[res.stars];
     const first = !P.done[theme.id];
@@ -315,13 +357,8 @@
     P.xp += xp; P.level = levelFromXp(P.xp);
     P.done[theme.id] = Math.max(P.done[theme.id] || 0, res.stars);
     P.shows++; P.stars += res.stars;
-    const unlockedNow = [
-      ...ITEMS.filter(i => i.lvl > prevLevel && i.lvl <= P.level),
-      ...HAIR_COLORS.filter(c => c.lvl > prevLevel && c.lvl <= P.level).map(c => ({ cat: 'haircolor', c: c.c, name: 'Haarkleur ' + c.name })),
-    ];
-    const newThemes = THEMES.filter(t => t.lvl > prevLevel && t.lvl <= P.level);
     save();
-    return { xp, first, prevLevel, unlocked: unlockedNow, newThemes };
+    return { xp, first, prevLevel, summary: unlockSummary(prevLevel, P.level) };
   }
 
   function goJury() {
@@ -353,11 +390,10 @@
       <div class="xp-gain">+${g.xp} XP${g.first ? ' <small>eerste-keer-bonus!</small>' : ''}</div>
       <div class="xp"><div class="xp-bar"><div id="xp-fill-res"></div></div><small id="xp-text-res"></small></div>
       ${res.stars < 3 ? `<div class="tip">💡 ${TIPS[res.weakest]}</div>` : ''}
-      ${lvlUp ? `<div class="levelup"><h3>🎊 Level ${P.level}! 🎊</h3><p>Nieuw vrijgespeeld:</p><div class="unlocks">${g.unlocked.map(u => `<div class="unlock">${u.cat === 'haircolor' ? `<span class="swatch big" style="background:${u.c === 'rainbow' ? HUES.multi.swatch : u.c}"></span>` : Avatar.thumb(u, P.look)}<span>${u.name}</span></div>`).join('')}</div>${g.newThemes.length ? `<p class="newtheme">Nieuwe opdracht${g.newThemes.length > 1 ? 'en' : ''}: ${g.newThemes.map(t => t.emoji + ' ' + t.name).join(', ')}</p>` : ''}</div>` : ''}
+      ${lvlUp ? `<div class="levelup"><h3>🎊 Level ${P.level}! 🎊</h3><p>Er staat iets nieuws in je kast:</p><div class="unlocks">${g.summary.parts.map(u => `<div class="unlock-count"><span class="ic">${u.emoji}</span><b>${u.n}</b><span>${u.label}</span></div>`).join('')}</div>${g.summary.themes.length ? `<p class="newtheme">Nieuwe opdracht${g.summary.themes.length > 1 ? 'en' : ''}: ${g.summary.themes.map(t => t.emoji + ' ' + t.name).join(', ')}</p>` : ''}</div>` : ''}
       <div class="row center wrap"><button class="btn ghost" id="res-back" type="button">🪞 Kleedkamer</button><button class="btn ghost" id="res-again" type="button">🔁 Zelfde opdracht</button><button class="btn big" id="res-next" type="button">Volgende opdracht ➜</button></div>`;
     [...r.querySelectorAll('.stars span')].forEach((s, i) => setTimeout(() => { s.classList.add('on'); if (i < res.stars) Sound.play('ster'); }, 150 + i * 350));
     setTimeout(() => Sound.play(lvlUp ? 'levelup' : res.stars === 3 ? 'tada' : 'ding'), 150 + 3 * 350);
-    // xp-balk laten groeien
     const cur = xpForLevel(P.level), next = P.level < MAX_LEVEL ? xpForLevel(P.level + 1) : null;
     const pctNow = next ? clamp((P.xp - cur) / (next - cur)) * 100 : 100;
     const pctBefore = lvlUp ? 0 : (next ? clamp((P.xp - g.xp - cur) / (next - cur)) * 100 : 100);
@@ -384,7 +420,7 @@
 
   /* ---------- foto ---------- */
   function makePhoto() {
-    const svg = Avatar.render(P.look, P.outfit, { expr: 'grin' });
+    const svg = Avatar.render(P.look, outfitForStage(), { expr: 'grin' });
     const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const img = new Image();
@@ -407,15 +443,13 @@
     Sound.play('klik');
     if (P.level >= MAX_LEVEL) { openOverlay(`<h2 class="h center">🏆 Alles vrijgespeeld!</h2><p class="center">Je hebt het hoogste level bereikt. Alle kleding, kapsels en decors zijn van jou.</p><div class="row center"><button class="btn" id="nl-close" type="button">Super!</button></div>`); $('#nl-close').onclick = closeOverlay; return; }
     const next = P.level + 1;
-    const items = ITEMS.filter(i => i.lvl === next);
-    const colors = HAIR_COLORS.filter(c => c.lvl === next);
-    const themes = THEMES.filter(t => t.lvl === next);
+    const s = unlockSummary(P.level, next);
     const need = xpForLevel(next) - P.xp;
     openOverlay(`
       <h2 class="h center">🎁 Level ${next}</h2>
-      <p class="center">Nog <b>${need} XP</b> te gaan. Dit speel je dan vrij:</p>
-      <div class="unlocks">${items.map(u => `<div class="unlock">${Avatar.thumb(u, P.look)}<span>${u.name}</span></div>`).join('')}${colors.map(c => `<div class="unlock"><span class="swatch big" style="background:${c.c === 'rainbow' ? HUES.multi.swatch : c.c}"></span><span>Haarkleur ${c.name}</span></div>`).join('')}</div>
-      ${themes.length ? `<p class="center newtheme">Nieuwe opdracht${themes.length > 1 ? 'en' : ''}: ${themes.map(t => t.emoji + ' ' + t.name).join(', ')}</p>` : ''}
+      <p class="center">Nog <b>${need} XP</b> te gaan. Dan komt er dit in je kast (wát precies blijft een verrassing):</p>
+      <div class="unlocks">${s.parts.map(u => `<div class="unlock-count"><span class="ic">${u.emoji}</span><b>${u.n}</b><span>${u.label}</span></div>`).join('')}</div>
+      ${s.themes.length ? `<p class="center newtheme">Nieuwe opdracht${s.themes.length > 1 ? 'en' : ''}: ${s.themes.map(t => t.emoji + ' ' + t.name).join(', ')}</p>` : ''}
       <div class="row center"><button class="btn" id="nl-close" type="button">Aan de slag! ✨</button></div>`);
     $('#nl-close').onclick = closeOverlay;
   }
@@ -428,12 +462,13 @@
     $('#btn-next').onclick = showNextLevel;
     $('#create-done').onclick = () => {
       const name = $('#name-input').value.trim().slice(0, 16) || 'Ster';
-      const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, hairColor: ui.temp.hairColor };
+      const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor };
       if (ui.editMode) { P.name = name; P.look = look; P.outfit.hair = ui.temp.hairStyle; save(); startGame(P); }
       else { const p = newProfile(name, look, ui.temp.hairStyle); DB.profiles.push(p); save(); startGame(p); }
     };
     $('#create-cancel').onclick = () => { if (ui.editMode) startGame(P); else { renderStart(); showScreen('screen-start'); } };
     $('#name-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('#create-done').click(); });
+    $('#build-range').addEventListener('input', e => { ui.temp.build = +e.target.value; renderCreate(true); });
     $('#hud-profile').onclick = () => { renderStart(); showScreen('screen-start'); };
     $('#btn-look').onclick = () => openCreate(P);
     $('#btn-random').onclick = () => { Sound.play('tada'); randomOutfit(); };

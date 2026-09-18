@@ -117,6 +117,16 @@ svg { display: block; }
 .swatch.selected { box-shadow: 0 0 0 4px var(--pink); transform: scale(1.1); }
 .swatch.big { width: 56px; height: 56px; display: block; margin: 8px auto; }
 .mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+.field > label { font: 800 15px var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.face-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.face { width: 72px; padding: 4px 4px 6px; border-radius: 16px; border: 3px solid var(--line); background: var(--surface2); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font: 800 11px var(--body); color: var(--ink); }
+.face svg { width: 52px; height: 56px; }
+.face.selected { border-color: var(--pink); background: var(--surface); }
+.slider-row { display: flex; align-items: center; gap: 12px; font: 800 14px var(--display); color: var(--muted); max-width: 420px; }
+.slider-row input[type="range"] { flex: 1; accent-color: var(--pink); height: 8px; cursor: pointer; }
+.unlock-count { display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--surface); border-radius: 14px; padding: 8px 12px; min-width: 84px; font: 800 12px var(--body); text-align: center; }
+.unlock-count b { font: 800 26px/1 var(--display); color: var(--violet); }
+.unlock-count .ic { font-size: 22px; line-height: 1; }
 @media (max-width: 700px) {
   .create-grid { grid-template-columns: 1fr; }
   .preview { position: static; }
@@ -181,9 +191,13 @@ svg { display: block; }
 .item.none .none-ic { font-size: 34px; width: 100%; aspect-ratio: 1; display: grid; place-items: center; opacity: .5; }
 .actions { display: flex; justify-content: center; padding-bottom: 4px; }
 
-@media (min-width: 761px) {
+@media (min-width: 761px) and (min-height: 640px) {
   body[data-screen="screen-game"] { overflow: hidden; }
   body[data-screen="screen-game"] #app { height: 100%; }
+}
+@media (min-width: 761px) and (max-height: 639px) {
+  .stage { min-height: 420px; }
+  .closet .grid { max-height: 60vh; }
 }
 @media (max-width: 760px) {
   .room { display: flex; flex-direction: column; }
