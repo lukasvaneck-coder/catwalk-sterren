@@ -9,7 +9,9 @@ De voortgang wordt per speler in de browser bewaard (localStorage), dus meerdere
 
 ## Hoe het spel werkt
 
-- **Opdrachten**: elke ronde krijg je een thema (bijv. Dagje Strand, Het Grote Gala, Ruimtereis). De stickers bij de opdracht laten zien wat de jury zoekt.
+- **Model maken**: huidskleur, ogen, gezichtsvorm, postuur (slider van dun naar dik), kapsel en haarkleur.
+- **Opdrachten**: elke ronde krijg je een thema (bijv. Dagje Strand, Balletles, Prinsessenthee, Ruimtereis). De stickers bij de opdracht laten zien wat de jury zoekt. De setting hoort bij de opdracht; alleen bij vrij spelen kies je zelf waar je staat.
+- **Kast**: je ziet alleen wat je al hebt vrijgespeeld. Wat er op het volgende level bijkomt blijft een verrassing, je ziet alleen de aantallen.
 - **Jury**: drie juryleden beoordelen elk met een eigen smaak:
   - Madame Fleur let op kleurharmonie en glamour
   - Meester Ties let op het thema, compleetheid en de setting
