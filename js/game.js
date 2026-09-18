@@ -180,7 +180,7 @@
     const nav = $('#tabs'); nav.innerHTML = '';
     CATEGORIES.forEach(c => {
       const b = h('button', { class: 'tab' + (c.id === ui.tab ? ' active' : ''), type: 'button', 'aria-pressed': c.id === ui.tab }, `<span class="ti">${c.emoji}</span><span>${c.name}</span>`);
-      b.onclick = () => { ui.tab = c.id; renderTabs(); renderGrid(); };
+      b.onclick = () => { Sound.play('klik'); ui.tab = c.id; renderTabs(); renderGrid(); };
       nav.appendChild(b);
     });
   }
@@ -205,21 +205,21 @@
   const section = title => h('div', { class: 'section' }, title);
   function noneCard(slot) {
     const b = h('button', { class: 'item none' + (P.outfit[slot] ? '' : ' selected'), type: 'button' }, `<div class="none-ic">🚫</div><span class="name">Geen</span>`);
-    b.onclick = () => { delete P.outfit[slot]; save(); renderStage(); renderGrid(); };
+    b.onclick = () => { Sound.play('klik'); delete P.outfit[slot]; save(); renderStage(); renderGrid(); };
     return b;
   }
   function itemCard(it) {
     const isSel = P.outfit[it.cat] === it.id, lock = !unlocked(it);
     const b = h('button', { class: 'item' + (isSel ? ' selected' : '') + (lock ? ' locked' : ''), type: 'button', title: lock ? `${it.name} (level ${it.lvl})` : it.name });
     b.innerHTML = Avatar.thumb(it, P.look) + `<span class="name">${it.name}</span>` + (lock ? `<span class="lock">🔒</span><span class="lvl">Lvl ${it.lvl}</span>` : '');
-    b.onclick = () => { if (lock) { toast(`🔒 ${it.name} speel je vrij op level ${it.lvl}`); return; } wear(it); };
+    b.onclick = () => { if (lock) { Sound.play('fout'); toast(`🔒 ${it.name} speel je vrij op level ${it.lvl}`); return; } Sound.play('pop'); wear(it); };
     return b;
   }
   function colorCard(c) {
     const isSel = P.look.hairColor === c.id, lock = c.lvl > P.level;
     const b = h('button', { class: 'item color' + (isSel ? ' selected' : '') + (lock ? ' locked' : ''), type: 'button' },
       `<span class="swatch big" style="background:${c.c === 'rainbow' ? HUES.multi.swatch : c.c}"></span><span class="name">${c.name}</span>` + (lock ? `<span class="lock">🔒</span><span class="lvl">Lvl ${c.lvl}</span>` : ''));
-    b.onclick = () => { if (lock) { toast(`🔒 Haarkleur ${c.name} speel je vrij op level ${c.lvl}`); return; } P.look.hairColor = c.id; save(); renderStage(); renderGrid(); };
+    b.onclick = () => { if (lock) { Sound.play('fout'); toast(`🔒 Haarkleur ${c.name} speel je vrij op level ${c.lvl}`); return; } Sound.play('pop'); P.look.hairColor = c.id; save(); renderStage(); renderGrid(); };
     return b;
   }
   function wear(it) {
@@ -337,7 +337,7 @@
     const cards = [...ov.querySelectorAll('.judge')];
     let t = 1500;
     res.judges.forEach((r, i) => {
-      setTimeout(() => { const c = cards[i]; c.classList.add('in'); countUp(c.querySelector('.score'), r.score); c.querySelector('.comment').textContent = r.comment; }, t);
+      setTimeout(() => { Sound.play('ding'); const c = cards[i]; c.classList.add('in'); countUp(c.querySelector('.score'), r.score); c.querySelector('.comment').textContent = r.comment; }, t);
       t += 1100;
     });
     setTimeout(() => showResult(res, gained, theme), t + 200);
@@ -355,7 +355,8 @@
       ${res.stars < 3 ? `<div class="tip">💡 ${TIPS[res.weakest]}</div>` : ''}
       ${lvlUp ? `<div class="levelup"><h3>🎊 Level ${P.level}! 🎊</h3><p>Nieuw vrijgespeeld:</p><div class="unlocks">${g.unlocked.map(u => `<div class="unlock">${u.cat === 'haircolor' ? `<span class="swatch big" style="background:${u.c === 'rainbow' ? HUES.multi.swatch : u.c}"></span>` : Avatar.thumb(u, P.look)}<span>${u.name}</span></div>`).join('')}</div>${g.newThemes.length ? `<p class="newtheme">Nieuwe opdracht${g.newThemes.length > 1 ? 'en' : ''}: ${g.newThemes.map(t => t.emoji + ' ' + t.name).join(', ')}</p>` : ''}</div>` : ''}
       <div class="row center wrap"><button class="btn ghost" id="res-back" type="button">🪞 Kleedkamer</button><button class="btn ghost" id="res-again" type="button">🔁 Zelfde opdracht</button><button class="btn big" id="res-next" type="button">Volgende opdracht ➜</button></div>`;
-    [...r.querySelectorAll('.stars span')].forEach((s, i) => setTimeout(() => s.classList.add('on'), 150 + i * 350));
+    [...r.querySelectorAll('.stars span')].forEach((s, i) => setTimeout(() => { s.classList.add('on'); if (i < res.stars) Sound.play('ster'); }, 150 + i * 350));
+    setTimeout(() => Sound.play(lvlUp ? 'levelup' : res.stars === 3 ? 'tada' : 'ding'), 150 + 3 * 350);
     // xp-balk laten groeien
     const cur = xpForLevel(P.level), next = P.level < MAX_LEVEL ? xpForLevel(P.level + 1) : null;
     const pctNow = next ? clamp((P.xp - cur) / (next - cur)) * 100 : 100;
@@ -376,6 +377,7 @@
       <p class="center">Het publiek juicht en de camera's flitsen!</p>
       <div class="row center"><button class="btn ghost" id="show-photo" type="button">📸 Foto maken</button><button class="btn big" id="show-close" type="button">Dankjewel! 💖</button></div>`, 'show');
     confetti(ov, 90);
+    Sound.play('applaus'); setTimeout(() => Sound.play('tada'), 900);
     $('#show-close').onclick = closeOverlay;
     $('#show-photo').onclick = () => { closeOverlay(); makePhoto(); };
   }
@@ -400,8 +402,30 @@
     img.src = url;
   }
 
+  /* ---------- wat komt er op het volgende level? ---------- */
+  function showNextLevel() {
+    Sound.play('klik');
+    if (P.level >= MAX_LEVEL) { openOverlay(`<h2 class="h center">🏆 Alles vrijgespeeld!</h2><p class="center">Je hebt het hoogste level bereikt. Alle kleding, kapsels en decors zijn van jou.</p><div class="row center"><button class="btn" id="nl-close" type="button">Super!</button></div>`); $('#nl-close').onclick = closeOverlay; return; }
+    const next = P.level + 1;
+    const items = ITEMS.filter(i => i.lvl === next);
+    const colors = HAIR_COLORS.filter(c => c.lvl === next);
+    const themes = THEMES.filter(t => t.lvl === next);
+    const need = xpForLevel(next) - P.xp;
+    openOverlay(`
+      <h2 class="h center">🎁 Level ${next}</h2>
+      <p class="center">Nog <b>${need} XP</b> te gaan. Dit speel je dan vrij:</p>
+      <div class="unlocks">${items.map(u => `<div class="unlock">${Avatar.thumb(u, P.look)}<span>${u.name}</span></div>`).join('')}${colors.map(c => `<div class="unlock"><span class="swatch big" style="background:${c.c === 'rainbow' ? HUES.multi.swatch : c.c}"></span><span>Haarkleur ${c.name}</span></div>`).join('')}</div>
+      ${themes.length ? `<p class="center newtheme">Nieuwe opdracht${themes.length > 1 ? 'en' : ''}: ${themes.map(t => t.emoji + ' ' + t.name).join(', ')}</p>` : ''}
+      <div class="row center"><button class="btn" id="nl-close" type="button">Aan de slag! ✨</button></div>`);
+    $('#nl-close').onclick = closeOverlay;
+  }
+  function renderSoundButton() { const b = $('#btn-sound'); b.textContent = Sound.isOn() ? '🔊' : '🔇'; b.title = Sound.isOn() ? 'Geluid uit' : 'Geluid aan'; }
+
   /* ---------- knoppen ---------- */
   function wire() {
+    renderSoundButton();
+    $('#btn-sound').onclick = () => { Sound.toggle(); renderSoundButton(); };
+    $('#btn-next').onclick = showNextLevel;
     $('#create-done').onclick = () => {
       const name = $('#name-input').value.trim().slice(0, 16) || 'Ster';
       const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, hairColor: ui.temp.hairColor };
@@ -412,10 +436,10 @@
     $('#name-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('#create-done').click(); });
     $('#hud-profile').onclick = () => { renderStart(); showScreen('screen-start'); };
     $('#btn-look').onclick = () => openCreate(P);
-    $('#btn-random').onclick = randomOutfit;
-    $('#btn-clear').onclick = clearOutfit;
-    $('#btn-photo').onclick = makePhoto;
-    $('#btn-jury').onclick = goJury;
+    $('#btn-random').onclick = () => { Sound.play('tada'); randomOutfit(); };
+    $('#btn-clear').onclick = () => { Sound.play('klik'); clearOutfit(); };
+    $('#btn-photo').onclick = () => { Sound.play('klik'); makePhoto(); };
+    $('#btn-jury').onclick = () => { Sound.play('klik'); goJury(); };
     $('#overlay').addEventListener('click', e => { if (e.target.id === 'overlay' && !$('#overlay .jury')) closeOverlay(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#overlay').hidden && !$('#overlay .jury')) closeOverlay(); });
   }
