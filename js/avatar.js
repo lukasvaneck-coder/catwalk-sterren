@@ -473,7 +473,8 @@ const Avatar = (() => {
   /* ---------- het hele model ---------- */
   function render(look, outfit, opts = {}) {
     const ctx = makeCtx(look, opts);
-    const get = slot => outfit[slot] ? ITEM_BY_ID[outfit[slot]] : null;
+    // opts.items: losse items die niet in de catalogus staan (bijv. voor de kleurenpuzzel)
+    const get = slot => outfit[slot] ? ((opts.items && opts.items[outfit[slot]]) || ITEM_BY_ID[outfit[slot]]) : null;
     const hairIt = get('hair') || ITEM_BY_ID.hair_kort;
     const H = HAIR[hairIt.shape] || HAIR.kort;
     const dress = get('dress'), top = get('top');
