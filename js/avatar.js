@@ -78,8 +78,8 @@ const Avatar = (() => {
   const FACES = {
     ovaal:    '<ellipse cx="150" cy="100" rx="54" ry="60"/>',
     rond:     '<ellipse cx="150" cy="102" rx="58" ry="58"/>',
-    hart:     '<path d="M150 162 Q100 142 96 96 Q96 44 150 42 Q204 44 204 96 Q200 142 150 162 Z"/>',
-    vierkant: '<path d="M108 46 Q150 38 192 46 Q206 90 200 138 Q188 162 150 164 Q112 162 100 138 Q94 90 108 46 Z"/>',
+    hart:     '<path d="M150 162 Q100 142 96 96 Q100 46 150 42 Q200 46 204 96 Q200 142 150 162 Z"/>',
+    vierkant: '<path d="M100 110 Q98 44 150 40 Q202 44 200 110 Q200 140 188 160 Q170 166 150 166 Q130 166 112 160 Q100 140 100 110 Z"/>',
     smal:     '<ellipse cx="150" cy="100" rx="49" ry="62"/>',
   };
   // postuur 0 (dun) … 100 (dik) → horizontale schaal van lichaam en kleding; 40 = normaal
