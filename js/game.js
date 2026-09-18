@@ -175,15 +175,32 @@
     showScreen('screen-game');
   }
   function renderAll() { renderHUD(); renderChallenge(); renderStage(); renderGrid(); }
+  // kleurenopdrachten: de gevraagde kleuren worden per keer gekozen
+  const WHEEL = ['rood', 'oranje', 'geel', 'groen', 'blauw', 'paars'];
+  function ruleColors(rule) {
+    const i = Math.floor(Math.random() * 6);
+    if (rule === 'mono') return [WHEEL[i]];
+    if (rule === 'tegenover') return [WHEEL[i], WHEEL[(i + 3) % 6]];
+    return [WHEEL[i], WHEEL[(i + 1) % 6]];
+  }
+  function effectiveTheme(t, colors) {
+    if (!t || !t.rule) return t;
+    const cols = colors && colors.length ? colors : ruleColors(t.rule);
+    const lab = i => cols[i] ? HUES[cols[i]].label : '';
+    return { ...t, colors: cols, desc: t.desc.replace('{a}', lab(0)).replace('{b}', lab(1)) };
+  }
   function currentTheme() {
-    if (ui.duel) return THEME_BY_ID[ui.duel.themeId];
-    const t = THEME_BY_ID[P.themeId]; return t && t.lvl <= P.level ? t : null;
+    if (ui.duel) return effectiveTheme(THEME_BY_ID[ui.duel.themeId], ui.duel.colors);
+    const t = THEME_BY_ID[P.themeId];
+    if (!t || t.lvl > P.level) return null;
+    if (t.rule && !(P.themeColors && P.themeColors.length)) { P.themeColors = ruleColors(t.rule); save(); }
+    return effectiveTheme(t, P.themeColors);
   }
   function pickTheme(exclude, maxLevel = P.level) {
     const avail = THEMES.filter(t => t.lvl <= maxLevel && t.id !== exclude);
     const fresh = avail.filter(t => !P.done[t.id]);
     const t = rand(fresh.length ? fresh : (avail.length ? avail : THEMES));
-    if (!ui.duel) { P.themeId = t.id; save(); }
+    if (!ui.duel) { P.themeId = t.id; P.themeColors = t.rule ? ruleColors(t.rule) : null; save(); }
     return t;
   }
   // de setting hoort bij de opdracht; alleen bij vrij spelen kies je zelf
@@ -209,12 +226,14 @@
     const glam = t.glam >= 2.5 ? '💎 super chic' : t.glam >= 1.5 ? '✨ een beetje glamour' : t.glam >= 1 ? '🙂 gewoon leuk' : '👟 lekker simpel';
     return `<div class="tags">${hints}${col}<span class="tag">${glam}</span></div>`;
   }
+  // bij een kleurenopdracht staat het wiel op de kaart in plaats van de emoji
+  const themeIcon = t => t.rule ? `<div class="ch-wheel">${wheelSvg(t.colors)}</div>` : `<div class="ch-emoji">${t.emoji}</div>`;
   function renderChallenge() {
     const box = $('#challenge');
     if (ui.duel) {
       const t = currentTheme();
       const other = DB.profiles.find(p => p.id === ui.duel.ids[1 - ui.duel.turn]);
-      box.innerHTML = `<div class="ch-emoji">${t.emoji}</div><div class="ch-body"><small><span class="duel-banner">⚔️ Duel · beurt van ${esc(P.name)}</span> · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}</div><div class="ch-actions"><span class="small">Daarna is ${esc(other.name)}</span><button class="btn ghost sm" id="btn-duel-stop" type="button">✖ Duel stoppen</button></div>`;
+      box.innerHTML = `${themeIcon(t)}<div class="ch-body"><small><span class="duel-banner">⚔️ Duel · beurt van ${esc(P.name)}</span> · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}</div><div class="ch-actions"><span class="small">Daarna is ${esc(other.name)}</span><button class="btn ghost sm" id="btn-duel-stop" type="button">✖ Duel stoppen</button></div>`;
       $('#btn-duel-stop').onclick = () => { Sound.play('klik'); ui.duel = null; renderStart(); showScreen('screen-start'); };
       $('#btn-jury').textContent = 'Klaar! Naar de jury ✨';
       return;
@@ -224,7 +243,7 @@
     } else {
       const t = currentTheme() || pickTheme();
       const best = P.done[t.id] ? `beste score ${'⭐'.repeat(P.done[t.id])}` : 'nieuw!';
-      box.innerHTML = `<div class="ch-emoji">${t.emoji}</div><div class="ch-body"><small>Opdracht · ${best} · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}</div><div class="ch-actions"><button class="btn ghost sm" id="btn-other" type="button">🔄 Andere opdracht</button><button class="btn ghost sm" id="btn-free" type="button">🎨 Vrij spelen</button></div>`;
+      box.innerHTML = `${themeIcon(t)}<div class="ch-body"><small>Opdracht · ${best} · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}</div><div class="ch-actions"><button class="btn ghost sm" id="btn-other" type="button">🔄 Andere opdracht</button><button class="btn ghost sm" id="btn-free" type="button">🎨 Vrij spelen</button></div>`;
       $('#btn-other').onclick = () => { Sound.play('klik'); pickTheme(t.id); renderChallenge(); renderStage(); };
     }
     $('#btn-free').onclick = () => { Sound.play('klik'); ui.free = !ui.free; if (!ui.free && ui.tab === 'bg') ui.tab = 'dress'; renderChallenge(); renderStage(); renderTabs(); renderGrid(); };
@@ -402,7 +421,15 @@
       else kleur = 0.3;
       kleur = clamp(kleur - multiCount * 0.15);
     }
-    if (theme.colors) { const hits = hues.filter(hh => theme.colors.includes(hh)).length; kleur = clamp(kleur * 0.65 + clamp(hits / 2) * 0.35); }
+    if (theme.rule) {
+      // kleurenopdracht: alleen de gevraagde kleuren tellen, neutrale kleuren mogen altijd
+      const hits = colored.filter(hh => theme.colors.includes(hh)).length;
+      const missing = theme.colors.filter(c => !colored.includes(c)).length;
+      kleur = colored.length ? clamp(0.15 + 0.85 * (hits / colored.length)) : 0.3;
+      if (theme.colors.length > 1 && missing === 0) kleur = clamp(kleur + 0.15);
+      if (missing) kleur = clamp(kleur - 0.2 * missing);
+      thema = kleur;
+    } else if (theme.colors) { const hits = hues.filter(hh => theme.colors.includes(hh)).length; kleur = clamp(kleur * 0.65 + clamp(hits / 2) * 0.35); }
 
     const top = get('top');
     const hasTop = !!outfit.dress || !!top, hasBottom = !!outfit.dress || !!outfit.bottom || !!(top && top.full), hasShoes = !!outfit.shoes;
@@ -486,7 +513,9 @@
       <div class="xp"><div class="xp-bar"><div id="xp-fill-res"></div></div><small id="xp-text-res"></small></div>
       ${res.stars < 3 ? `<div class="tip">💡 ${TIPS[res.weakest]}</div>` : ''}
       ${lvlUp ? levelUpHtml(g, P) : ''}
+      ${bonusAvailable(res, theme) ? `<div class="bonus-offer"><span class="who">🌸</span><p>Madame Fleur: "Die kleuren waren nog geen vriendjes. Wil je een kleurenvraag over jouw outfit doen? Goed antwoord = <b>+4 munten</b>."</p><button class="btn mint" id="res-bonus" type="button">🎨 Bonusvraag!</button></div>` : ''}
       <div class="row center wrap"><button class="btn ghost" id="res-back" type="button">🪞 Kleedkamer</button><button class="btn gold" id="res-shop" type="button">🛍️ Winkel</button><button class="btn big" id="res-next" type="button">Volgende opdracht ➜</button></div>`;
+    if ($('#res-bonus')) $('#res-bonus').onclick = () => bonusQuestion(res, theme, () => { closeOverlay(); pickTheme(theme.id); renderAll(); });
     [...r.querySelectorAll('.stars span')].forEach((s, i) => setTimeout(() => { s.classList.add('on'); if (i < res.stars) Sound.play('ster'); }, 150 + i * 350));
     setTimeout(() => Sound.play(lvlUp ? 'levelup' : res.stars === 3 ? 'tada' : 'ding'), 150 + 3 * 350);
     const cur = xpForLevel(P.level), next = P.level < MAX_LEVEL ? xpForLevel(P.level + 1) : null;
@@ -513,6 +542,51 @@
     $('#show-photo').onclick = () => { closeOverlay(); makePhoto(); };
   }
 
+  /* ---------- bonusvraag van Madame Fleur over jouw eigen outfit ---------- */
+  function wornColors() {
+    const hues = OUTFIT_SLOTS.map(s => P.outfit[s] && ITEM_BY_ID[P.outfit[s]]).filter(Boolean).map(i => i.hue).filter(hh => HUES[hh] && !HUES[hh].neutral && !HUES[hh].multi);
+    return [...new Set(hues)];
+  }
+  function bonusAvailable(res, theme) {
+    if (theme.multiColor || ui.duel) return false;
+    return res.factors.kleur < 0.6 && wornColors().length >= 2;
+  }
+  function bonusQuestion(res, theme, done) {
+    Sound.play('klik');
+    const cols = wornColors();
+    const a = cols[0];
+    const ia = WHEEL.indexOf(a);
+    // zoek een kleur die botst met a (2 stappen op het wiel), anders gewoon de tweede kleur
+    const b = cols.find(c => wheelDist(WHEEL.indexOf(c), ia) === 2) || cols[1];
+    const neighbours = [WHEEL[(ia + 1) % 6], WHEEL[(ia + 5) % 6]];
+    const wrong = WHEEL.filter(c => c !== a && !neighbours.includes(c));
+    const options = shuffle([rand(neighbours), ...shuffle(wrong).slice(0, 2)]);
+    openOverlay(`<div class="puzzle bonus"><h2 class="h">🌸 Bonusvraag van Madame Fleur</h2>
+      <div class="worn"><span class="dot" style="background:${HUES[a].swatch}"></span> ${HUES[a].label} <span>+</span> <span class="dot" style="background:${HUES[b].swatch}"></span> ${HUES[b].label}</div>
+      ${wheelSvg([a, b])}
+      <div class="question">Je droeg <b>${HUES[a].label}</b> met <b>${HUES[b].label}</b>. Die staan niet naast elkaar op het wiel. Welke kleur was een betere <b>buur</b> van ${HUES[a].label} geweest?</div>
+      <div class="color-options">${options.map(v => `<button class="color-opt" data-v="${v}" type="button"><span class="dot" style="background:${HUES[v].swatch}"></span>${HUES[v].label}</button>`).join('')}</div>
+      <p class="feedback" id="bq-feedback"></p>
+      <div class="row center"><button class="btn ghost sm" id="bq-skip" type="button">Overslaan</button></div></div>`, 'jury');
+    $('#bq-skip').onclick = done;
+    document.querySelectorAll('.color-opt').forEach(btn => {
+      btn.onclick = async () => {
+        if (btn.disabled) return;
+        const ok = neighbours.includes(btn.dataset.v);
+        document.querySelectorAll('.color-opt').forEach(x => { x.disabled = true; x.classList.add(neighbours.includes(x.dataset.v) ? 'right' : 'wrong'); });
+        const coins = ok ? 4 : 1;
+        P.coins += coins; save();
+        Sound.play(ok ? 'tada' : 'fout');
+        $('#bq-feedback').textContent = (ok ? `Precies! +${coins} munten. ` : `Bijna! +${coins} munt voor het proberen. `) + `${HUES[neighbours[0]].label} en ${HUES[neighbours[1]].label} zijn de buren van ${HUES[a].label}. Probeer dat de volgende keer!`;
+        $('#bq-skip').textContent = 'Volgende opdracht ➜';
+        $('#bq-skip').className = 'btn';
+        if (ok) confetti($('#overlay'), 40);
+        await wait(2600);
+        if ($('#bq-skip')) done();
+      };
+    });
+  }
+
   /* ---------- duel: twee spelers, één opdracht ---------- */
   function openDuelSetup() {
     Sound.play('klik');
@@ -535,8 +609,10 @@
     const a = DB.profiles.find(p => p.id === idA), b = DB.profiles.find(p => p.id === idB);
     P = a; ui.free = false; if (ui.tab === 'bg') ui.tab = 'dress';
     const maxLevel = Math.min(a.level, b.level);
-    ui.duel = { ids: [idA, idB], themeId: null, turn: 0, results: [] };
-    ui.duel.themeId = pickTheme(null, maxLevel).id;
+    ui.duel = { ids: [idA, idB], themeId: null, colors: null, turn: 0, results: [] };
+    const chosen = pickTheme(null, maxLevel);
+    ui.duel.themeId = chosen.id;
+    ui.duel.colors = chosen.rule ? ruleColors(chosen.rule) : null;
     closeOverlay();
     renderAll(); renderTabs();
     showScreen('screen-game');
@@ -582,9 +658,10 @@
   }
 
   /* ---------- kleurenpuzzel ---------- */
-  const WHEEL = ['rood', 'oranje', 'geel', 'groen', 'blauw', 'paars'];
-  const wheelSvg = (askHue, extra = '') => {
-    const seg = (i, hue) => { const a0 = (i * 60 - 90 - 30) * Math.PI / 180, a1 = (i * 60 - 90 + 30) * Math.PI / 180; const R = 120, r = 46; const p = (ang, rad) => `${(150 + Math.cos(ang) * rad).toFixed(1)} ${(150 + Math.sin(ang) * rad).toFixed(1)}`; return `<path class="seg${hue === askHue ? ' ask' : ''}" data-hue="${hue}" d="M${p(a0, r)} L${p(a0, R)} A${R} ${R} 0 0 1 ${p(a1, R)} L${p(a1, r)} A${r} ${r} 0 0 0 ${p(a0, r)} Z" fill="${HUES[hue].swatch}" stroke="#fff" stroke-width="3"/>`; };
+  // kleurenwiel; de gemarkeerde kleuren krijgen een rand en springen iets naar buiten
+  const wheelSvg = (marks, extra = '') => {
+    const marked = Array.isArray(marks) ? marks : (marks ? [marks] : []);
+    const seg = (i, hue) => { const a0 = (i * 60 - 90 - 30) * Math.PI / 180, a1 = (i * 60 - 90 + 30) * Math.PI / 180; const R = 120, r = 46; const p = (ang, rad) => `${(150 + Math.cos(ang) * rad).toFixed(1)} ${(150 + Math.sin(ang) * rad).toFixed(1)}`; const on = marked.includes(hue); const mid = (i * 60 - 90) * Math.PI / 180; const tr = on ? ` transform="translate(${(Math.cos(mid) * 8).toFixed(1)} ${(Math.sin(mid) * 8).toFixed(1)})"` : ''; return `<path class="seg${on ? ' ask' : ''}" data-hue="${hue}"${tr} d="M${p(a0, r)} L${p(a0, R)} A${R} ${R} 0 0 1 ${p(a1, R)} L${p(a1, r)} A${r} ${r} 0 0 0 ${p(a0, r)} Z" fill="${HUES[hue].swatch}" stroke="#fff" stroke-width="3" opacity="${marked.length && !on ? .45 : 1}"/>`; };
     return `<svg class="wheel" viewBox="0 0 300 300" aria-hidden="true">${WHEEL.map((hh, i) => seg(i, hh)).join('')}<circle cx="150" cy="150" r="40" fill="var(--surface)"/><text x="150" y="158" text-anchor="middle" font-size="26">🎨</text>${extra}</svg>`;
   };
   function makeQuestions() {

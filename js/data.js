@@ -757,6 +757,21 @@ const THEMES = [
   { id: 'finale',     lvl: 20, emoji: '🌟', name: 'Sterrenshow Finale', bg: 'catwalk',
     desc: 'De grote finale. Laat alles zien wat je hebt geleerd: thema, kleur en glamour!',
     wants: ['feest', 'chic', 'muziek'], avoid: ['pyjama', 'regen'], glam: 3 },
+
+  // Kleurenopdrachten: hier draait alles om het kleurenwiel. De kleuren ({a} en {b})
+  // worden elke keer opnieuw gekozen, zodat de opdracht steeds anders is.
+  { id: 'kleur_buren', lvl: 2,  emoji: '🎨', name: 'Buurkleurenfeest', bg: 'feestkamer', rule: 'buren',
+    desc: 'Kies kleding in {a} en {b}. Die staan naast elkaar op het kleurenwiel en passen perfect bij elkaar. Wit, zwart, goud en zilver mogen er altijd bij.',
+    wants: ['feest', 'casual'], avoid: ['pyjama'], glam: 1 },
+  { id: 'kleur_mono',  lvl: 4,  emoji: '🎨', name: 'Eén-kleur-dag', bg: 'catwalk', rule: 'mono',
+    desc: 'Vandaag draait alles om {a}! Kies zoveel mogelijk kleding in die kleur. Wit, zwart en zilver mogen erbij.',
+    wants: ['casual', 'chic', 'feest'], avoid: ['pyjama'], glam: 1.5 },
+  { id: 'kleur_knal',  lvl: 6,  emoji: '🎨', name: 'Knalcombinatie', bg: 'disco', rule: 'tegenover',
+    desc: '{a} en {b} liggen tegenover elkaar op het wiel en laten elkaar knallen! Gebruik ze allebei.',
+    wants: ['feest', 'disco', 'dans'], avoid: ['pyjama', 'regen'], glam: 2 },
+  { id: 'kleur_meester', lvl: 10, emoji: '🎨', name: 'Kleurenmeester', bg: 'parijs', rule: 'buren',
+    desc: 'De modestad wil een meesterwerk in {a} en {b}. Chic, netjes en precies deze buurkleuren.',
+    wants: ['chic'], avoid: ['sport', 'pyjama'], glam: 2.5 },
 ];
 const THEME_BY_ID = Object.fromEntries(THEMES.map(t => [t.id, t]));
 

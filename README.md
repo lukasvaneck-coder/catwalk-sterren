@@ -20,6 +20,8 @@ De voortgang wordt per speler in de browser bewaard (localStorage), dus meerdere
 - **Munten en winkel**: elke jurybeurt levert munten op. Bij een level-up krijg je twee cadeautjes, de rest van dat level komt in de winkel. Bij het kopen komt een rekenvraagje (hoeveel houd je over?), goed gerekend geeft bonusmunten.
 - **Duel**: twee spelers, dezelfde opdracht, om de beurt aankleden. De jury beoordeelt beiden naast elkaar. Allebei krijgen sterren en munten, de winnaar iets extra.
 - **Kleurenpuzzel**: drie vragen over het kleurenwiel (buurkleur, tegenoverliggende kleur, welke outfit is rustig). Vijf rondes per dag leveren munten op, oefenen mag altijd.
+- **Kleurenopdrachten**: vier opdrachten (Buurkleurenfeest, Eén-kleur-dag, Knalcombinatie, Kleurenmeester) waarin het kleurenwiel op de kaart laat zien welke kleuren gevraagd worden. De kleuren wisselen per keer.
+- **Bonusvraag**: waren de kleuren geen vriendjes, dan stelt Madame Fleur na de jury één vraag over jouw eigen outfit. Goed antwoord is 4 munten, proberen is er altijd 1.
 - **Vrij spelen**: aankleden zonder jury, met een modeshow als finale.
 
 ## Projectstructuur
