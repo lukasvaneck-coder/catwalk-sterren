@@ -805,3 +805,13 @@ function xpForLevel(level) {           // totaal xp nodig om dit level te bereik
 }
 const XP_PER_STARS = { 1: 15, 2: 25, 3: 40 };
 const XP_FIRST_TIME = 10;
+
+/* ---------- Munten & winkel ---------- */
+const COINS_PER_STARS = { 1: 10, 2: 15, 3: 25 };
+const COINS_START = 30;
+const GIFTS_PER_LEVEL = 2;             // cadeautjes bij een level-up, de rest komt in de winkel
+const DUEL_WIN_BONUS = { stars: 1, coins: 5 };
+const PUZZLE_REWARDED_PER_DAY = 5;     // zoveel puzzelrondes per dag leveren munten op
+const PUZZLE_COIN_PER_ANSWER = 2;
+const PUZZLE_BONUS_ALL_RIGHT = 3;
+function priceOf(item) { return 10 + item.lvl * 3 + item.glam * 8; }

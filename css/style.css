@@ -255,6 +255,74 @@ svg { display: block; }
   .modal { padding: 16px; }
 }
 
+/* ---------- winkel ---------- */
+.hud-stars.coins { color: var(--gold-d); }
+.shop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.shop-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.shop-tabs .tab { min-width: 0; padding: 6px 10px; flex-direction: row; gap: 6px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; max-height: 52vh; overflow-y: auto; padding: 4px 6px 12px 2px; }
+.shop-grid .item .price { font: 800 14px var(--display); color: var(--gold-d); background: rgba(255, 197, 49, .18); border-radius: 999px; padding: 2px 10px; }
+.shop-grid .item.poor { opacity: .55; }
+.shop-grid .item.poor .price { color: var(--muted); background: var(--line); }
+.shop-empty { text-align: center; color: var(--muted); font-weight: 700; padding: 24px; }
+.item.more { border-style: dashed; justify-content: center; }
+.item.more .none-ic { opacity: .9; }
+.sum { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; font: 800 30px var(--display); }
+.sum .coin { background: var(--surface2); border-radius: 16px; padding: 6px 14px; }
+.sum .q { color: var(--pink); }
+.answers { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.answers .btn { min-width: 84px; font-size: 24px; }
+.answers .btn.right { background: var(--mint); color: #143a30; box-shadow: 0 5px 0 var(--mint-d); }
+.answers .btn.wrong { background: var(--line); color: var(--muted); box-shadow: none; }
+.buy-preview { width: 120px; height: 120px; margin: 0 auto; background: var(--surface2); border-radius: 20px; padding: 8px; }
+.buy-preview svg { width: 100%; height: 100%; }
+
+/* ---------- duel ---------- */
+.pick-players { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.pick-players .profile { width: 140px; }
+.pick-players .profile .pav { width: 80px; height: 120px; }
+.pick-players .profile.picked { border-color: var(--violet); background: var(--surface2); }
+.pick-players .profile .badge { position: absolute; top: 8px; left: 8px; background: var(--violet); color: #fff; border-radius: 999px; padding: 2px 8px; font: 800 12px var(--display); }
+.duel-banner { display: inline-flex; align-items: center; gap: 6px; background: var(--violet); color: #fff; border-radius: 999px; padding: 3px 10px; font: 800 12px var(--display); }
+.handover { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.handover .pav { width: 120px; height: 180px; }
+.handover .pav svg { width: 100%; height: 100%; }
+.duel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.duel-col { background: var(--surface2); border-radius: 20px; padding: 12px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+.duel-col .pav { width: 120px; height: 190px; }
+.duel-col .pav svg { width: 100%; height: 100%; }
+.duel-col b { font: 800 20px var(--display); }
+.duel-col .score { font: 800 34px/1 var(--display); color: var(--violet); }
+.duel-col .stars { font-size: 30px; letter-spacing: 3px; }
+.duel-col .stars span { opacity: 1; transform: none; }
+.duel-col.winner { box-shadow: 0 0 0 4px var(--gold); }
+.duel-col .crown { position: absolute; top: -18px; font-size: 34px; }
+.duel-col .gain { font-weight: 800; color: var(--mint-d); }
+@media (max-width: 560px) { .duel-cols { grid-template-columns: 1fr; } }
+
+/* ---------- kleurenpuzzel ---------- */
+.puzzle { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.puzzle .progress { display: flex; gap: 8px; }
+.puzzle .progress i { width: 14px; height: 14px; border-radius: 50%; background: var(--line); display: block; }
+.puzzle .progress i.ok { background: var(--mint); }
+.puzzle .progress i.bad { background: var(--pink); }
+.puzzle .progress i.cur { box-shadow: 0 0 0 3px var(--violet); }
+.wheel { width: min(240px, 60vw); height: auto; }
+.wheel .seg { transition: transform .3s; transform-origin: 150px 150px; }
+.wheel .seg.ask { stroke: var(--ink); stroke-width: 6; }
+.puzzle .question { font: 800 22px/1.2 var(--display); text-wrap: balance; max-width: 520px; }
+.color-options { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.color-opt { width: 96px; border: 4px solid var(--line); border-radius: 20px; background: var(--surface2); padding: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 800 14px var(--body); color: var(--ink); }
+.color-opt .dot { width: 54px; height: 54px; border-radius: 50%; border: 3px solid #fff; box-shadow: var(--shadow-sm); }
+.color-opt.right { border-color: var(--mint); }
+.color-opt.wrong { border-color: var(--pink); opacity: .6; }
+.outfit-options { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.outfit-opt { width: 120px; border: 4px solid var(--line); border-radius: 20px; background: var(--surface2); padding: 6px; cursor: pointer; }
+.outfit-opt svg { width: 100%; height: 150px; }
+.outfit-opt.right { border-color: var(--mint); }
+.outfit-opt.wrong { border-color: var(--pink); opacity: .6; }
+.puzzle .feedback { min-height: 1.5em; font-weight: 800; }
+
 /* ---------- confetti & toast ---------- */
 .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .confetti i { position: absolute; top: -20px; border-radius: 3px; animation: fall linear forwards; }

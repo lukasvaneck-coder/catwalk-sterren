@@ -17,6 +17,9 @@ De voortgang wordt per speler in de browser bewaard (localStorage), dus meerdere
   - Meester Ties let op het thema, compleetheid en de setting
   - DJ Luna let op accessoires en fun
 - **Sterren en levels**: sterren geven XP. Elk level speelt nieuwe spullen en nieuwe opdrachten vrij. Er zijn 20 levels.
+- **Munten en winkel**: elke jurybeurt levert munten op. Bij een level-up krijg je twee cadeautjes, de rest van dat level komt in de winkel. Bij het kopen komt een rekenvraagje (hoeveel houd je over?), goed gerekend geeft bonusmunten.
+- **Duel**: twee spelers, dezelfde opdracht, om de beurt aankleden. De jury beoordeelt beiden naast elkaar. Allebei krijgen sterren en munten, de winnaar iets extra.
+- **Kleurenpuzzel**: drie vragen over het kleurenwiel (buurkleur, tegenoverliggende kleur, welke outfit is rustig). Vijf rondes per dag leveren munten op, oefenen mag altijd.
 - **Vrij spelen**: aankleden zonder jury, met een modeshow als finale.
 
 ## Projectstructuur
