@@ -42,6 +42,9 @@
     if (!HAIR_COLORS.some(c => c.id === p.look.hairColor)) p.look.hairColor = 'bruin';
     p.outfit = p.outfit || {};
     delete p.outfit.bg;
+    // kapsels uit eerdere versies krijgen het kapsel dat er nu het meest op lijkt
+    if (HAIR_ALIASES[p.outfit.hair]) p.outfit.hair = HAIR_ALIASES[p.outfit.hair];
+    if (Array.isArray(p.owned)) p.owned = p.owned.map(id => HAIR_ALIASES[id] || id);
     for (const slot of Object.keys(p.outfit)) if (!ITEM_BY_ID[p.outfit[slot]]) delete p.outfit[slot];
     if (!p.outfit.hair) p.outfit.hair = 'hair_lang';
     if (!SETTING_BY_ID[p.freeBg]) p.freeBg = 'kamer';
@@ -74,7 +77,25 @@
   }
 
   /* ---------- schermen & hulpjes ---------- */
-  function showScreen(id) { document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; }); document.body.dataset.screen = id; window.scrollTo(0, 0); }
+  function showScreen(id) {
+    if (document.body.dataset.screen === 'screen-world' && id !== 'screen-world') World.hide();
+    document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; }); document.body.dataset.screen = id; window.scrollTo(0, 0);
+  }
+  /* ---------- het dorp: vanuit hier loop je naar de huisjes ---------- */
+  function enterWorld(p) {
+    P = p; ui.free = false; ui.duel = null;
+    if (ui.tab === 'bg') ui.tab = 'dress';
+    showScreen('screen-world');
+    World.show(P, {
+      save,
+      enter: id => {
+        if (id === 'kleedkamer') startGame(P);
+        else if (id === 'winkel') openShop();
+        else if (id === 'puzzel') openPuzzle();
+        else if (id === 'duel') { if (DB.profiles.length < 2) toast('Voor een duel heb je twee spelers nodig. Maak op het startscherm nog een speler.'); else openDuelSetup(); }
+      },
+    });
+  }
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 2400); }
   function openOverlay(html, cls = '') { const ov = $('#overlay'); ov.innerHTML = `<div class="modal ${cls}">${html}</div>`; ov.hidden = false; ov.scrollTop = 0; return ov; }
   function closeOverlay() { const ov = $('#overlay'); ov.hidden = true; ov.innerHTML = ''; }
@@ -104,8 +125,8 @@
     DB.profiles.forEach(p => {
       const card = h('div', { class: 'profile card', role: 'button', tabindex: '0' });
       card.innerHTML = `<div class="pav">${Avatar.render(p.look, p.outfit, { bg: false })}</div><b>${esc(p.name)}</b><small>Level ${p.level} · ⭐ ${p.stars} · 🪙 ${p.coins}</small><span class="del" role="button" title="Speler verwijderen" aria-label="Speler ${esc(p.name)} verwijderen">✕</span>`;
-      card.addEventListener('click', e => { if (e.target.classList.contains('del')) { confirmDelete(p); } else startGame(p); });
-      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame(p); } });
+      card.addEventListener('click', e => { if (e.target.classList.contains('del')) { confirmDelete(p); } else enterWorld(p); });
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); enterWorld(p); } });
       box.appendChild(card);
     });
     const add = h('button', { class: 'profile card new', type: 'button' }, `<div class="plus">+</div><b>Nieuwe speler</b><small>Maak je eigen model</small>`);
@@ -142,15 +163,9 @@
     if (previewOnly) return;
     swatches($('#skin-swatches'), SKINS.map(s => ({ id: s.id, c: s.c, title: 'Huidskleur' })), t.skin, id => { t.skin = id; renderCreate(); });
     swatches($('#eye-swatches'), EYES.map(e => ({ id: e.id, c: e.c, title: e.name })), t.eyes, id => { t.eyes = id; renderCreate(); });
-    const fs = $('#face-shapes'); fs.innerHTML = '';
-    FACE_SHAPES.forEach(f => {
-      const b = h('button', { class: 'face' + (f.id === t.face ? ' selected' : ''), type: 'button', title: f.name }, Avatar.headThumb({ ...t, face: f.id }) + `<span>${f.name}</span>`);
-      b.onclick = () => { Sound.play('pop'); t.face = f.id; renderCreate(); };
-      fs.appendChild(b);
-    });
     const hs = $('#hair-styles'); hs.innerHTML = '';
     styles.forEach(it => {
-      const b = h('button', { class: 'item' + (it.id === t.hairStyle ? ' selected' : ''), type: 'button' }, Avatar.thumb(it, t) + `<span class="name">${it.name}</span>`);
+      const b = h('button', { class: 'item' + (it.id === t.hairStyle ? ' selected' : ''), type: 'button' }, Avatar.thumb(it, { ...t, _hair: it.id }) + `<span class="name">${it.name}</span>`);
       b.onclick = () => { Sound.play('pop'); t.hairStyle = it.id; renderCreate(); };
       hs.appendChild(b);
     });
@@ -252,7 +267,7 @@
 
   function renderStage() {
     $('#stage').innerHTML = Avatar.render(P.look, outfitForStage());
-    $('#hud-avatar').innerHTML = Avatar.render(P.look, P.outfit, { bg: false });
+    $('#hud-avatar').innerHTML = Avatar.render(P.look, P.outfit, { head: true });
   }
 
   function renderTabs() {
@@ -279,7 +294,7 @@
       grid.appendChild(section('Waar sta je?'));
       const ids = [...new Set(THEMES.filter(t => t.lvl <= P.level).map(t => t.bg))];
       ids.map(id => SETTING_BY_ID[id]).forEach(s => {
-        const b = h('button', { class: 'item' + (P.freeBg === s.id ? ' selected' : ''), type: 'button', title: s.name }, Avatar.thumb({ cat: 'bg', shape: s.shape }, P.look) + `<span class="name">${s.name}</span>`);
+        const b = h('button', { class: 'item' + (P.freeBg === s.id ? ' selected' : ''), type: 'button', title: s.name }, Avatar.thumb({ cat: 'bg', shape: s.id }, P.look) + `<span class="name">${s.name}</span>`);
         b.onclick = () => { Sound.play('pop'); P.freeBg = s.id; save(); renderStage(); renderGrid(); };
         grid.appendChild(b);
       });
@@ -308,7 +323,7 @@
   }
   function itemCard(it) {
     const b = h('button', { class: 'item' + (P.outfit[it.cat] === it.id ? ' selected' : ''), type: 'button', title: it.name });
-    b.innerHTML = Avatar.thumb(it, P.look) + `<span class="name">${it.name}</span>`;
+    b.innerHTML = Avatar.thumb(it, thumbLook()) + `<span class="name">${it.name}</span>`;
     b.onclick = () => { Sound.play('pop'); wear(it); };
     return b;
   }
@@ -318,6 +333,7 @@
     b.onclick = () => { Sound.play('pop'); P.look.hairColor = c.id; save(); renderStage(); renderGrid(); };
     return b;
   }
+  const thumbLook = () => ({ ...P.look, _hair: P.outfit.hair });
   function wear(it) {
     const slot = it.cat;
     if (P.outfit[slot] === it.id && slot !== 'hair') delete P.outfit[slot];
@@ -349,7 +365,7 @@
       openOverlay(`
         <div class="shop-head"><h2 class="h">🛍️ Winkel</h2><div class="hud-stars coins">🪙 <span id="shop-coins">${P.coins}</span></div></div>
         <div class="shop-tabs"><button class="tab${filter === 'alles' ? ' active' : ''}" data-f="alles" type="button">Alles (${shopItems().length})</button>${cats.map(c => { const n = (c.slots || [c.id]).reduce((a, s) => a + shopItems(s).length, 0); return n ? `<button class="tab${filter === c.id ? ' active' : ''}" data-f="${c.id}" type="button"><span class="ti">${c.emoji}</span>${c.name} (${n})</button>` : ''; }).join('')}</div>
-        ${list.length ? `<div class="shop-grid">${list.map(it => `<button class="item${P.coins < priceOf(it) ? ' poor' : ''}" data-id="${it.id}" type="button" title="${it.name}">${Avatar.thumb(it, P.look)}<span class="name">${it.name}</span><span class="price">🪙 ${priceOf(it)}</span></button>`).join('')}</div>` : `<div class="shop-empty">Alles gekocht! Speel een opdracht of haal een hoger level voor nieuwe spullen.</div>`}
+        ${list.length ? `<div class="shop-grid">${list.map(it => `<button class="item${P.coins < priceOf(it) ? ' poor' : ''}" data-id="${it.id}" type="button" title="${it.name}">${Avatar.thumb(it, thumbLook())}<span class="name">${it.name}</span><span class="price">🪙 ${priceOf(it)}</span></button>`).join('')}</div>` : `<div class="shop-empty">Alles gekocht! Speel een opdracht of haal een hoger level voor nieuwe spullen.</div>`}
         <p class="center small">Munten verdien je bij de jury en met de kleurenpuzzel. Kies je kleding zelf en spaar voor wat je écht wilt.</p>
         <div class="row center"><button class="btn ghost" id="shop-close" type="button">Terug naar de kleedkamer</button></div>`, 'shop');
       $('#shop-close').onclick = () => { closeOverlay(); renderAll(); };
@@ -368,7 +384,7 @@
     const options = shuffle([rest, ...wrongs]);
     openOverlay(`
       <h2 class="h center">${esc(it.name)} kopen?</h2>
-      <div class="buy-preview">${Avatar.thumb(it, P.look)}</div>
+      <div class="buy-preview">${Avatar.thumb(it, thumbLook())}</div>
       <p class="center">Je hebt <b>${P.coins}</b> munten en dit kost <b>${price}</b>. Hoeveel houd je over?</p>
       <div class="sum"><span class="coin">🪙 ${P.coins}</span><span>−</span><span class="coin">🪙 ${price}</span><span>=</span><span class="coin q" id="sum-answer">?</span></div>
       <div class="answers" id="answers">${options.map(v => `<button class="btn violet" data-v="${v}" type="button">${v}</button>`).join('')}</div>
@@ -477,7 +493,7 @@
   }
   function levelUpHtml(g, p) {
     return `<div class="levelup"><h3>🎊 Level ${p.level}! 🎊</h3>
-      ${g.gifts.length ? `<p>Cadeautjes voor jou:</p><div class="unlocks">${g.gifts.map(u => `<div class="unlock">${Avatar.thumb(u, p.look)}<span>${u.name}</span></div>`).join('')}${g.colors.map(c => `<div class="unlock"><span class="swatch big" style="background:${c.c === 'rainbow' ? HUES.multi.swatch : c.c}"></span><span>Haarkleur ${c.name}</span></div>`).join('')}</div>` : ''}
+      ${g.gifts.length ? `<p>Cadeautjes voor jou:</p><div class="unlocks">${g.gifts.map(u => `<div class="unlock">${Avatar.thumb(u, { ...p.look, _hair: p.outfit.hair })}<span>${u.name}</span></div>`).join('')}${g.colors.map(c => `<div class="unlock"><span class="swatch big" style="background:${c.c === 'rainbow' ? HUES.multi.swatch : c.c}"></span><span>Haarkleur ${c.name}</span></div>`).join('')}</div>` : ''}
       ${g.shopCount ? `<p class="newtheme">🛍️ En er liggen ${g.shopCount} nieuwe dingen in de winkel!</p>` : ''}
       ${g.themes.length ? `<p class="newtheme">Nieuwe opdracht${g.themes.length > 1 ? 'en' : ''}: ${g.themes.map(t => t.emoji + ' ' + t.name).join(', ')}</p>` : ''}</div>`;
   }
@@ -723,22 +739,13 @@
 
   /* ---------- foto ---------- */
   function makePhoto() {
-    const svg = Avatar.render(P.look, outfitForStage(), { expr: 'grin' });
-    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement('canvas'); c.width = 900; c.height = 1560;
-      const g = c.getContext('2d'); g.drawImage(img, 0, 0, 900, 1560);
-      URL.revokeObjectURL(url);
-      let data = '';
-      try { data = c.toDataURL('image/png'); } catch (e) { data = url; }
-      const fname = `catwalk-${P.name.replace(/[^\w-]+/g, '_')}.png`;
-      openOverlay(`<h2 class="h center">📸 Jouw foto</h2><div class="photo"><img src="${data}" alt="Foto van het model van ${esc(P.name)}"></div><p class="center small">Op een tablet: houd de foto lang ingedrukt om hem op te slaan.</p><div class="row center"><button class="btn ghost" id="photo-close" type="button">Sluiten</button><a class="btn" id="photo-dl" href="${data}" download="${fname}">⬇️ Opslaan</a></div>`, 'photo-modal');
-      $('#photo-close').onclick = closeOverlay;
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); toast('De foto lukte helaas niet. Probeer het nog eens.'); };
-    img.src = url;
+    const c = Avatar.stage(P.look, P.outfit, currentBg());
+    let data = '';
+    try { data = c.toDataURL('image/png'); } catch (e) { data = ''; }
+    if (!data) { toast('De foto kan alleen opgeslagen worden als het spel via een website draait (niet vanaf een los bestand).'); return; }
+    const fname = `catwalk-${P.name.replace(/[^\w-]+/g, '_')}.png`;
+    openOverlay(`<h2 class="h center">📸 Jouw foto</h2><div class="photo"><img src="${data}" alt="Foto van het model van ${esc(P.name)}"></div><p class="center small">Op een tablet: houd de foto lang ingedrukt om hem op te slaan.</p><div class="row center"><button class="btn ghost" id="photo-close" type="button">Sluiten</button><a class="btn" id="photo-dl" href="${data}" download="${fname}">⬇️ Opslaan</a></div>`, 'photo-modal');
+    $('#photo-close').onclick = closeOverlay;
   }
 
   /* ---------- wat komt er op het volgende level? ---------- */
@@ -767,16 +774,24 @@
     $('#btn-shop').onclick = () => { Sound.play('klik'); openShop(); };
     $('#btn-puzzle').onclick = openPuzzle;
     $('#btn-duel').onclick = openDuelSetup;
+    // testknop: alle spelers naar het hoogste level met alle spullen en een zak munten
+    $('#btn-test-max').onclick = () => {
+      if (!DB.profiles.length) { toast('Maak eerst een speler.'); return; }
+      DB.profiles.forEach(p => { p.xp = Math.max(p.xp, xpForLevel(MAX_LEVEL)); p.level = MAX_LEVEL; p.owned = ITEMS.map(i => i.id); p.coins += 500; });
+      save(); renderStart(); Sound.play('levelup'); toast('Alle spelers staan op level 20 met alle kleding, kapsels en 500 munten extra.');
+    };
     $('#create-done').onclick = () => {
       const name = $('#name-input').value.trim().slice(0, 16) || 'Ster';
       const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor };
       if (ui.editMode) { P.name = name; P.look = look; P.outfit.hair = ui.temp.hairStyle; save(); startGame(P); }
-      else { const p = newProfile(name, look, ui.temp.hairStyle); DB.profiles.push(p); save(); startGame(p); }
+      else { const p = newProfile(name, look, ui.temp.hairStyle); DB.profiles.push(p); save(); enterWorld(p); }
     };
     $('#create-cancel').onclick = () => { if (ui.editMode) startGame(P); else { renderStart(); showScreen('screen-start'); } };
     $('#name-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('#create-done').click(); });
     $('#build-range').addEventListener('input', e => { ui.temp.build = +e.target.value; renderCreate(true); });
     $('#hud-profile').onclick = () => { ui.duel = null; renderStart(); showScreen('screen-start'); };
+    $('#btn-world').onclick = () => { if (ui.duel) { toast('Maak eerst het duel af, of stop het bij de opdracht.'); return; } Sound.play('klik'); enterWorld(P); };
+    $('#btn-world-players').onclick = () => { renderStart(); showScreen('screen-start'); };
     $('#btn-look').onclick = () => { if (ui.duel) { toast('Tijdens een duel kun je je uiterlijk niet aanpassen.'); return; } openCreate(P); };
     $('#btn-random').onclick = () => { Sound.play('tada'); randomOutfit(); };
     $('#btn-clear').onclick = () => { Sound.play('klik'); clearOutfit(); };

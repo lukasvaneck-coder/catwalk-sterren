@@ -1,157 +1,126 @@
 /* ============================================================
-   Catwalk Sterren — achtergronden (settings), 300 x 520
-   Het model staat met de voeten op ongeveer y = 476.
+   Catwalk Sterren — decors (settings) achter het model
+
+   Het podium is 480 x 720; het model staat met de voeten op y ≈ 654.
+   Waar het kan gebruiken we uitsneden uit de Sterreneiland-illustraties
+   (assets/bg/<id>.jpg), soms met een sfeerlaag erover (nacht, regen,
+   sneeuw, slingers). De rest wordt hier getekend in dezelfde zachte stijl.
+
+   Backgrounds.draw(ctx, id, w, h) -> true als alles getekend is
+                                      (false: afbeelding laadt nog, er
+                                      komt vanzelf een nieuwe tekenbeurt)
+   Backgrounds.thumb(id)           -> <canvas>-string met een miniatuur
    ============================================================ */
 
 const Backgrounds = (() => {
-  // vaste 'willekeurige' punten zodat de scène niet flikkert bij opnieuw tekenen
-  function rnd(seed) { let s = seed; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
-  const scatter = (seed, n, x0, x1, y0, y1, fn) => { const r = rnd(seed); let s = ''; for (let i = 0; i < n; i++) s += fn(x0 + r() * (x1 - x0), y0 + r() * (y1 - y0), r()); return s; };
-  const sky = (ctx, a, b) => `<rect width="300" height="520" fill="${ctx.grad(a, b)}"/>`;
-  const cloud = (x, y, s = 1, c = '#fff') => `<g fill="${c}" transform="translate(${x} ${y}) scale(${s})"><ellipse cx="0" cy="0" rx="26" ry="14"/><circle cx="-14" cy="-4" r="12"/><circle cx="6" cy="-9" r="15"/><circle cx="20" cy="-2" r="11"/></g>`;
-  const star = (x, y, r, c = '#fff') => `<path d="${Avatar.starPath(x, y, r, r * 0.4, 4)}" fill="${c}"/>`;
-  const tree = (x, y, s = 1, leaf = '#4caf50', trunk = '#7a4b23') => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-6" y="-30" width="12" height="40" fill="${trunk}"/><circle cx="0" cy="-48" r="30" fill="${leaf}"/><circle cx="-20" cy="-34" r="20" fill="${leaf}"/><circle cx="20" cy="-34" r="20" fill="${leaf}"/></g>`;
-  const pine = (x, y, s = 1, c = '#2d7a4a') => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-5" y="-10" width="10" height="16" fill="#5c3a17"/><path d="M0 -90 L-28 -40 L28 -40 Z M0 -70 L-36 -10 L36 -10 Z" fill="${c}"/></g>`;
+  const IMAGES = {};
+  function img(id) {
+    if (!IMAGES[id]) {
+      const im = new Image();
+      im.onload = () => { im.ok = true; schedule(); if (window.Avatar) Avatar.mountAll(); };
+      im.onerror = () => { im.bad = true; };
+      im.src = `assets/bg/${id}.jpg`;
+      IMAGES[id] = im;
+    }
+    return IMAGES[id];
+  }
+  const HAS_IMAGE = ['kamer', 'feestkamer', 'kerst', 'park', 'kasteeltuin', 'manege', 'bos', 'spookhuis', 'sportveld', 'stad', 'regen', 'strand', 'zwembad'];
+  const preload = () => HAS_IMAGE.forEach(img);
 
-  return {
-    bedroom: ctx => `${sky(ctx, '#fbe4ec', '#f8d0e0')}<rect y="400" width="300" height="120" fill="#d9a878"/><g stroke="#c48f5c" stroke-width="2"><path d="M0 430 L300 430 M0 460 L300 460 M0 490 L300 490"/></g>
-      <rect x="28" y="56" width="112" height="124" rx="6" fill="#bfe6ff" stroke="#fff" stroke-width="8"/><path d="M84 56 L84 180 M28 118 L140 118" stroke="#fff" stroke-width="6"/>${cloud(62, 92, .6)}<circle cx="120" cy="80" r="12" fill="#ffd23f"/>
-      <rect x="16" y="50" width="12" height="150" rx="4" fill="#ff8fab"/><rect x="140" y="50" width="12" height="150" rx="4" fill="#ff8fab"/>
-      <rect x="190" y="330" width="106" height="90" rx="10" fill="#ff8fab"/><rect x="190" y="322" width="106" height="30" rx="10" fill="#c47bff"/><rect x="198" y="304" width="44" height="26" rx="8" fill="#fff"/><rect x="186" y="300" width="8" height="120" rx="3" fill="#8b5a2b"/>
-      <rect x="180" y="70" width="70" height="90" rx="6" fill="#fff" stroke="#c47bff" stroke-width="4"/>${star(215, 115, 22, '#ffd23f')}<path d="M190 148 L240 148" stroke="#ff5da2" stroke-width="4"/>
-      <ellipse cx="120" cy="470" rx="90" ry="22" fill="#c47bff" opacity=".55"/><ellipse cx="120" cy="470" rx="60" ry="14" fill="#ff8fab" opacity=".6"/>`,
+  /* ---------- hulpjes ---------- */
+  const GROUND = 560;                 // waar de vloer begint
+  const rnd = seed => { let s = seed; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; };
+  const hex2rgb = h => { h = h.replace('#', ''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const rgba = (h, a) => { const [r, g, b] = hex2rgb(h); return `rgba(${r},${g},${b},${a})`; };
+  const mix = (a, b, t) => { const A = hex2rgb(a), B = hex2rgb(b); return '#' + [0, 1, 2].map(i => Math.round(A[i] + (B[i] - A[i]) * t).toString(16).padStart(2, '0')).join(''); };
+  const light = (c, t = .3) => mix(c, '#ffffff', t), dark = (c, t = .25) => mix(c, '#000000', t);
+  const em = (g, ch, x, y, size, o) => Avatar.emoji(g, ch, x, y, size, o);
 
-    catwalk: ctx => `${sky(ctx, '#2a1b3d', '#4a2a6a')}<path d="M0 0 L120 330 L60 330 Z" fill="#fff" opacity=".12"/><path d="M300 0 L180 330 L240 330 Z" fill="#fff" opacity=".12"/>
-      <path d="M100 330 L200 330 L270 520 L30 520 Z" fill="${ctx.grad('#f5e9ff', '#d8c3f0')}"/><path d="M100 330 L200 330 L270 520 L30 520 Z" fill="none" stroke="#ffd23f" stroke-width="4"/>
-      <rect x="0" y="330" width="100" height="190" fill="#1b1030" opacity=".7"/><rect x="200" y="330" width="100" height="190" fill="#1b1030" opacity=".7"/>
-      ${scatter(7, 14, 0, 300, 20, 300, (x, y, r) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(1 + r * 2.5).toFixed(1)}" fill="#fff" opacity="${(0.4 + r * 0.6).toFixed(2)}"/>`)}
-      <circle cx="40" cy="380" r="14" fill="#fff" opacity=".85"/><circle cx="262" cy="420" r="10" fill="#fff" opacity=".8"/><circle cx="26" cy="460" r="8" fill="#fff" opacity=".7"/>${star(70, 60, 8, '#ffd23f')}${star(236, 90, 7, '#ff5da2')}`,
+  function sky(g, w, h, a, b, y1 = h) { const lg = g.createLinearGradient(0, 0, 0, y1); lg.addColorStop(0, a); lg.addColorStop(1, b); g.fillStyle = lg; g.fillRect(0, 0, w, h); }
+  function floor(g, w, h, y, a, b, planks = false) {
+    const lg = g.createLinearGradient(0, y, 0, h); lg.addColorStop(0, a); lg.addColorStop(1, b); g.fillStyle = lg; g.fillRect(0, y, w, h - y);
+    if (planks) { g.strokeStyle = 'rgba(0,0,0,.08)'; g.lineWidth = 2; for (let i = 1; i < 6; i++) { const yy = y + (h - y) * (i / 6) ** 1.4; g.beginPath(); g.moveTo(0, yy); g.lineTo(w, yy); g.stroke(); } }
+    g.save(); const sh = g.createLinearGradient(0, y - 30, 0, y + 40); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.08)'); g.fillStyle = sh; g.fillRect(0, y - 30, w, 70); g.restore();
+  }
+  function wallLine(g, w, y, c) { g.fillStyle = c; g.fillRect(0, y - 6, w, 12); }
+  function glow(g, x, y, r, c, a = .5) { const rg = g.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, rgba(c, a)); rg.addColorStop(1, rgba(c, 0)); g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  function sun(g, x, y, r, c = '#ffd23f') { glow(g, x, y, r * 3, '#fff3b0', .55); Avatar.blob(g, x, y, r, r, c); }
+  function cloud(g, x, y, s = 1, c = '#ffffff') { [[0, 0, 40, 22], [-26, 4, 22, 16], [24, 2, 26, 18], [4, -12, 26, 20]].forEach(([dx, dy, rx, ry]) => Avatar.blob(g, x + dx * s, y + dy * s, rx * s, ry * s, c)); }
+  function spot(g, x0, x1, hw, c, a = .35, top = -40, bottom = GROUND + 40) {
+    g.save(); g.globalAlpha = a; const lg = g.createLinearGradient(0, top, 0, bottom); lg.addColorStop(0, c); lg.addColorStop(1, rgba(c, 0));
+    g.fillStyle = lg; g.beginPath(); g.moveTo(x0 - 12, top); g.lineTo(x0 + 12, top); g.lineTo(x1 + hw, bottom); g.lineTo(x1 - hw, bottom); g.closePath(); g.fill(); g.restore();
+  }
+  function tint(g, w, h, c, a, mode = 'multiply') { g.save(); g.globalCompositeOperation = mode; g.globalAlpha = a; g.fillStyle = c; g.fillRect(0, 0, w, h); g.restore(); }
+  function stars(g, w, h, n, seed, maxY = h) { const r = rnd(seed); for (let i = 0; i < n; i++) { const x = r() * w, y = r() * maxY, s = .6 + r() * 1.6; g.save(); g.globalAlpha = .5 + r() * .5; g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, s, 0, 7); g.fill(); g.restore(); } }
+  function sparkles(g, w, h, n, seed, c = '#fff', maxY = h) { const r = rnd(seed); for (let i = 0; i < n; i++) { const x = r() * w, y = r() * maxY, s = 2 + r() * 5; g.save(); g.globalAlpha = .4 + r() * .6; g.fillStyle = c; g.beginPath(); for (let k = 0; k < 8; k++) { const a = Math.PI / 4 * k, rr = k % 2 ? s * .35 : s; g[k ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); g.restore(); } }
+  function vignette(g, w, h, a = .18) { const rg = g.createRadialGradient(w / 2, h / 2, h * .3, w / 2, h / 2, h * .75); rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(1, `rgba(20,10,40,${a})`); g.fillStyle = rg; g.fillRect(0, 0, w, h); }
+  function drawImage(g, id, w, h) { const im = img(id); if (!im.ok) { sky(g, w, h, '#efe7fa', '#d8c9ee'); return false; } g.drawImage(im, 0, 0, w, h); return true; }
+  function confetti(g, w, h, seed, n = 40) { const r = rnd(seed), cols = ['#ff5da2', '#7c5cff', '#ffc531', '#3ddcb0', '#5aaeff', '#ff8c42']; for (let i = 0; i < n; i++) { g.save(); g.translate(r() * w, r() * h * .8); g.rotate(r() * 6); g.fillStyle = cols[i % cols.length]; g.globalAlpha = .85; g.fillRect(-4, -6, 8, 12); g.restore(); } }
+  function garland(g, w, y, seed) { const r = rnd(seed), cols = ['#ff5da2', '#ffc531', '#3ddcb0', '#5aaeff', '#c47bff']; g.strokeStyle = 'rgba(90,70,110,.6)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, y); g.quadraticCurveTo(w / 2, y + 60, w, y); g.stroke(); for (let i = 1; i < 12; i++) { const t = i / 12, x = t * w, yy = y + 4 * t * (1 - t) * 60 + 6; g.beginPath(); g.moveTo(x - 8, yy); g.lineTo(x + 8, yy); g.lineTo(x, yy + 18); g.closePath(); g.fillStyle = cols[i % cols.length]; g.fill(); } }
+  function balloons(g, seed, list) { list.forEach(([x, y, c]) => { g.strokeStyle = 'rgba(90,70,110,.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y + 34); ctxCurve(g, x, y + 34, x + 6, y + 120); g.stroke(); Avatar.blob(g, x, y, 26, 32, c); g.fillStyle = dark(c, .2); g.beginPath(); g.moveTo(x - 4, y + 32); g.lineTo(x + 4, y + 32); g.lineTo(x, y + 38); g.fill(); }); }
+  const ctxCurve = (g, x0, y0, x1, y1) => g.quadraticCurveTo(x0 + 14, (y0 + y1) / 2, x1, y1);
+  function rain(g, w, h, seed) { const r = rnd(seed); g.strokeStyle = 'rgba(220,235,255,.55)'; g.lineWidth = 1.6; for (let i = 0; i < 140; i++) { const x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 3, y + 16); g.stroke(); } }
+  function snow(g, w, h, seed, n = 90) { const r = rnd(seed); for (let i = 0; i < n; i++) { g.save(); g.globalAlpha = .55 + r() * .45; g.fillStyle = '#fff'; g.beginPath(); g.arc(r() * w, r() * h, 1.5 + r() * 3, 0, 7); g.fill(); g.restore(); } }
+  function moon(g, x, y, r) { glow(g, x, y, r * 3, '#fff6d6', .35); Avatar.blob(g, x, y, r, r, '#fff6d6'); }
+  function tiles(g, w, y0, y1, c1, c2, size = 40) { for (let y = y0; y < y1; y += size) for (let x = -size; x < w + size; x += size) { g.fillStyle = ((x + y) / size) % 2 ? c1 : c2; g.fillRect(x, y, size, size); } }
+  function curtain(g, x, w, h, c) { const lg = g.createLinearGradient(x, 0, x + w, 0); for (let i = 0; i <= 6; i++) lg.addColorStop(i / 6, i % 2 ? c : dark(c, .3)); g.fillStyle = lg; g.fillRect(x, 0, w, h); }
 
-    beach: ctx => `${sky(ctx, '#7fd3ff', '#e8f7ff')}<circle cx="236" cy="84" r="32" fill="#ffd23f"/><circle cx="236" cy="84" r="44" fill="#ffd23f" opacity=".25"/>${cloud(70, 90, .9)}${cloud(190, 150, .6)}
-      <rect y="300" width="300" height="110" fill="${ctx.grad('#3aaee8', '#7fd3ff')}"/><g stroke="#fff" stroke-width="3" fill="none" opacity=".8"><path d="M0 330 Q20 322 40 330 T80 330 T120 330 T160 330 T200 330 T240 330 T280 330 T320 330"/><path d="M0 366 Q20 358 40 366 T80 366 T120 366 T160 366 T200 366 T240 366 T280 366 T320 366"/></g>
-      <path d="M0 400 Q150 380 300 400 L300 520 L0 520 Z" fill="#f6e2b5"/>
-      <path d="M40 400 Q52 330 56 250" stroke="#8b5a2b" stroke-width="10" fill="none" stroke-linecap="round"/><g fill="#3fbf63"><ellipse cx="30" cy="240" rx="34" ry="12" transform="rotate(-30 30 240)"/><ellipse cx="82" cy="240" rx="34" ry="12" transform="rotate(30 82 240)"/><ellipse cx="56" cy="222" rx="12" ry="34"/><ellipse cx="40" cy="256" rx="28" ry="10" transform="rotate(20 40 256)"/></g>
-      <rect x="236" y="440" width="34" height="34" rx="4" fill="#ff5da2"/><path d="M236 440 L270 440" stroke="#c0396f" stroke-width="5"/><ellipse cx="216" cy="484" rx="10" ry="6" fill="#fff"/><ellipse cx="60" cy="490" rx="8" ry="5" fill="#ffb3d9"/>`,
+  /* ---------- de settings ---------- */
+  const SCENES = {
+    kamer: (g, w, h) => drawImage(g, 'kamer', w, h),
+    feestkamer: (g, w, h) => { const ok = drawImage(g, 'feestkamer', w, h); garland(g, w, 40, 3); balloons(g, 5, [[60, 250, '#ff5da2'], [96, 214, '#ffc531'], [420, 240, '#5aaeff'], [452, 290, '#3ddcb0']]); confetti(g, w, h, 9, 30); em(g, '🎂', 92, 470, 70); em(g, '🎁', 420, 520, 64); return ok; },
+    kerst: (g, w, h) => { const ok = drawImage(g, 'kerst', w, h); tint(g, w, h, '#ffd9b0', .18); em(g, '🎄', 386, 470, 190); em(g, '🎁', 340, 560, 56); em(g, '🎁', 440, 575, 48); em(g, '⭐', 386, 372, 40); glow(g, 386, 470, 140, '#ffd23f', .18); return ok; },
+    park: (g, w, h) => { const ok = drawImage(g, 'park', w, h); glow(g, 380, 60, 200, '#fff3b0', .35); em(g, '🦋', 90, 150, 44); em(g, '🐝', 400, 300, 30); return ok; },
+    kasteeltuin: (g, w, h) => { const ok = drawImage(g, 'kasteeltuin', w, h); em(g, '🫖', 70, 600, 56); em(g, '🧁', 130, 606, 40); em(g, '🦢', 420, 610, 56); return ok; },
+    manege: (g, w, h) => { const ok = drawImage(g, 'manege', w, h); em(g, '🐴', 396, 470, 150); em(g, '🌾', 70, 640, 70); em(g, '🌾', 120, 660, 56); return ok; },
+    bos: (g, w, h) => { const ok = drawImage(g, 'bos', w, h); tint(g, w, h, '#7a5bc4', .55); tint(g, w, h, '#2a1b55', .35); sparkles(g, w, h, 40, 21, '#fff6b0'); glow(g, 120, 420, 60, '#fff3b0', .4); glow(g, 400, 300, 50, '#b8f3ff', .4); em(g, '🧚', 110, 400, 56); em(g, '🍄', 60, 630, 48); em(g, '🍄', 430, 645, 40); return ok; },
+    spookhuis: (g, w, h) => { const ok = drawImage(g, 'spookhuis', w, h); tint(g, w, h, '#24143f', .68); tint(g, w, h, '#0c0620', .25); moon(g, 90, 80, 34); stars(g, w, h, 40, 31, 300); em(g, '🎃', 70, 630, 70); em(g, '🎃', 420, 640, 56); em(g, '👻', 380, 200, 64, { alpha: .85 }); em(g, '🦇', 300, 120, 36); em(g, '🦇', 160, 170, 28); return ok; },
+    sportveld: (g, w, h) => { const ok = drawImage(g, 'sportveld', w, h); em(g, '🥅', 400, 520, 120); em(g, '⚽', 80, 650, 46); return ok; },
+    stad: (g, w, h) => { const ok = drawImage(g, 'stad', w, h); tint(g, w, h, '#2b3a8a', .7); tint(g, w, h, '#0b1230', .4); stars(g, w, h, 50, 41, 260); moon(g, 400, 70, 28); em(g, '🏙️', 240, 300, 0); em(g, '🚦', 60, 560, 70); em(g, '💡', 430, 380, 40); glow(g, 430, 380, 90, '#ffe27a', .35); return ok; },
+    regen: (g, w, h) => { const ok = drawImage(g, 'regen', w, h); tint(g, w, h, '#7b8aa8', .55); rain(g, w, h, 51); em(g, '🌧️', 90, 90, 80); em(g, '🌧️', 380, 130, 64); g.fillStyle = 'rgba(200,220,240,.45)'; g.beginPath(); g.ellipse(120, 680, 80, 12, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(400, 690, 60, 9, 0, 0, 7); g.fill(); return ok; },
+    strand: (g, w, h) => { const ok = drawImage(g, 'strand', w, h); const lg = g.createLinearGradient(0, 520, 0, h); lg.addColorStop(0, 'rgba(246,222,170,0)'); lg.addColorStop(.25, '#f3d9a4'); lg.addColorStop(1, '#e6c07a'); g.fillStyle = lg; g.fillRect(0, 520, w, h - 520); sun(g, 410, 70, 34); em(g, '🐚', 70, 660, 36); em(g, '⭐', 420, 680, 30, { color: '#ff8c42' }); em(g, '🏖️', 80, 520, 90); return ok; },
+    zwembad: (g, w, h) => { const ok = drawImage(g, 'zwembad', w, h); tiles(g, w, 500, 560, '#d9e6f2', '#c5d6e8', 30); const lg = g.createLinearGradient(0, 560, 0, h); lg.addColorStop(0, '#7fd3ff'); lg.addColorStop(1, '#3b9ee6'); g.fillStyle = lg; g.fillRect(0, 560, w, h - 560); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 3; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(0, 590 + i * 28); for (let x = 0; x <= w; x += 30) g.quadraticCurveTo(x + 15, 590 + i * 28 - 8, x + 30, 590 + i * 28); g.stroke(); } em(g, '🛟', 90, 600, 60); em(g, '🦆', 400, 600, 44); sun(g, 60, 70, 30); return ok; },
 
-    field: ctx => `${sky(ctx, '#9fd8ff', '#e0f4ff')}${cloud(60, 70, .9)}${cloud(220, 110, .7)}<rect y="340" width="300" height="180" fill="#5cc46a"/><g stroke="#fff" stroke-width="4" opacity=".9"><path d="M0 500 L300 500 M150 340 L150 520"/><circle cx="150" cy="500" r="40" fill="none"/></g>
-      <g stroke="#fff" stroke-width="6" fill="none"><path d="M204 340 L204 440 L296 440 L296 340"/></g><g stroke="#fff" stroke-width="1" opacity=".7"><path d="M204 360 L296 360 M204 380 L296 380 M204 400 L296 400 M204 420 L296 420 M224 340 L224 440 M244 340 L244 440 M264 340 L264 440 M284 340 L284 440"/></g>
-      <g fill="#ffd23f"><rect x="30" y="360" width="8" height="120" rx="3"/><path d="M38 362 L74 372 L38 382 Z" fill="#e63946"/></g>`,
-
-    snow: ctx => `${sky(ctx, '#c9dff5', '#f2f7fb')}<path d="M0 400 Q80 360 160 400 T300 390 L300 520 L0 520 Z" fill="#fff"/><path d="M0 440 Q150 410 300 440 L300 520 L0 520 Z" fill="#eef4fb"/>
-      ${pine(40, 400, .8)}${pine(270, 390, .7)}${pine(24, 420, .5)}
-      <circle cx="240" cy="460" r="26" fill="#fff" stroke="#dde7f3" stroke-width="2"/><circle cx="240" cy="418" r="18" fill="#fff" stroke="#dde7f3" stroke-width="2"/><circle cx="234" cy="414" r="2" fill="#222"/><circle cx="246" cy="414" r="2" fill="#222"/><path d="M240 418 L252 422 L240 424 Z" fill="#ff8c42"/><rect x="224" y="396" width="32" height="8" fill="#222"/><rect x="230" y="380" width="20" height="18" fill="#222"/><path d="M226 424 Q240 432 254 424" stroke="#e63946" stroke-width="4" fill="none"/><path d="M216 452 L196 440 M264 452 L284 440" stroke="#8b5a2b" stroke-width="3"/>
-      ${scatter(3, 30, 0, 300, 0, 400, (x, y, r) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(1.5 + r * 2.5).toFixed(1)}" fill="#fff" opacity=".9"/>`)}`,
-
-    ballroom: ctx => `${sky(ctx, '#f7e6ff', '#e9d3ff')}<rect y="400" width="300" height="120" fill="${ctx.grad('#f4ecf9', '#d9c6ea')}"/><path d="M0 404 L300 404" stroke="#c9a6e6" stroke-width="2"/><g stroke="#fff" stroke-width="2" opacity=".6"><path d="M40 420 L20 520 M110 420 L100 520 M190 420 L200 520 M260 420 L280 520"/></g>
-      <g fill="#fff"><rect x="18" y="120" width="26" height="284"/><rect x="256" y="120" width="26" height="284"/></g><g fill="#f1c232"><rect x="12" y="112" width="38" height="14" rx="3"/><rect x="250" y="112" width="38" height="14" rx="3"/><rect x="12" y="392" width="38" height="14" rx="3"/><rect x="250" y="392" width="38" height="14" rx="3"/></g>
-      <path d="M0 0 L60 0 Q40 200 80 404 L0 404 Z" fill="#c8102e"/><path d="M300 0 L240 0 Q260 200 220 404 L300 404 Z" fill="#c8102e"/><path d="M0 0 L60 0 Q40 200 80 404" stroke="#f1c232" stroke-width="4" fill="none"/><path d="M300 0 L240 0 Q260 200 220 404" stroke="#f1c232" stroke-width="4" fill="none"/>
-      <g stroke="#f1c232" stroke-width="3" fill="none"><path d="M150 0 L150 40 M100 70 Q150 100 200 70 M110 60 Q150 80 190 60"/></g><g fill="#f1c232"><circle cx="150" cy="44" r="6"/><rect x="96" y="56" width="6" height="14"/><rect x="198" y="56" width="6" height="14"/><rect x="122" y="66" width="6" height="14"/><rect x="172" y="66" width="6" height="14"/><rect x="147" y="72" width="6" height="14"/></g><g fill="#ffd23f"><circle cx="99" cy="54" r="4"/><circle cx="201" cy="54" r="4"/><circle cx="125" cy="64" r="4"/><circle cx="175" cy="64" r="4"/><circle cx="150" cy="70" r="4"/></g>
-      ${scatter(11, 10, 60, 240, 100, 300, (x, y, r) => star(x, y, 3 + r * 4, '#fff'))}`,
-
-    rainstreet: ctx => `${sky(ctx, '#8a97ad', '#c3ccd8')}<g fill="#5d6678"><rect x="0" y="200" width="70" height="230"/><rect x="60" y="150" width="60" height="280"/><rect x="200" y="180" width="50" height="250"/><rect x="240" y="120" width="60" height="310"/></g><g fill="#ffe27a" opacity=".85"><rect x="14" y="220" width="12" height="16"/><rect x="40" y="260" width="12" height="16"/><rect x="76" y="180" width="12" height="16"/><rect x="96" y="230" width="12" height="16"/><rect x="212" y="200" width="12" height="16"/><rect x="258" y="150" width="12" height="16"/><rect x="278" y="210" width="12" height="16"/></g>
-      <rect y="420" width="300" height="100" fill="#6b7482"/><g fill="#9aa6b8" opacity=".8"><ellipse cx="60" cy="470" rx="46" ry="8"/><ellipse cx="250" cy="490" rx="40" ry="7"/></g>
-      <rect x="150" y="240" width="6" height="190" fill="#3b4150"/><path d="M140 240 Q153 224 166 240 Z" fill="#ffe27a"/>
-      ${scatter(5, 60, 0, 300, 0, 420, (x, y) => `<path d="M${x.toFixed(0)} ${y.toFixed(0)} l-4 12" stroke="#fff" stroke-width="1.5" opacity=".55"/>`)}`,
-
-    stage: ctx => `${sky(ctx, '#1a1030', '#3a1f5a')}<path d="M40 0 L150 400 L0 400 Z" fill="#ff5da2" opacity=".28"/><path d="M260 0 L150 400 L300 400 Z" fill="#5aaeff" opacity=".28"/><path d="M150 0 L200 400 L100 400 Z" fill="#ffd23f" opacity=".2"/>
-      <rect y="400" width="300" height="120" fill="#2b1d3d"/><path d="M0 400 L300 400" stroke="#ffd23f" stroke-width="4"/>
-      <g fill="#111"><rect x="6" y="330" width="50" height="70" rx="4"/><rect x="244" y="330" width="50" height="70" rx="4"/></g><g fill="#444"><circle cx="31" cy="352" r="12"/><circle cx="31" cy="382" r="10"/><circle cx="269" cy="352" r="12"/><circle cx="269" cy="382" r="10"/></g>
-      ${scatter(9, 16, 0, 300, 20, 320, (x, y, r) => star(x, y, 2 + r * 4, r > .5 ? '#ffd23f' : '#ff5da2'))}<g fill="#ffd23f" opacity=".9"><circle cx="34" cy="8" r="7"/><circle cx="150" cy="8" r="7"/><circle cx="266" cy="8" r="7"/></g>`,
-
-    park: ctx => `${sky(ctx, '#bfe6ff', '#eaf7ff')}<circle cx="60" cy="70" r="26" fill="#ffd23f"/>${cloud(210, 70, .8)}<rect y="380" width="300" height="140" fill="#7ad37f"/><path d="M0 380 Q150 350 300 380" fill="#7ad37f"/>
-      ${tree(50, 380, 1)}${tree(262, 372, .8)}
-      ${scatter(2, 14, 0, 300, 400, 510, (x, y, r) => Avatar.flower(x.toFixed(0), y.toFixed(0), 4 + r * 3, ['#ff8fab', '#fff', '#ffd23f', '#c47bff'][Math.floor(r * 4)]))}
-      <g fill="#ff5da2"><ellipse cx="100" cy="300" rx="6" ry="9" transform="rotate(-30 100 300)"/><ellipse cx="112" cy="300" rx="6" ry="9" transform="rotate(30 112 300)"/></g><g fill="#5aaeff"><ellipse cx="220" cy="240" rx="5" ry="7" transform="rotate(-30 220 240)"/><ellipse cx="230" cy="240" rx="5" ry="7" transform="rotate(30 230 240)"/></g>`,
-
-    fairyforest: ctx => `${sky(ctx, '#5d3f8f', '#a77ad6')}<g fill="#3b2a5c"><path d="M0 120 L40 120 L40 400 L0 400 Z M260 100 L300 100 L300 400 L260 400 Z"/></g>${pine(28, 400, 1.1, '#2e5b6b')}${pine(276, 400, 1, '#2e5b6b')}${pine(90, 380, .6, '#3b7a7a')}${pine(220, 372, .55, '#3b7a7a')}
-      <g fill="#c9b8ec"><rect x="130" y="180" width="40" height="60"/><rect x="122" y="160" width="14" height="80"/><rect x="164" y="160" width="14" height="80"/><path d="M122 160 L129 140 L136 160 Z M164 160 L171 140 L178 160 Z"/></g><rect x="145" y="210" width="10" height="30" fill="#5d3f8f"/>
-      <rect y="400" width="300" height="120" fill="#3e7a5c"/><path d="M0 400 Q150 380 300 400" fill="#3e7a5c"/>
-      <g><rect x="60" y="450" width="10" height="26" fill="#fff"/><ellipse cx="65" cy="450" rx="20" ry="12" fill="#e63946"/><circle cx="58" cy="446" r="3" fill="#fff"/><circle cx="72" cy="450" r="2.5" fill="#fff"/></g><g><rect x="236" y="456" width="8" height="20" fill="#fff"/><ellipse cx="240" cy="456" rx="16" ry="10" fill="#e63946"/><circle cx="236" cy="452" r="2.5" fill="#fff"/></g>
-      ${scatter(13, 14, 0, 300, 120, 440, (x, y, r) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(2 + r * 3).toFixed(1)}" fill="#ffe27a" opacity=".9"/><circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(6 + r * 5).toFixed(1)}" fill="#ffe27a" opacity=".2"/>`)}`,
-
-    haunted: ctx => `${sky(ctx, '#0f1024', '#2b1f4a')}<circle cx="64" cy="94" r="38" fill="#ff8c42"/><circle cx="52" cy="84" r="8" fill="#e6752e" opacity=".6"/><circle cx="76" cy="108" r="5" fill="#e6752e" opacity=".6"/>
-      <g fill="#1a1430"><rect x="190" y="220" width="100" height="200"/><path d="M180 220 L240 150 L300 220 Z"/><rect x="230" y="140" width="20" height="60"/></g><g fill="#ffe27a"><rect x="206" y="250" width="18" height="24"/><rect x="256" y="250" width="18" height="24"/><rect x="230" y="330" width="22" height="50"/></g>
-      <rect y="420" width="300" height="100" fill="#1e1a2e"/><g fill="#5c5570" opacity=".5"><ellipse cx="80" cy="440" rx="80" ry="14"/><ellipse cx="220" cy="470" rx="90" ry="14"/></g>
-      <g><ellipse cx="50" cy="466" rx="22" ry="18" fill="#ff8c42"/><path d="M42 460 L48 466 L36 466 Z M58 460 L64 466 L52 466 Z M40 474 L60 474 L56 480 L44 480 Z" fill="#1a1430"/><rect x="47" y="444" width="6" height="8" fill="#4caf50"/></g>
-      <g fill="#111"><path d="M120 60 Q130 50 140 60 Q150 50 160 60 Q150 66 140 62 Q130 66 120 60Z"/><path d="M200 100 Q208 92 216 100 Q224 92 232 100 Q224 105 216 102 Q208 105 200 100Z"/><path d="M90 160 Q98 152 106 160 Q114 152 122 160 Q114 165 106 162 Q98 165 90 160Z"/></g>${scatter(17, 12, 0, 300, 0, 200, (x, y, r) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(1 + r).toFixed(1)}" fill="#fff" opacity=".7"/>`)}`,
-
-    space: ctx => `${sky(ctx, '#04061a', '#12123a')}${scatter(23, 60, 0, 300, 0, 440, (x, y, r) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(0.6 + r * 1.8).toFixed(1)}" fill="#fff" opacity="${(0.5 + r * 0.5).toFixed(2)}"/>`)}
-      <circle cx="240" cy="110" r="34" fill="${ctx.grad('#ffb347', '#e0762a')}"/><ellipse cx="240" cy="112" rx="56" ry="12" fill="none" stroke="#ffe27a" stroke-width="5" transform="rotate(-18 240 112)"/><circle cx="52" cy="330" r="20" fill="#3a86ff"/><path d="M40 322 Q52 316 60 328 Q50 336 40 322Z" fill="#3fbf63"/>
-      ${star(120, 60, 6, '#ffe27a')}${star(180, 200, 5, '#fff')}${star(40, 160, 4, '#ff8fab')}
-      <path d="M0 440 Q150 420 300 440 L300 520 L0 520 Z" fill="#9aa0ad"/><g fill="#7b818f"><ellipse cx="60" cy="470" rx="22" ry="8"/><ellipse cx="240" cy="490" rx="26" ry="9"/><ellipse cx="150" cy="500" rx="14" ry="5"/></g>
-      <g><rect x="252" y="380" width="4" height="60" fill="#ccc"/><rect x="256" y="380" width="30" height="20" fill="#e63946"/><rect x="256" y="386" width="30" height="7" fill="#fff"/></g>`,
-
-    xmas: ctx => `${sky(ctx, '#fbe9dd', '#f4d9c8')}<rect y="410" width="300" height="110" fill="#b5804d"/><g stroke="#9a6a3c" stroke-width="2"><path d="M0 440 L300 440 M0 470 L300 470 M0 500 L300 500"/></g>
-      <g><path d="M70 400 L20 400 L70 300 Z M70 400 L120 400 L70 300 Z" fill="#2d7a4a"/><path d="M70 250 L30 340 L110 340 Z" fill="#3fbf63"/><path d="M70 300 L24 400 L116 400 Z" fill="#2d9a6a"/><rect x="62" y="400" width="16" height="16" fill="#5c3a17"/>${star(70, 246, 12, '#ffd23f')}<g><circle cx="60" cy="320" r="5" fill="#e63946"/><circle cx="84" cy="336" r="5" fill="#3a86ff"/><circle cx="50" cy="370" r="5" fill="#ffd23f"/><circle cx="90" cy="380" r="5" fill="#e63946"/><circle cx="70" cy="360" r="4" fill="#ff5da2"/></g></g>
-      <g><rect x="18" y="384" width="28" height="26" rx="3" fill="#e63946"/><rect x="29" y="384" width="6" height="26" fill="#ffd23f"/><rect x="100" y="388" width="24" height="22" rx="3" fill="#3a86ff"/><rect x="100" y="396" width="24" height="5" fill="#fff"/></g>
-      <g><rect x="196" y="260" width="100" height="150" fill="#8b4a3a"/><g fill="#a35a47"><rect x="200" y="266" width="20" height="10"/><rect x="230" y="266" width="20" height="10"/><rect x="260" y="266" width="20" height="10"/><rect x="214" y="282" width="20" height="10"/><rect x="246" y="282" width="20" height="10"/></g><rect x="214" y="300" width="64" height="110" fill="#2a1b1b"/><path d="M226 410 Q236 360 246 400 Q252 350 262 400 Q270 380 266 410 Z" fill="#ff8c42"/><path d="M234 410 Q244 380 250 404 Q256 388 258 410 Z" fill="#ffd23f"/><rect x="190" y="254" width="112" height="10" fill="#5c3a17"/><path d="M206 264 L212 300 L226 300 L222 264 Z" fill="#e63946"/><path d="M270 264 L276 300 L290 300 L286 264 Z" fill="#2d9a6a"/></g>
-      <path d="M0 30 Q75 70 150 30 T300 30" stroke="#2d7a4a" stroke-width="10" fill="none"/><g fill="#e63946"><circle cx="40" cy="46" r="5"/><circle cx="110" cy="46" r="5"/><circle cx="190" cy="46" r="5"/><circle cx="260" cy="46" r="5"/></g>`,
-
-    paris: ctx => `${sky(ctx, '#ffd1dc', '#ffe9a8')}<circle cx="230" cy="120" r="30" fill="#fff3b0" opacity=".9"/>
-      <g fill="#8d7c8f"><rect x="0" y="300" width="60" height="120"/><rect x="60" y="330" width="40" height="90"/><rect x="220" y="320" width="50" height="100"/><rect x="270" y="290" width="30" height="130"/></g><g fill="#fff6d6" opacity=".9"><rect x="10" y="316" width="10" height="14"/><rect x="34" y="316" width="10" height="14"/><rect x="10" y="350" width="10" height="14"/><rect x="34" y="350" width="10" height="14"/><rect x="232" y="340" width="10" height="14"/><rect x="252" y="340" width="10" height="14"/><rect x="278" y="310" width="10" height="14"/></g>
-      <g stroke="#4a3f52" stroke-width="5" fill="none" stroke-linecap="round"><path d="M150 40 L150 90"/><path d="M150 90 L120 260 M150 90 L180 260"/><path d="M120 260 L86 420 M180 260 L214 420"/><path d="M134 160 L166 160 M122 250 L178 250 M100 340 L200 340"/><path d="M100 340 Q150 300 200 340"/></g><g stroke="#4a3f52" stroke-width="2" fill="none" opacity=".7"><path d="M124 240 L176 240 M140 120 L160 120 M110 300 L190 300 M96 380 L204 380"/></g>
-      <rect y="420" width="300" height="100" fill="#c9b7b0"/><g fill="#b3a19a"><ellipse cx="50" cy="450" rx="14" ry="6"/><ellipse cx="120" cy="480" rx="16" ry="6"/><ellipse cx="220" cy="460" rx="14" ry="6"/><ellipse cx="270" cy="500" rx="14" ry="6"/></g>
-      <g><rect x="40" y="340" width="4" height="82" fill="#4a3f52"/><circle cx="42" cy="336" r="7" fill="#ffe27a"/><rect x="258" y="360" width="4" height="62" fill="#4a3f52"/><circle cx="260" cy="356" r="6" fill="#ffe27a"/></g>`,
-
-    rainbowland: ctx => { const cols = ['#ff5c5c', '#ffb347', '#ffe94d', '#5fe38a', '#5aaeff', '#c47bff']; let arcs = ''; cols.forEach((c, i) => arcs += `<circle cx="150" cy="420" r="${290 - i * 20}" fill="none" stroke="${c}" stroke-width="20"/>`); return `${sky(ctx, '#bfe6ff', '#eaf7ff')}${arcs}${cloud(40, 380, 1.3)}${cloud(260, 380, 1.3)}${cloud(80, 80, .8)}${cloud(230, 150, .7)}
-      <path d="M0 400 Q80 360 160 410 T300 390 L300 520 L0 520 Z" fill="#ff8fcf"/><path d="M0 450 Q100 420 200 460 T300 440 L300 520 L0 520 Z" fill="#8fe0b8"/>
-      <g><rect x="40" y="420" width="6" height="60" fill="#fff"/><circle cx="43" cy="418" r="18" fill="#ff5da2"/><path d="M43 400 A18 18 0 0 1 61 418 L43 418 Z" fill="#fff" opacity=".7"/></g><g><rect x="250" y="440" width="6" height="50" fill="#fff"/><circle cx="253" cy="438" r="15" fill="#5aaeff"/><path d="M253 423 A15 15 0 0 1 268 438 L253 438 Z" fill="#fff" opacity=".7"/></g>`; },
-
-    citynight: ctx => `${sky(ctx, '#0b1a3a', '#26356b')}${scatter(31, 30, 0, 300, 0, 200, (x, y, r) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(0.7 + r * 1.3).toFixed(1)}" fill="#fff" opacity=".8"/>`)}<circle cx="250" cy="70" r="26" fill="#fff6d6"/><circle cx="240" cy="62" r="24" fill="#1a2a55" opacity=".9"/>
-      <g fill="#141f3d"><rect x="0" y="200" width="50" height="240"/><rect x="44" y="140" width="46" height="300"/><rect x="86" y="230" width="40" height="210"/><rect x="180" y="170" width="50" height="270"/><rect x="226" y="240" width="40" height="200"/><rect x="262" y="120" width="38" height="320"/></g>
-      ${scatter(37, 40, 4, 296, 150, 420, (x, y, r) => r > .3 ? `<rect x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="6" height="8" fill="#ffe27a" opacity=".9"/>` : '')}
-      <rect y="440" width="300" height="80" fill="#2a2a33"/><g stroke="#ffd23f" stroke-width="3" stroke-dasharray="18 14"><path d="M0 480 L300 480"/></g><path d="M0 440 L300 440" stroke="#555" stroke-width="3"/>`,
-
-    pirateship: ctx => `${sky(ctx, '#f6b26b', '#ffd9a0')}<circle cx="70" cy="120" r="34" fill="#ffe27a"/>${cloud(200, 80, .7, '#ffe9c9')}<rect y="300" width="300" height="110" fill="${ctx.grad('#2a6f97', '#4a9cc9')}"/><g stroke="#fff" stroke-width="2.5" fill="none" opacity=".7"><path d="M0 330 Q20 322 40 330 T80 330 T120 330 T160 330 T200 330 T240 330 T280 330 T320 330"/><path d="M0 370 Q20 362 40 370 T80 370 T120 370 T160 370 T200 370 T240 370 T280 370 T320 370"/></g>
-      <path d="M0 400 L300 400 L300 520 L0 520 Z" fill="#a6733d"/><g stroke="#8a5a2b" stroke-width="2"><path d="M0 430 L300 430 M0 460 L300 460 M0 490 L300 490"/></g><path d="M0 396 L300 396" stroke="#5c3a17" stroke-width="10"/><g stroke="#5c3a17" stroke-width="6"><path d="M20 396 L20 360 M80 396 L80 360 M220 396 L220 360 M280 396 L280 360"/></g><path d="M0 362 L300 362" stroke="#5c3a17" stroke-width="6"/>
-      <rect x="236" y="20" width="10" height="380" fill="#5c3a17"/><path d="M246 60 Q300 170 246 280 Z" fill="#fff8f0"/><path d="M236 60 Q182 170 236 280 Z" fill="#f4ede0"/><path d="M246 20 L286 30 L246 40 Z" fill="#23202a"/><circle cx="262" cy="30" r="3" fill="#fff"/>
-      <g><ellipse cx="50" cy="420" rx="20" ry="8" fill="#5c3a17"/><rect x="30" y="378" width="40" height="42" rx="6" fill="#8b5a2b"/><path d="M30 390 L70 390 M30 408 L70 408" stroke="#5c3a17" stroke-width="3"/></g><path d="M140 100 Q150 92 160 100 M160 100 Q170 92 180 100" stroke="#fff" stroke-width="2.5" fill="none"/>`,
-
-    party: ctx => `${sky(ctx, '#fff0f7', '#ffe0ec')}<rect y="400" width="300" height="120" fill="#e9c9a8"/><g stroke="#d4ad88" stroke-width="2"><path d="M0 430 L300 430 M0 460 L300 460 M0 490 L300 490"/></g>
-      <path d="M0 40 Q75 90 150 40 T300 40" stroke="#ff5da2" stroke-width="3" fill="none"/>${[20, 60, 100, 140, 180, 220, 260].map((x, i) => `<path d="M${x} ${40 + (i % 2 ? 30 : 10)} l8 16 l-16 0 Z" fill="${['#ff5da2', '#ffd23f', '#3ddcb0', '#7c5cff', '#5aaeff'][i % 5]}"/>`).join('')}
-      <g><path d="M40 420 L46 340" stroke="#888" stroke-width="1.5"/><ellipse cx="46" cy="316" rx="20" ry="26" fill="#ff5da2"/><path d="M60 420 L70 356" stroke="#888" stroke-width="1.5"/><ellipse cx="70" cy="332" rx="20" ry="26" fill="#ffd23f"/><path d="M262 420 L254 350" stroke="#888" stroke-width="1.5"/><ellipse cx="254" cy="326" rx="20" ry="26" fill="#5aaeff"/><path d="M280 420 L276 370" stroke="#888" stroke-width="1.5"/><ellipse cx="276" cy="346" rx="18" ry="24" fill="#3ddcb0"/></g>
-      <g><rect x="190" y="350" width="100" height="70" rx="6" fill="#fff"/><rect x="190" y="346" width="100" height="10" rx="4" fill="#c47bff"/><rect x="220" y="310" width="40" height="36" rx="6" fill="#ffb3d9"/><rect x="216" y="326" width="48" height="20" rx="5" fill="#ff8fcf"/><g fill="#ffd23f"><rect x="226" y="300" width="3" height="12"/><rect x="238" y="300" width="3" height="12"/><rect x="250" y="300" width="3" height="12"/></g><g fill="#ff8c42"><circle cx="227" cy="298" r="3"/><circle cx="239" cy="298" r="3"/><circle cx="251" cy="298" r="3"/></g><rect x="200" y="380" width="24" height="22" fill="#3ddcb0"/><rect x="209" y="380" width="6" height="22" fill="#ffd23f"/></g>
-      ${scatter(51, 30, 0, 300, 60, 400, (x, y, r) => `<rect x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="5" height="8" fill="${['#ff5da2', '#ffd23f', '#3ddcb0', '#7c5cff'][Math.floor(r * 4)]}" transform="rotate(${(r * 360).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})"/>`)}`,
-
-    pool: ctx => `${sky(ctx, '#bfe6ff', '#eaf7ff')}<circle cx="250" cy="70" r="28" fill="#ffd23f"/>${cloud(70, 80, .8)}<rect y="300" width="300" height="100" fill="#d9e6f2"/><g fill="#5aa9e6" opacity=".8">${[0, 40, 80, 120, 160, 200, 240, 280].map(x => `<rect x="${x + 4}" y="304" width="32" height="32" rx="2"/>`).join('')}<rect x="4" y="344" width="292" height="48" rx="3" fill="#7fb2e6"/></g>
-      <rect y="400" width="300" height="120" fill="${ctx.grad('#3aaee8', '#7fd3ff')}"/><g stroke="#fff" stroke-width="2.5" fill="none" opacity=".7"><path d="M0 430 Q20 422 40 430 T80 430 T120 430 T160 430 T200 430 T240 430 T280 430 T320 430"/><path d="M0 480 Q20 472 40 480 T80 480 T120 480 T160 480 T200 480 T240 480 T280 480 T320 480"/></g>
-      <path d="M0 396 L300 396" stroke="#fff" stroke-width="10"/><g><rect x="30" y="200" width="6" height="196" fill="#c9d1dc"/><path d="M36 220 Q90 240 90 300 L96 396 L84 396 L78 300 Q78 250 36 236 Z" fill="#ff8c42"/><path d="M36 210 L36 232" stroke="#c9d1dc" stroke-width="8"/></g>
-      <ellipse cx="240" cy="440" rx="30" ry="12" fill="none" stroke="#ff5da2" stroke-width="10"/><ellipse cx="240" cy="440" rx="30" ry="12" fill="none" stroke="#fff" stroke-width="10" stroke-dasharray="14 18"/>
-      <g><rect x="200" y="330" width="40" height="8" fill="#fff"/><path d="M204 338 L204 396 M236 338 L236 396" stroke="#fff" stroke-width="4"/><path d="M204 350 L236 350 M204 366 L236 366 M204 382 L236 382" stroke="#fff" stroke-width="3"/></g>`,
-
-    gym: ctx => `${sky(ctx, '#f6e9d8', '#efdcc4')}<rect width="300" height="60" fill="#e3cfb4"/><g fill="#9fd8ff" opacity=".8">${[16, 76, 136, 196, 256].map(x => `<rect x="${x}" y="12" width="44" height="36" rx="3"/>`).join('')}</g>
-      <rect y="380" width="300" height="140" fill="#3a86ff"/><rect y="376" width="300" height="10" fill="#2a5fb8"/><path d="M0 460 L300 460" stroke="#ffffff" stroke-width="3" opacity=".5"/>
-      <g><rect x="20" y="300" width="70" height="80" rx="8" fill="#e63946"/><rect x="20" y="300" width="70" height="14" rx="6" fill="#ff8fab"/><rect x="24" y="296" width="62" height="6" rx="3" fill="#fff"/></g>
-      <g><rect x="200" y="200" width="6" height="180" fill="#8b5a2b"/><rect x="284" y="200" width="6" height="180" fill="#8b5a2b"/><rect x="196" y="250" width="98" height="8" rx="3" fill="#c98a5e"/><rect x="196" y="300" width="98" height="8" rx="3" fill="#c98a5e"/></g>
-      <g><path d="M120 60 L120 300" stroke="#c9d1dc" stroke-width="3"/><path d="M180 60 L180 300" stroke="#c9d1dc" stroke-width="3"/><circle cx="120" cy="304" r="8" fill="#ffd23f"/><circle cx="180" cy="304" r="8" fill="#ffd23f"/></g>
-      <rect y="370" width="300" height="12" fill="#ffd23f"/>`,
-
-    balletstudio: ctx => `${sky(ctx, '#fff4f8', '#fbe4ec')}<rect y="400" width="300" height="120" fill="#e8c9a8"/><g stroke="#d4ad88" stroke-width="2"><path d="M0 424 L300 424 M0 448 L300 448 M0 472 L300 472 M0 496 L300 496"/></g>
-      <rect x="20" y="40" width="260" height="300" rx="6" fill="#e6f0f7" stroke="#c9b3d9" stroke-width="6"/><path d="M40 60 L120 60 M40 80 L90 80" stroke="#fff" stroke-width="4" opacity=".7"/>
-      <rect y="290" width="300" height="10" rx="5" fill="#c98a5e"/><g fill="#8b5a2b"><rect x="40" y="298" width="8" height="102"/><rect x="252" y="298" width="8" height="102"/></g>
-      <g><path d="M30 20 Q60 50 30 80" stroke="#ff8fab" stroke-width="10" fill="none"/><path d="M270 20 Q240 50 270 80" stroke="#ff8fab" stroke-width="10" fill="none"/></g>
-      <g><rect x="230" y="330" width="46" height="50" rx="6" fill="#8b5a2b"/><rect x="236" y="336" width="34" height="18" rx="3" fill="#ffd23f"/><circle cx="252" cy="366" r="6" fill="#ffd23f"/></g>${scatter(53, 8, 40, 260, 340, 400, (x, y) => `<path d="${Avatar.heartPath(+x.toFixed(0), +y.toFixed(0), 4)}" fill="#ffb3d9"/>`)}`,
-
-    disco: ctx => `${sky(ctx, '#1a0f3a', '#3a1f6a')}<circle cx="150" cy="60" r="34" fill="${ctx.rgrad('#ffffff', '#9aa0ad')}"/><g stroke="#ffffff" stroke-width="1.5" opacity=".7"><path d="M116 60 L184 60 M120 44 L180 44 M120 76 L180 76 M150 26 L150 94 M134 30 L134 90 M166 30 L166 90"/></g><path d="M150 0 L150 26" stroke="#ccc" stroke-width="3"/>
-      <g opacity=".45"><path d="M150 60 L0 260 L0 200 Z" fill="#ff5da2"/><path d="M150 60 L300 240 L300 180 Z" fill="#5aaeff"/><path d="M150 60 L60 400 L20 400 Z" fill="#ffd23f"/><path d="M150 60 L240 400 L280 400 Z" fill="#3ddcb0"/></g>
-      ${[0, 1, 2, 3, 4, 5].map(i => [0, 1, 2, 3].map(j => `<rect x="${i * 50}" y="${400 + j * 30}" width="50" height="30" fill="${['#ff5da2', '#ffd23f', '#5aaeff', '#3ddcb0', '#c47bff'][(i + j) % 5]}" opacity="${0.85 - j * 0.1}"/>`).join('')).join('')}
-      ${scatter(57, 30, 0, 300, 100, 380, (x, y, r) => `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(1 + r * 2).toFixed(1)}" fill="#fff" opacity="${(0.4 + r * 0.6).toFixed(2)}"/>`)}`,
-
-    stable: ctx => `${sky(ctx, '#bfe6ff', '#eaf7ff')}${cloud(60, 60, .8)}${cloud(240, 90, .6)}<rect y="380" width="300" height="140" fill="#c9a06a"/><g fill="#b58b55" opacity=".7"><ellipse cx="70" cy="440" rx="40" ry="8"/><ellipse cx="230" cy="480" rx="50" ry="9"/></g>
-      <g><rect x="150" y="200" width="150" height="180" fill="#a5533a"/><path d="M140 200 L225 130 L310 200 Z" fill="#7a3a28"/><rect x="200" y="280" width="60" height="100" fill="#4a2a1c"/><rect x="200" y="280" width="60" height="50" fill="#f6e2b5" opacity=".9"/><path d="M200 330 L260 330 M230 280 L230 330" stroke="#4a2a1c" stroke-width="4"/><rect x="165" y="230" width="24" height="24" fill="#f6e2b5"/><path d="M165 242 L189 242 M177 230 L177 254" stroke="#7a3a28" stroke-width="2"/></g>
-      <g stroke="#8b5a2b" stroke-width="6"><path d="M0 330 L140 330 M0 356 L140 356"/><path d="M20 316 L20 380 M70 316 L70 380 M120 316 L120 380"/></g>
-      <g><ellipse cx="60" cy="300" rx="36" ry="12" fill="#e6c76a"/><ellipse cx="60" cy="292" rx="30" ry="10" fill="#f2d98a"/></g>${scatter(59, 8, 0, 140, 384, 420, (x, y) => `<path d="M${x.toFixed(0)} ${y.toFixed(0)} l3 -10 l3 10" stroke="#5c8a3a" stroke-width="2" fill="none"/>`)}`,
-
-    icepalace: ctx => `${sky(ctx, '#dcefff', '#f5fbff')}<g fill="#bfe3ff" opacity=".9"><rect x="0" y="120" width="60" height="300"/><rect x="240" y="120" width="60" height="300"/><path d="M0 120 L30 40 L60 120 Z M240 120 L270 40 L300 120 Z"/></g><g fill="#a5d3f5"><rect x="60" y="180" width="180" height="240"/><path d="M60 180 L150 90 L240 180 Z"/><path d="M110 180 L150 130 L190 180 Z" fill="#8cc4ee"/></g>
-      <g stroke="#fff" stroke-width="3" opacity=".8"><path d="M80 200 L80 400 M120 200 L120 400 M180 200 L180 400 M220 200 L220 400"/></g>
-      <path d="M0 400 Q150 380 300 400 L300 520 L0 520 Z" fill="${ctx.grad('#e8f4ff', '#bfe3ff')}"/><g stroke="#fff" stroke-width="2" opacity=".8"><path d="M30 440 L90 500 M200 430 L270 500 M120 470 L160 510"/></g>
-      ${scatter(61, 20, 0, 300, 0, 380, (x, y, r) => `<path d="${Avatar.starPath(+x.toFixed(0), +y.toFixed(0), 3 + r * 4, (3 + r * 4) * 0.35, 6)}" fill="#fff" opacity=".9"/>`)}<path d="M150 40 L150 20" stroke="#fff" stroke-width="3"/>${star(150, 16, 8, '#fff')}`,
-
-    weddinggarden: ctx => `${sky(ctx, '#e8f4ff', '#fff6f0')}<rect y="400" width="300" height="120" fill="#8fd694"/><path d="M0 400 Q150 380 300 400" fill="#8fd694"/>
-      <g fill="#4caf50"><ellipse cx="30" cy="390" rx="40" ry="50"/><ellipse cx="270" cy="390" rx="40" ry="50"/></g>${scatter(41, 10, 0, 60, 350, 420, (x, y, r) => Avatar.flower(x.toFixed(0), y.toFixed(0), 4, '#ff8fab'))}${scatter(43, 10, 240, 300, 350, 420, (x, y, r) => Avatar.flower(x.toFixed(0), y.toFixed(0), 4, '#fff'))}
-      <path d="M60 400 L60 200 Q60 90 150 90 Q240 90 240 200 L240 400" stroke="#fff" stroke-width="14" fill="none"/><g stroke="#4caf50" stroke-width="6" fill="none"><path d="M60 300 Q66 200 110 130 Q150 100 190 130 Q234 200 240 300"/></g>
-      ${[[64, 330], [70, 250], [90, 170], [126, 116], [174, 116], [210, 170], [230, 250], [236, 330]].map(([x, y], i) => Avatar.flower(x, y, 8, i % 2 ? '#ff8fab' : '#fff', '#f1c232')).join('')}
-      ${scatter(47, 24, 0, 300, 100, 500, (x, y, r) => `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="3" ry="2" fill="#ffb3d9" opacity=".9" transform="rotate(${(r * 90).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})"/>`)}
-      <path d="M0 470 Q150 500 300 470" stroke="#fff" stroke-width="10" fill="none"/><path d="M0 470 Q150 500 300 470" stroke="#f1c232" stroke-width="2" fill="none"/>`,
+    catwalk: (g, w, h) => { sky(g, w, h, '#2a1b3d', '#4a2a6a'); spot(g, 90, 200, 120, '#ffffff', .18); spot(g, 390, 280, 120, '#ffffff', .18); spot(g, 240, 240, 90, '#ff9ad5', .18); const lg = g.createLinearGradient(0, GROUND, 0, h); lg.addColorStop(0, '#ff8fcf'); lg.addColorStop(1, '#ff5da2'); g.fillStyle = lg; g.beginPath(); g.moveTo(120, GROUND); g.lineTo(360, GROUND); g.lineTo(480, h); g.lineTo(0, h); g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, GROUND - 4, w, 6); [40, 440].forEach(x => { for (let i = 0; i < 3; i++) em(g, '📸', x + (i - 1) * 6, 600 + i * 30, 26, { alpha: .8 }); }); sparkles(g, w, h, 30, 61, '#fff', GROUND); em(g, '✨', 60, 120, 40); em(g, '✨', 420, 160, 34); vignette(g, w, h, .3); return true; },
+    balletzaal: (g, w, h) => { sky(g, w, h, '#fff4f8', '#fbe4ec', GROUND); floor(g, w, h, GROUND, '#e8c9a8', '#cfa67e', true); g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(40, 60, 400, 420); g.strokeStyle = '#d9c2cf'; g.lineWidth = 6; g.strokeRect(40, 60, 400, 420); g.strokeStyle = '#c99a6a'; g.lineWidth = 8; g.beginPath(); g.moveTo(0, 400); g.lineTo(w, 400); g.stroke(); [60, 420].forEach(x => { g.beginPath(); g.moveTo(x, 400); g.lineTo(x, GROUND); g.stroke(); }); em(g, '🩰', 70, 620, 56); em(g, '🎀', 420, 110, 44); em(g, '🎵', 400, 250, 34, { alpha: .6 }); return true; },
+    turnzaal: (g, w, h) => { sky(g, w, h, '#f6e9d8', '#efdcc4', GROUND); floor(g, w, h, GROUND, '#e3cfb4', '#c9b08d', true); g.fillStyle = '#9fd8ff'; [20, 130, 240, 350].forEach(x => { g.beginPath(); g.roundRect(x, 30, 90, 70, 8); g.fill(); }); g.strokeStyle = '#b58b55'; g.lineWidth = 6; for (let y = 160; y < GROUND; y += 40) { g.beginPath(); g.moveTo(20, y); g.lineTo(120, y); g.stroke(); } g.beginPath(); g.moveTo(20, 150); g.lineTo(20, GROUND); g.moveTo(120, 150); g.lineTo(120, GROUND); g.stroke(); g.fillStyle = '#5aaeff'; g.beginPath(); g.roundRect(300, GROUND + 40, 200, 40, 10); g.fill(); em(g, '🏅', 420, 200, 56); em(g, '🤸', 400, 460, 0); return true; },
+    disco: (g, w, h) => { sky(g, w, h, '#1a0f3a', '#3a1f6a', GROUND); [['#ff5da2', 40, 120], ['#5aaeff', 440, 360], ['#ffd23f', 240, 60], ['#3ddcb0', 240, 420]].forEach(([c, x1]) => spot(g, 240, x1, 90, c, .35, 60)); em(g, '🪩', 240, 70, 110); glow(g, 240, 70, 120, '#ffffff', .3); tiles(g, w, GROUND, h, '#ff5da2', '#ffd23f', 60); tint(g, w, h, '#000', .0); g.save(); g.globalAlpha = .35; tiles(g, w, GROUND, h, '#5aaeff', '#c47bff', 60); g.restore(); sparkles(g, w, h, 40, 71, '#fff', GROUND); em(g, '🎶', 80, 300, 40); em(g, '🎶', 400, 260, 34); return true; },
+    sneeuw: (g, w, h) => { sky(g, w, h, '#c9dff5', '#f2f7fb', GROUND); [[80, 520, 1.1], [400, 540, .9], [240, 470, .6]].forEach(([x, y, s]) => { Avatar.blob(g, x, y - 80 * s, 46 * s, 92 * s, '#2e6b56'); Avatar.blob(g, x, y - 40 * s, 60 * s, 40 * s, '#3a8a6a'); Avatar.blob(g, x, y - 92 * s, 30 * s, 22 * s, '#ffffff'); }); const lg = g.createLinearGradient(0, GROUND - 40, 0, h); lg.addColorStop(0, '#ffffff'); lg.addColorStop(1, '#dbe8f5'); g.fillStyle = lg; g.beginPath(); g.moveTo(0, GROUND); g.quadraticCurveTo(120, GROUND - 40, 240, GROUND); g.quadraticCurveTo(360, GROUND + 30, w, GROUND - 10); g.lineTo(w, h); g.lineTo(0, h); g.fill(); em(g, '⛄', 90, 600, 90); snow(g, w, h, 81, 120); return true; },
+    ijspaleis: (g, w, h) => { sky(g, w, h, '#dcefff', '#f5fbff', GROUND); [60, 420].forEach(x => { g.fillStyle = '#bfe3ff'; g.beginPath(); g.roundRect(x - 40, 150, 80, GROUND - 150, 10); g.fill(); g.beginPath(); g.moveTo(x - 46, 160); g.lineTo(x, 40); g.lineTo(x + 46, 160); g.fill(); }); g.fillStyle = '#a5d3f5'; g.beginPath(); g.roundRect(120, 220, 240, GROUND - 220, 12); g.fill(); g.beginPath(); g.moveTo(110, 230); g.lineTo(240, 110); g.lineTo(370, 230); g.fill(); g.fillStyle = '#8cc4ee'; g.beginPath(); g.moveTo(190, 230); g.lineTo(240, 170); g.lineTo(290, 230); g.fill(); g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 3; [150, 200, 280, 330].forEach(x => { g.beginPath(); g.moveTo(x, 250); g.lineTo(x, GROUND); g.stroke(); }); floor(g, w, h, GROUND, '#e8f4ff', '#bfe3ff'); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2; [[40, 600, 120, 690], [330, 590, 440, 700]].forEach(([a, b, c, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); }); sparkles(g, w, h, 30, 91, '#fff', GROUND); em(g, '❄️', 70, 90, 44); em(g, '❄️', 420, 60, 36); em(g, '❄️', 400, 330, 28); return true; },
+    balzaal: (g, w, h) => { sky(g, w, h, '#f7e6ff', '#e9d3ff', GROUND); curtain(g, 0, 70, GROUND, '#c47bff'); curtain(g, w - 70, 70, GROUND, '#c47bff'); g.fillStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.roundRect(150, 120, 180, 300, 90); g.fill(); g.strokeStyle = '#f1c232'; g.lineWidth = 6; g.stroke(); glow(g, 240, 60, 120, '#fff3b0', .6); g.strokeStyle = '#f1c232'; g.lineWidth = 4; g.beginPath(); g.moveTo(240, 0); g.lineTo(240, 30); g.stroke(); [0, 1, 2].forEach(i => { g.beginPath(); g.ellipse(240, 40 + i * 16, 50 + i * 24, 12 + i * 4, 0, 0, Math.PI); g.stroke(); }); for (let i = 0; i < 9; i++) em(g, '💡', 240 + (i - 4) * 24, 72 + Math.abs(i - 4) * 4, 14, { shadow: false }); floor(g, w, h, GROUND, '#f4ecf9', '#d9c6ea'); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2; [60, 180, 300, 420].forEach(x => { g.beginPath(); g.moveTo(x, GROUND); g.lineTo(x + (x < 240 ? -40 : 40), h); g.stroke(); }); sparkles(g, w, h, 25, 101, '#fff6d6', GROUND); return true; },
+    podium: (g, w, h) => { sky(g, w, h, '#1a1030', '#3a1f5a', GROUND); spot(g, 60, 200, 100, '#ff5da2', .3); spot(g, 420, 280, 100, '#5aaeff', .3); spot(g, 240, 240, 80, '#ffd23f', .25); const lg = g.createLinearGradient(0, GROUND, 0, h); lg.addColorStop(0, '#3a2a55'); lg.addColorStop(1, '#1a1030'); g.fillStyle = lg; g.fillRect(0, GROUND, w, h - GROUND); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(0, GROUND - 3, w, 5); for (let i = 0; i < 12; i++) { g.fillStyle = ['#ff5da2', '#ffd23f', '#5aaeff', '#3ddcb0'][i % 4]; g.beginPath(); g.arc(20 + i * 40, GROUND + 22, 5, 0, 7); g.fill(); } em(g, '🎤', 70, 500, 60, { alpha: .9 }); em(g, '🔊', 430, 520, 64); em(g, '🎶', 100, 200, 40); em(g, '🎵', 400, 260, 34); sparkles(g, w, h, 30, 111, '#fff', GROUND); vignette(g, w, h, .3); return true; },
+    ruimte: (g, w, h) => { sky(g, w, h, '#04061a', '#141545'); stars(g, w, h, 120, 121); em(g, '🪐', 380, 110, 110); em(g, '🌍', 90, 160, 80); em(g, '🚀', 400, 360, 70, { rot: -0.6 }); em(g, '⭐', 60, 380, 30); em(g, '🌙', 240, 60, 40); const lg = g.createLinearGradient(0, GROUND, 0, h); lg.addColorStop(0, '#c9cfe0'); lg.addColorStop(1, '#7d86a8'); g.fillStyle = lg; g.beginPath(); g.moveTo(0, GROUND + 20); g.quadraticCurveTo(240, GROUND - 40, w, GROUND + 20); g.lineTo(w, h); g.lineTo(0, h); g.fill(); g.fillStyle = 'rgba(0,0,0,.15)'; [[80, 640, 30, 10], [380, 680, 40, 12], [220, 700, 24, 8]].forEach(([x, y, rx, ry]) => { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 7); g.fill(); }); return true; },
+    parijs: (g, w, h) => { sky(g, w, h, '#ffd1dc', '#ffe9a8', GROUND); sun(g, 380, 90, 30, '#fff3b0'); cloud(g, 100, 110, .8); em(g, '🗼', 300, 380, 300); floor(g, w, h, GROUND, '#e9d8c8', '#c9ad95'); em(g, '🥐', 70, 640, 44); em(g, '☕', 120, 660, 40); em(g, '🌹', 420, 660, 44); em(g, '🕊️', 80, 260, 36); return true; },
+    regenboog: (g, w, h) => { sky(g, w, h, '#bfe6ff', '#eaf7ff', GROUND); const cols = ['#ff5c5c', '#ffb347', '#ffe94d', '#5fe38a', '#5aaeff', '#c47bff']; cols.forEach((c, i) => { g.strokeStyle = c; g.lineWidth = 24; g.beginPath(); g.arc(240, GROUND + 60, 330 - i * 24, Math.PI, 0); g.stroke(); }); cloud(g, 40, 520, 1.4); cloud(g, 440, 540, 1.4); cloud(g, 90, 110, .8); cloud(g, 380, 160, .7); floor(g, w, h, GROUND, '#8fe08f', '#5cc46a'); em(g, '🌸', 60, 600, 40); em(g, '🌼', 420, 620, 40); em(g, '🦄', 400, 520, 70); em(g, '🍭', 80, 660, 40); return true; },
+    schip: (g, w, h) => { sky(g, w, h, '#f6b26b', '#ffd9a0', 420); sun(g, 80, 110, 36, '#ffe27a'); cloud(g, 360, 90, .8, '#ffe9c9'); const sea = g.createLinearGradient(0, 380, 0, 520); sea.addColorStop(0, '#2a6f97'); sea.addColorStop(1, '#4a9cc9'); g.fillStyle = sea; g.fillRect(0, 380, w, 160); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2.5; [410, 450, 490].forEach(y => { g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= w; x += 40) g.quadraticCurveTo(x + 20, y - 8, x + 40, y); g.stroke(); }); floor(g, w, h, 520, '#b5804d', '#8a5a2b', true); g.strokeStyle = '#6e4520'; g.lineWidth = 10; g.beginPath(); g.moveTo(0, 520); g.lineTo(w, 520); g.stroke(); [20, 120, 360, 460].forEach(x => { g.beginPath(); g.moveTo(x, 470); g.lineTo(x, 520); g.stroke(); }); g.fillStyle = '#5c3a17'; g.fillRect(232, 0, 16, 520); em(g, '🏴‍☠️', 300, 90, 90); em(g, '⚓', 70, 620, 56); em(g, '🦜', 420, 300, 60); em(g, '🗺️', 420, 650, 50); return true; },
   };
+
+  function draw(g, id, w, h) {
+    g.save();
+    const fn = SCENES[id] || SCENES.kamer;
+    let ok = true;
+    try { ok = fn(g, w, h) !== false; } catch (e) { console.warn('decor', id, e); sky(g, w, h, '#efe7fa', '#d8c9ee'); }
+    g.restore();
+    return ok;
+  }
+
+  /* ---------- miniaturen ---------- */
+  let uid = 0; const pending = new Map();
+  function thumb(id) { const k = ++uid; pending.set(k, id); return `<canvas class="bg-thumb" data-bg="${k}" width="160" height="240" aria-hidden="true"></canvas>`; }
+  let scheduled = false;
+  function mount() {
+    scheduled = false;
+    document.querySelectorAll('canvas[data-bg]:not([data-ok])').forEach(cv => {
+      const id = pending.get(+cv.dataset.bg); if (!id) { cv.dataset.ok = '1'; return; }
+      const big = document.createElement('canvas'); big.width = 480; big.height = 720;
+      const ok = draw(big.getContext('2d'), id, 480, 720);
+      const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(big, 0, 0, cv.width, cv.height);
+      if (ok) { cv.dataset.ok = '1'; pending.delete(+cv.dataset.bg); }
+    });
+  }
+  function schedule() { if (scheduled) return; scheduled = true; setTimeout(mount, 0); }
+  new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+  preload();
+
+  return { draw, thumb, preload, GROUND };
 })();

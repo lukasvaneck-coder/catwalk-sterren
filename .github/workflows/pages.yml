@@ -1,6 +1,6 @@
 name: Publiceer op GitHub Pages
 
-# Bij elke push naar main worden index.html, css/ en js/ naar de
+# Bij elke push naar main worden index.html, css/, js/ en assets/ naar de
 # gh-pages-branch gekopieerd. GitHub Pages serveert die branch op
 # https://lukasvaneck-coder.github.io/catwalk-sterren/
 on:
@@ -23,7 +23,7 @@ jobs:
       - name: Spelbestanden verzamelen
         run: |
           mkdir -p _site
-          cp -r index.html css js _site/
+          cp -r index.html css js assets _site/
       - name: Naar gh-pages pushen
         uses: peaceiris/actions-gh-pages@v4
         with:
