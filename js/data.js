@@ -77,6 +77,7 @@ const EYES = [
   { id: 'e5', c: '#b0782f', name: 'amber' },
   { id: 'e6', c: '#7d4fc2', name: 'paars' },
 ];
+// Gezichtsvormen worden sinds de sprite-versie niet meer getekend; ze staan hier alleen nog voor oude opslag.
 const FACE_SHAPES = [
   { id: 'ovaal',    name: 'Ovaal' },
   { id: 'rond',     name: 'Rond' },
@@ -111,36 +112,34 @@ function variants(cat, shape, base, list) {
   add(cat, list.map(v => Object.assign({ shape }, base, v)));
 }
 
-// Kapsels (kleur kies je apart)
+// Kapsels (kleur kies je apart). Elke shape hoort bij een van de twintig sprites in assets/doll.png
 add('hair', [
   { id: 'hair_kort',        shape: 'kort',        name: 'Kort & Stoer',        lvl: 1 },
-  { id: 'hair_pixie',       shape: 'pixie',       name: 'Pixie',               lvl: 1 },
   { id: 'hair_bob',         shape: 'bob',         name: 'Bob',                 lvl: 1 },
   { id: 'hair_bob_pony',    shape: 'bob_pony',    name: 'Bob met Pony',        lvl: 1 },
   { id: 'hair_lang',        shape: 'lang',        name: 'Lang & Glad',         lvl: 1 },
   { id: 'hair_lang_pony',   shape: 'lang_pony',   name: 'Lang met Pony',       lvl: 1 },
-  { id: 'hair_halflang',    shape: 'halflang',    name: 'Halflang',            lvl: 1 },
   { id: 'hair_staart',      shape: 'staart',      name: 'Paardenstaart',       lvl: 1 },
   { id: 'hair_staartjes',   shape: 'staartjes',   name: 'Twee Staartjes',      lvl: 1 },
   { id: 'hair_kort_krul',   shape: 'kort_krul',   name: 'Korte Krullen',       lvl: 1 },
-  { id: 'hair_hoge_staart', shape: 'hoge_staart', name: 'Hoge Staart',         lvl: 2 },
-  { id: 'hair_golvend_kort',shape: 'golvend_kort',name: 'Korte Golven',        lvl: 2 },
   { id: 'hair_krullen',     shape: 'krullen',     name: 'Krullenbol',          lvl: 3 },
   { id: 'hair_zijstaart',   shape: 'zijstaart',   name: 'Zijstaart',           lvl: 3 },
   { id: 'hair_vlechten',    shape: 'vlechten',    name: 'Vlechtjes',           lvl: 4 },
-  { id: 'hair_knot',        shape: 'knot',        name: 'Knotje',              lvl: 5 },
+  { id: 'hair_knot',        shape: 'knot',        name: 'Hoge Knot',           lvl: 5 },
   { id: 'hair_afro_puffs',  shape: 'afro_puffs',  name: 'Afro Puffs',          lvl: 6 },
   { id: 'hair_golvend',     shape: 'golvend',     name: 'Lange Golven',        lvl: 7 },
   { id: 'hair_afro',        shape: 'afro',        name: 'Afro',                lvl: 8 },
-  { id: 'hair_dreads',      shape: 'dreads',      name: 'Dreads',              lvl: 8 },
   { id: 'hair_spacebuns',   shape: 'spacebuns',   name: 'Space Buns',          lvl: 9 },
   { id: 'hair_zijvlecht',   shape: 'zijvlecht',   name: 'Zijvlecht',           lvl: 9 },
-  { id: 'hair_krullen_lang',shape: 'krullen_lang',name: 'Lange Krullen',       lvl: 10 },
-  { id: 'hair_hanenkam',    shape: 'hanenkam',    name: 'Hanenkam',            lvl: 11 },
-  { id: 'hair_opgestoken',  shape: 'opgestoken',  name: 'Opgestoken',          lvl: 12 },
-  { id: 'hair_prinses',     shape: 'prinses',     name: 'Prinsessenkrullen',   lvl: 13 },
+  { id: 'hair_halfop',      shape: 'halfop',      name: 'Half Opgestoken',     lvl: 10 },
+  { id: 'hair_opgestoken',  shape: 'opgestoken',  name: 'Lage Knot',           lvl: 12 },
   { id: 'hair_kroonvlecht', shape: 'kroonvlecht', name: 'Kroonvlecht',         lvl: 14 },
 ]);
+// oude kapsel-ids van eerdere versies -> het kapsel dat er nu het meest op lijkt
+const HAIR_ALIASES = {
+  hair_pixie: 'hair_kort', hair_hoge_staart: 'hair_staart', hair_golvend_kort: 'hair_kort_krul', hair_halflang: 'hair_halfop',
+  hair_dreads: 'hair_afro', hair_krullen_lang: 'hair_golvend', hair_hanenkam: 'hair_kort', hair_prinses: 'hair_golvend',
+};
 
 /* ---------- Tops ---------- */
 variants('top', 'tshirt', { tags: ['casual', 'school', 'zomer'] }, [

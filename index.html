@@ -19,6 +19,7 @@
     <div id="profiles" class="profiles"></div>
     <button class="btn violet big" id="btn-duel" type="button" hidden>⚔️ Samen spelen: duel!</button>
     <p class="footer-note">Jouw outfits, sterren en munten blijven op dit apparaat bewaard. <span>✦</span></p>
+    <button class="btn ghost sm" id="btn-test-max" type="button" title="Testknop: zet alle spelers op level 20 met alle spullen">🧪 Test: alles vrijspelen</button>
   </section>
 
   <!-- Model maken of aanpassen -->
@@ -30,7 +31,6 @@
         <label class="field" for="name-input"><span>Hoe heet je?</span><input id="name-input" maxlength="16" placeholder="Jouw naam" autocomplete="off"></label>
         <div class="field"><span>Huidskleur</span><div id="skin-swatches" class="swatches"></div></div>
         <div class="field"><span>Ogen</span><div id="eye-swatches" class="swatches"></div></div>
-        <div class="field"><span>Gezichtsvorm</span><div id="face-shapes" class="face-grid"></div></div>
         <div class="field"><label for="build-range">Postuur</label><div class="slider-row"><span>dun</span><input type="range" id="build-range" min="0" max="100" step="1" value="40"><span>dik</span></div></div>
         <div class="field"><span>Kapsel</span><div id="hair-styles" class="mini-grid"></div></div>
         <div class="field"><span>Haarkleur</span><div id="hair-swatches" class="swatches"></div></div>
@@ -40,6 +40,15 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- Het dorp: loop naar een huisje -->
+  <section id="screen-world" class="screen world" hidden>
+    <div class="world-top">
+      <button class="btn ghost sm" id="btn-world-players" type="button">👤 Andere speler</button>
+      <p class="eyebrow">LOOP NAAR EEN HUISJE</p>
+    </div>
+    <div id="world"></div>
   </section>
 
   <!-- De kleedkamer -->
@@ -55,6 +64,7 @@
       <button class="btn gold sm" id="btn-shop" type="button">🛍️ Winkel</button>
       <button class="btn mint sm" id="btn-puzzle" type="button">🎨 Kleurenpuzzel</button>
       <button class="btn ghost sm" id="btn-next" type="button" title="Wat speel je straks vrij?">🎁 Volgend level</button>
+      <button class="btn ghost sm" id="btn-world" type="button" title="Terug naar het dorp">🏡 Dorp</button>
       <button class="btn ghost sm" id="btn-look" type="button">🪞 Uiterlijk</button>
       <button class="btn ghost sm" id="btn-sound" type="button" aria-label="Geluid aan of uit">🔊</button>
     </header>
@@ -87,8 +97,10 @@
 
 <script src="js/sound.js"></script>
 <script src="js/data.js"></script>
+<script src="assets/doll-manifest.js"></script>
 <script src="js/bg.js"></script>
 <script src="js/avatar.js"></script>
+<script src="js/world.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>
