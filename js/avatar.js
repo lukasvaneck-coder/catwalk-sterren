@@ -202,7 +202,7 @@ const Avatar = (() => {
   };
   const BOTTOM_KEY = { pants: 'B0', joggers: 'B0', shorts: 'B1', sportshorts: 'B1', legging: 'B3', skirt: 'B4', pleated: 'B5', tutu: 'B6' };
   const BOTTOM_BY_ID = { bot_rok_spijker: 'B7', bot_baggy: 'B2', bot_jogging_grijs: 'B2', bot_jogging_zwart: 'B2', bot_jogging_roze: 'B2' };
-  const bottomRecipe = it => [{ k: BOTTOM_BY_ID[it.id] || BOTTOM_KEY[it.shape] || 'B0', d: designOf(it) }];
+  const bottomRecipe = it => it.shape === 'wideleg' ? [{ k: 'Bwide', d: designOf(it), custom: 'wideleg' }] : [{ k: BOTTOM_BY_ID[it.id] || BOTTOM_KEY[it.shape] || 'B0', d: designOf(it) }];
   const DRESS_RECIPES = {
     aline: it => [{ k: 'D', d: designOf(it) }],
     sundress: it => [{ k: 'D', d: designOf(it) }],
@@ -217,17 +217,56 @@ const Avatar = (() => {
   };
   const SHOE_KEY = { sneaker: 'S0', boot: 'S1', rainboot: 'S1', snowboot: 'S1', monster: 'S1', bunny: 'S1', pirateboot: 'S2', spaceboot: 'S2', heels: 'S3', dress: 'S3', ballet: 'S3', flipflop: 'S3', clog: 'S3', sandal: 'S3', elf: 'S3', platform: 'S3' };
   const SHOE_BY_ID = { sh_rijlaarzen: 'S2', sh_cowboy: 'S2', sh_boots: 'S2', sh_hightops: 'S1' };
-  const shoeRecipe = it => [{ k: SHOE_BY_ID[it.id] || SHOE_KEY[it.shape] || 'S0', d: designOf(it) }];
+  const shoeRecipe = it => ['pumps', 'heels'].includes(it.shape) ? [{ k: 'Spumps', d: designOf(it), custom: 'pumps' }] : [{ k: SHOE_BY_ID[it.id] || SHOE_KEY[it.shape] || 'S0', d: designOf(it) }];
   const SUBLAYERS = { T: ['skin', 'fab', 'keep'], B: ['skin', 'fab', 'keep'], D: ['skin', 'fab', 'keep'], J: ['fab', 'skin'], S: ['fab', 'keep'] };
 
+  // Eigen silhouetten, gedeeld door de miniaturen en het aangeklede model.
+  function drawTailored(ctx, step, skin) {
+    const color = step.d.c[0];
+    if (step.custom === 'wideleg') {
+      if (!step.fab) drawLayer(ctx, 'B0_skin', skin);
+      ctx.beginPath(); ctx.moveTo(157, 239); ctx.lineTo(240, 239);
+      ctx.quadraticCurveTo(241, 292, 259, 372);
+      ctx.quadraticCurveTo(233, 378, 207, 372);
+      ctx.lineTo(200, 289); ctx.lineTo(193, 372);
+      ctx.quadraticCurveTo(168, 378, 140, 372);
+      ctx.quadraticCurveTo(155, 292, 157, 239); ctx.closePath();
+      ctx.save(); ctx.clip();
+      ctx.save(); ctx.translate(138, 239);
+      paintDesign(ctx, step.d, 124, 140, 138, 239);
+      ctx.restore();
+      const shade = ctx.createLinearGradient(140, 0, 260, 0);
+      [[0,'#00000055'],[.22,'#ffffff22'],[.47,'#00000044'],[.55,'#00000033'],[.78,'#ffffff22'],[1,'#00000055']].forEach(([p,c])=>shade.addColorStop(p,c));
+      ctx.fillStyle = shade; ctx.fillRect(138, 239, 124, 140);
+      ctx.strokeStyle = dark(color, .22); ctx.lineWidth = 1.5;
+      [177, 222].forEach(x=>{ctx.beginPath();ctx.moveTo(x,256);ctx.lineTo(x+(x<200?-7:7),369);ctx.stroke();});
+      ctx.strokeStyle = light(color, .25); ctx.beginPath();ctx.moveTo(153,251);ctx.lineTo(244,251);ctx.stroke();
+      ctx.restore();
+      blob(ctx, 200, 246, 2.5, 2.5, '#c5b68d');
+      return;
+    }
+    [-1, 1].forEach(side => {
+      ctx.save(); ctx.translate(200, 0); ctx.scale(side, 1);
+      // Three-quarter pumps: the block heel and the arch remain visible below the upper.
+      rrect(ctx, 9, 379, 9, 14, 2); clayFill(ctx, dark(color,.25), 9,379,18,393);
+      ctx.beginPath();ctx.moveTo(9,363);ctx.quadraticCurveTo(17,367,24,363);
+      ctx.quadraticCurveTo(28,373,42,378);ctx.quadraticCurveTo(50,382,43,388);
+      ctx.lineTo(31,390);ctx.quadraticCurveTo(23,378,10,382);ctx.closePath();
+      clayFill(ctx,color,10,361,44,389);
+      ctx.strokeStyle=dark(color,.45);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(31,390);ctx.quadraticCurveTo(45,389,47,385);ctx.stroke();
+      ctx.strokeStyle=light(color,.5);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(28,377);ctx.quadraticCurveTo(35,378,40,382);ctx.stroke();
+      ctx.restore();
+    });
+  }
   function drawStep(ctx, step, skin) {
+    if (step.custom) { ctx.save(); drawTailored(ctx, step, skin); ctx.restore(); return; }
     const subs = step.fab ? ['fab'] : SUBLAYERS[step.k[0]];
     ctx.save();
     if (step.sx && step.sx !== 1) { ctx.translate(200, 0); ctx.scale(step.sx, 1); ctx.translate(-200, 0); }
     subs.forEach(s => drawLayer(ctx, `${step.k}_${s}`, s === 'skin' ? skin : s === 'fab' ? step.d : null));
     ctx.restore();
   }
-  const stepBox = step => union(SUBLAYERS[step.k[0]].map(s => layerBox(`${step.k}_${s}`)));
+  const stepBox = step => step.custom === 'wideleg' ? [138, 239, 260, 375] : step.custom === 'pumps' ? [152, 357, 247, 394] : union(SUBLAYERS[step.k[0]].map(s => layerBox(`${step.k}_${s}`)));
 
   /* ---------- hoofd ---------- */
   const headIndex = hairItem => HAIR_SPRITE[(hairItem || {}).shape] ?? 5;
@@ -269,6 +308,9 @@ const Avatar = (() => {
   function brim(ctx, g, c, rx, ry, dy = 22) { blob(ctx, g.cx, g.top + dy, rx, ry, c); return [g.cx - rx, g.top + dy - ry, g.cx + rx, g.top + dy + ry]; }
 
   const HATS = {
+    butterflyclip: E('🦋', g => g.cx + 54, g => g.top + 42, 45, { tint: 0, rot: .25 }),
+    daisyclip: E('🌼', g => g.cx - 54, g => g.top + 42, 38),
+    starclips: (ctx, it, g) => { [-1, 1].forEach(s => { starPath(ctx, g.cx + s * 55, g.top + 42, 15); clayFill(ctx, c0(it), g.cx - 70, g.top + 27, g.cx + 70, g.top + 57); }); return [g.cx - 72, g.top + 25, g.cx + 72, g.top + 59]; },
     bowband: E('🎀', g => g.cx + g.headW * 0.28, g => g.top + 22, 62, { tint: 0, rot: 0.25 }),
     cap: E('🧢', g => g.cx, g => g.top + 12, 120, { tint: 0 }),
     crown: E('👑', g => g.cx, g => g.top - 4, 96, { tint: 0 }),
@@ -321,7 +363,20 @@ const Avatar = (() => {
     silkscarf: (ctx, it, g) => { const y = NY - 2; blob(ctx, g.cx, y, 40, 12, c0(it)); blob(ctx, g.cx + 26, y + 26, 12, 22, c0(it), -0.4); blob(ctx, g.cx + 36, y + 20, 10, 18, c0(it), 0.5); blob(ctx, g.cx + 26, y + 8, 8, 8, c0(it)); if (it.pattern === 'dots') { ctx.fillStyle = c1(it); for (let x = g.cx - 34; x < g.cx + 40; x += 9) { ctx.beginPath(); ctx.arc(x, y + ((x / 9) % 2) * 5 - 2, 2.2, 0, 7); ctx.fill(); } } return [g.cx - 42, y - 14, g.cx + 48, y + 50]; },
   };
 
+  function charmBag(ctx, it, shape) {
+    const x = HAND_L[0] - 2, y = HAND_L[1] + 32;
+    ctx.strokeStyle = c1(it); ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x - 22, y - 10);
+    ctx.quadraticCurveTo(x, y - 66, x + 22, y - 10); ctx.stroke();
+    if (shape === 'heart') heartPath(ctx, x, y, 25);
+    else starPath(ctx, x, y, 34, 19);
+    clayFill(ctx, c0(it), x - 34, y - 34, x + 34, y + 34);
+    blob(ctx, x, y - 4, 4, 4, c1(it));
+    return [x - 38, y - 44, x + 38, y + 38];
+  }
   const BAGS = {
+    heartbag: { front: (ctx, it) => charmBag(ctx, it, 'heart') },
+    starbag: { front: (ctx, it) => charmBag(ctx, it, 'star') },
     backpack: { back: E('🎒', 262, 236, 96, { tint: 0 }) },
     tote: { front: E('🛍️', HAND_L[0] - 6, HAND_L[1] + 30, 80, { tint: 0 }) },
     handbag: { front: E('👜', HAND_R[0] + 6, HAND_R[1] + 30, 74, { tint: 0 }) },
@@ -330,6 +385,11 @@ const Avatar = (() => {
   };
 
   const HAND = {
+    camera: E('📷', HAND_R[0] + 6, HAND_R[1] + 14, 60),
+    paintbrush: E('🖌️', HAND_R[0] + 6, HAND_R[1] - 20, 65),
+    lollipop: E('🍭', HAND_R[0] + 6, HAND_R[1] - 22, 65, { tint: 0 }),
+    fan: E('🪭', HAND_R[0] + 10, HAND_R[1] - 8, 80, { tint: 0 }),
+    lantern: E('🏮', HAND_R[0] + 8, HAND_R[1] + 26, 72, { tint: 0 }),
     teddy: E('🧸', HAND_R[0] + 8, HAND_R[1] + 22, 74, { tint: 0 }),
     icecream: E('🍦', HAND_R[0] + 6, HAND_R[1] - 20, 70, { tint: 0 }),
     beachball: E('🏐', HAND_R[0] + 14, HAND_R[1] + 20, 76),
@@ -366,6 +426,7 @@ const Avatar = (() => {
   };
 
   const PETS = {
+    fox: E('🦊', 332, 350, 76), owl: E('🦉', 332, 350, 76), butterfly: E('🦋', 330, 230, 60, { tint: 0 }),
     puppy: E('🐶', 332, 350, 80, { tint: 0 }), kitten: E('🐱', 332, 352, 76, { tint: 0 }), rabbit: E('🐰', 332, 352, 76),
     pony: E('🐴', 336, 346, 88, { tint: 0 }), unicorn: E('🦄', 336, 346, 88), penguin: E('🐧', 330, 352, 76),
     parrot: E('🦜', 250, 200, 70), dragon: E('🐉', 336, 346, 90, { tint: 0 }),
@@ -424,8 +485,13 @@ const Avatar = (() => {
     const shoeSteps = shoes ? shoeRecipe(shoes) : [];
     // schoenen vóór de top zodat lange jassen eroverheen vallen, maar ná broek/rok
     const bottomSteps = steps.filter(s => s.k[0] === 'B' || s.k === 'D'), rest = steps.filter(s => !(s.k[0] === 'B' || s.k === 'D'));
-    bottomSteps.forEach(s => drawStep(ctx, s, skin));
-    shoeSteps.forEach(s => drawStep(ctx, s, skin));
+    if (bottom && bottom.shape === 'wideleg' && !dress) {
+      shoeSteps.forEach(s => drawStep(ctx, s, skin));
+      bottomSteps.forEach(s => drawStep(ctx, s, skin));
+    } else {
+      bottomSteps.forEach(s => drawStep(ctx, s, skin));
+      shoeSteps.forEach(s => drawStep(ctx, s, skin));
+    }
     rest.forEach(s => drawStep(ctx, s, skin));
     if (!dress) {
       if (top) (TOP_RECIPES[top.shape] || TOP_RECIPES.tshirt)(top).forEach(s => drawStep(ctx, s, skin));
@@ -434,6 +500,7 @@ const Avatar = (() => {
     ctx.restore();
     // 4. haar dat over de schouders valt
     drawLayer(ctx, `H${hi}_low`, hairDesign(look));
+
     // 5. voor het lijf
     if (back && BACK_FRONT[back.shape]) { ctx.save(); BACK_FRONT[back.shape](ctx, back, geo); ctx.restore(); }
     drawAcc(ctx, get('neck'), geo);

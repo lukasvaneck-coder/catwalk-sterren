@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><title>Collectiecontrole</title>
+<style>body{background:#f7edf6;font:14px system-ui;color:#40324d}main{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}article{background:white;border-radius:14px;text-align:center;padding:8px}canvas{width:100%;height:auto}h1{font-size:24px}</style>
+<h1>Nieuwe collectie — controleblad</h1><div id="status">Laden…</div><main></main>
+<script src="../assets/doll-manifest.js"></script><script src="../js/data.js"></script>
+<script>/* Asset paths in the renderer are relative to the document. */</script>
+<base href="../"><script src="js/avatar.js"></script>
+<script>
+const fresh = ITEMS.filter(i => ['wideleg', 'pumps'].includes(i.shape) || i.id.includes('_collection_') || i.id.includes('_extra_'));
+const look = {skin:'s2', eyes:'e3', hairColor:'bruin', build:40};
+const errors=[]; window.addEventListener('error', e => errors.push(e.message));
+const visible = location.search.includes('accessories') ? fresh.filter(i=>i.id.includes('_extra_')) : fresh;
+document.querySelector('main').innerHTML = visible.map(i => `<article>${Avatar.thumb(i, look)}<div>${i.name}</div><small>Level ${i.lvl}</small></article>`).join('');
+const timer=setInterval(()=>{
+ if(!Avatar.isReady())return;
+ Avatar.mountAll();
+ // Exercise composition as well as thumbnails, including every new hair color.
+ for(const i of fresh)for(const color of i.cat==='hair'?HAIR_COLORS:[HAIR_COLORS[0]]){
+  const cv=Avatar.compose({...look,hairColor:color.id},{hair:'hair_lang',top:'top_tshirt_wit',bottom:'bottom_collection_madelief_pants',[i.cat]:i.id});
+  if(!cv.width) errors.push(i.id);
+ }
+ const count=document.querySelectorAll('canvas[data-ok="1"]').length;
+ document.querySelector('#status').textContent=`${count}/${visible.length} miniaturen getekend; ${errors.length} fouten. ${errors.join('; ')}`;
+ clearInterval(timer);
+},100);
+</script>

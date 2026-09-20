@@ -1,0 +1,7 @@
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../"><title>Parkour speeltest</title><link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/parkour.css"></head><body>
+<main id="parkour"></main><script src="js/data.js"></script><script src="assets/doll-manifest.js"></script><script src="js/avatar.js"></script><script src="js/parkour-rules.js"></script><script src="js/parkour.js"></script>
+<script>
+// Afzonderlijk testprofiel in geheugen: verandert geen echte spelers of opslag.
+const testProfile={name:'Tester',look:{skin:'s2',eyes:'e3',hairColor:'bruin',build:40},outfit:{hair:'hair_staart',top:'top_tshirt_blauw',bottom:'bot_jeans',shoes:'sh_sneakers'},owned:ITEMS.map(i=>i.id)};
+Parkour.show(testProfile,{save(){},exit(){location.href='index.html';},reward(stars){return {xp:XP_PER_STARS[stars],coins:COINS_PER_STARS[stars]};}});
+</script></body></html>

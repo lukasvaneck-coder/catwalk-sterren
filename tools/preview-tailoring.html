@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>Broeken en hakjes</title>
+<base href="../">
+<style>body{font:16px system-ui;background:#f4eefa;color:#493854}main{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}article{background:white;border-radius:20px;text-align:center;padding:12px}canvas{width:100%;height:auto}</style>
+<h1>Wijde pijpen en hakjes — hele modellen</h1><p id="status">Laden…</p><main></main>
+<script src="assets/doll-manifest.js"></script><script src="js/data.js"></script><script src="js/avatar.js"></script>
+<script>
+const look={skin:'s2',eyes:'e3',hairColor:'bruin',build:40};
+const pants=ITEMS.filter(i=>i.shape==='wideleg'), shoes=ITEMS.filter(i=>i.shape==='pumps');
+const cases=pants.map((p,i)=>({name:p.name,look:{...look,build:i%3*50},outfit:{hair:['hair_knot','hair_afro_puffs','hair_kroonvlecht'][i%3],top:'top_tshirt_wit',bottom:p.id,shoes:shoes[i].id}}));
+shoes.forEach((s,i)=>cases.push({name:s.name,look,outfit:{hair:'hair_lang',dress:'dress_collection_lavendel_aline',shoes:s.id}}));
+document.querySelector('main').innerHTML=cases.map(c=>`<article>${Avatar.render(c.look,c.outfit,{bg:false})}${c.name}</article>`).join('');
+let errors=[];window.addEventListener('error',e=>errors.push(e.message));
+const timer=setInterval(()=>{if(!Avatar.isReady())return;Avatar.mountAll();
+const invalid=ITEMS.filter(i=>!i.id||i.tags.some(t=>!TAGS[t])||i.lvl<1||i.lvl>MAX_LEVEL);
+const badAliases=Object.values(HAIR_ALIASES).filter(id=>!ITEM_BY_ID[id]);
+document.querySelector('#status').textContent=`${document.querySelectorAll('canvas[data-ok="1"]').length}/${cases.length} modellen; ${errors.length} tekenfouten; ${invalid.length} ongeldige items; ${badAliases.length} ongeldige kapselverwijzingen; ${ITEMS.length-new Set(ITEMS.map(i=>i.id)).size} dubbele ids.`;clearInterval(timer);},100);
+</script>
