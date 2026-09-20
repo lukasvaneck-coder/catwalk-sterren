@@ -21,7 +21,7 @@ const World = (() => {
   const HOUSES = [
     { id: 'kleedkamer', icon: '👗', name: 'Modehuis', sub: 'Opdrachten & kleedkamer' },
     { id: 'winkel',     icon: '🛍️', name: 'Sterrenwinkel', sub: 'Nieuwe spullen kopen' },
-    { id: 'puzzel',     icon: '🎨', name: 'Kleurenhuis', sub: 'Kleurenpuzzel' },
+    { id: 'puzzel',     icon: '🎨', name: 'Kleurenhuis', sub: 'Kleuratelier' },
     { id: 'duel',       icon: '⚔️', name: 'Duelhuis', sub: 'Samen spelen' },
   ].map(h => Object.assign(h, W.doors[h.id]));
 

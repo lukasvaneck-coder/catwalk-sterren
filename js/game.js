@@ -32,6 +32,7 @@
   /* ---------- opslag ---------- */
   function load() {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.profiles)) DB = d; } } catch (e) { /* geen opslag beschikbaar */ }
+    DB.settings = { developerMode: DB.settings?.developerMode === true };
     DB.profiles.forEach(migrate);
   }
   // oude spelers meenemen naar de nieuwe versie
@@ -55,7 +56,15 @@
     if (!Array.isArray(p.owned)) p.owned = ITEMS.filter(i => i.lvl <= p.level).map(i => i.id);
     p.owned = p.owned.filter(id => ITEM_BY_ID[id]);
     for (const slot of Object.keys(p.outfit)) if (!p.owned.includes(p.outfit[slot])) p.owned.push(p.outfit[slot]);
-    p.puzzle = p.puzzle && p.puzzle.day === today() ? p.puzzle : { day: today(), count: 0 };
+    if (!['mono','buren','tegenover'].includes(p.colorMode)) p.colorMode = null;
+    if (!['weather','budget'].includes(p.learningMode)) p.learningMode = null;
+    if(p.learningMode==='budget') {
+      const task=THEME_BY_ID[p.themeId], run=p.budgetRun;
+      if(task?.learning!=='budget') {p.learningMode=null;p.budgetRun=null;}
+      else if(!run||run.themeId!==task.id||!Array.isArray(run.purchases)||!Number.isFinite(run.spent)) {
+        p.budgetRun=LearningChallenges.startBudget(task);
+      }
+    }
     p.duels = p.duels || { played: 0, won: 0 };
   }
   function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(DB)); } catch (e) { /* stil doorgaan */ } }
@@ -78,6 +87,7 @@
 
   /* ---------- schermen & hulpjes ---------- */
   function showScreen(id) {
+    if (document.body.dataset.screen === 'screen-parkour' && id !== 'screen-parkour') Parkour.hide();
     if (document.body.dataset.screen === 'screen-world' && id !== 'screen-world') World.hide();
     document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; }); document.body.dataset.screen = id; window.scrollTo(0, 0);
   }
@@ -91,8 +101,22 @@
       enter: id => {
         if (id === 'kleedkamer') startGame(P);
         else if (id === 'winkel') openShop();
-        else if (id === 'puzzel') openPuzzle();
+        else if (id === 'puzzel') openColorAtelier();
         else if (id === 'duel') { if (DB.profiles.length < 2) toast('Voor een duel heb je twee spelers nodig. Maak op het startscherm nog een speler.'); else openDuelSetup(); }
+      },
+    });
+  }
+  function openParkour() {
+    if (!P) return;
+    if (ui.duel) { toast('Maak eerst het duel af voordat je gaat racen.'); return; }
+    closeOverlay();
+    showScreen('screen-parkour');
+    Parkour.show(P, {
+      save,
+      exit: () => enterWorld(P),
+      reward: (stars, courseId) => {
+        const gained = award(P, { stars }, { id: `parkour_${courseId}` }, false);
+        return { ...gained, extra: P.level > gained.prevLevel ? levelUpHtml(gained, P) : '' };
       },
     });
   }
@@ -207,12 +231,28 @@
   function currentTheme() {
     if (ui.duel) return effectiveTheme(THEME_BY_ID[ui.duel.themeId], ui.duel.colors);
     const t = THEME_BY_ID[P.themeId];
-    if (!t || t.lvl > P.level) return null;
+    if (!t || (t.lvl > P.level && !(P.colorMode && t.rule===P.colorMode))) return null;
     if (t.rule && !(P.themeColors && P.themeColors.length)) { P.themeColors = ruleColors(t.rule); save(); }
     return effectiveTheme(t, P.themeColors);
   }
   function pickTheme(exclude, maxLevel = P.level) {
-    const avail = THEMES.filter(t => t.lvl <= maxLevel && t.id !== exclude);
+    if (P.learningMode && !ui.duel) {
+      const available=THEMES.filter(t=>t.learning===P.learningMode&&t.lvl<=maxLevel);
+      const choices=available.filter(t=>t.id!==exclude);
+      if(available.length){const t=rand(choices.length?choices:available);selectLearningTheme(t);return t;}
+      P.learningMode=null;
+    }
+    if (P.colorMode && !ui.duel) {
+      const rule=P.colorMode, choices=ColorChallenges.palettes(rule,P.owned,ITEM_BY_ID);
+      if (choices.length) {
+        const t=THEMES.find(t=>t.rule===rule);
+        const alternatives=choices.filter(c=>JSON.stringify(c)!==JSON.stringify(P.themeColors));
+        P.themeId=t.id; P.themeColors=rand(alternatives.length?alternatives:choices); save();
+        return effectiveTheme(t,P.themeColors);
+      }
+      P.colorMode=null;
+    }
+    const avail = THEMES.filter(t => !t.learning && t.lvl <= maxLevel && t.id !== exclude);
     const fresh = avail.filter(t => !P.done[t.id]);
     const t = rand(fresh.length ? fresh : (avail.length ? avail : THEMES));
     if (!ui.duel) { P.themeId = t.id; P.themeColors = t.rule ? ruleColors(t.rule) : null; save(); }
@@ -235,20 +275,29 @@
   }
 
   function themeTags(t) {
+    if(t.learning)return `<div class="tags"><span class="tag">${t.learning==='weather'?'🌦️ Passend bij het weer':'🛍️ Slim combineren'}</span><span class="tag">👗 Complete outfit</span></div>`;
     const hints = t.wants.map(w => `<span class="tag">${TAGS[w].emoji} ${TAGS[w].label}</span>`).join('');
     const col = t.multiColor ? `<span class="tag col">🌈 zoveel kleuren als je kunt</span>`
       : t.colors ? t.colors.map(c => `<span class="tag col"><i style="background:${HUES[c].swatch}"></i> ${HUES[c].label}</span>`).join('') : '';
     const glam = t.glam >= 2.5 ? '💎 super chic' : t.glam >= 1.5 ? '✨ een beetje glamour' : t.glam >= 1 ? '🙂 gewoon leuk' : '👟 lekker simpel';
+    if (t.rule) return `<div class="tags">${col}<span class="tag">👗 Complete outfit</span></div>`;
     return `<div class="tags">${hints}${col}<span class="tag">${glam}</span></div>`;
   }
   // bij een kleurenopdracht staat het wiel op de kaart in plaats van de emoji
   const themeIcon = t => t.rule ? `<div class="ch-wheel">${wheelSvg(t.colors)}</div>` : `<div class="ch-emoji">${t.emoji}</div>`;
+  function colorLesson(t) {
+    if(t.learning) {
+      const requirements=LearningChallenges.checks(P.outfit,t,ITEM_BY_ID);
+      return `<details class="color-lesson" open><summary>💡 Lesje van de jury</summary><p>${t.lesson}</p><ul>${requirements.map(c=>`<li>${c.label}</li>`).join('')}</ul>${t.learning==='budget'?budgetSummary(t):''}</details><details class="color-lesson"><summary>🎨 Kleurtip erbij</summary><p>${ColorChallenges.lesson(t)}</p></details>`;
+    }
+    return '<details class="color-lesson" '+(t.rule?'open':'')+'><summary>🌸 Kleurenlesje van Madame Fleur</summary><p>'+ColorChallenges.lesson(t)+'</p><small>We kijken naar de hoofdkleur van elk kledingstuk. Wit, zwart, grijs, bruin, goud en zilver mogen als neutrale kleuren erbij.</small></details>';
+  }
   function renderChallenge() {
     const box = $('#challenge');
     if (ui.duel) {
       const t = currentTheme();
       const other = DB.profiles.find(p => p.id === ui.duel.ids[1 - ui.duel.turn]);
-      box.innerHTML = `${themeIcon(t)}<div class="ch-body"><small><span class="duel-banner">⚔️ Duel · beurt van ${esc(P.name)}</span> · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}</div><div class="ch-actions"><span class="small">Daarna is ${esc(other.name)}</span><button class="btn ghost sm" id="btn-duel-stop" type="button">✖ Duel stoppen</button></div>`;
+      box.innerHTML = `${themeIcon(t)}<div class="ch-body"><small><span class="duel-banner">⚔️ Duel · beurt van ${esc(P.name)}</span> · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}${colorLesson(t)}</div><div class="ch-actions"><span class="small">Daarna is ${esc(other.name)}</span><button class="btn ghost sm" id="btn-duel-stop" type="button">✖ Duel stoppen</button></div>`;
       $('#btn-duel-stop').onclick = () => { Sound.play('klik'); ui.duel = null; renderStart(); showScreen('screen-start'); };
       $('#btn-jury').textContent = 'Klaar! Naar de jury ✨';
       return;
@@ -258,7 +307,12 @@
     } else {
       const t = currentTheme() || pickTheme();
       const best = P.done[t.id] ? `beste score ${'⭐'.repeat(P.done[t.id])}` : 'nieuw!';
-      box.innerHTML = `${themeIcon(t)}<div class="ch-body"><small>Opdracht · ${best} · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}</div><div class="ch-actions"><button class="btn ghost sm" id="btn-other" type="button">🔄 Andere opdracht</button><button class="btn ghost sm" id="btn-free" type="button">🎨 Vrij spelen</button></div>`;
+      box.innerHTML = `${themeIcon(t)}<div class="ch-body"><small>Opdracht · ${best} · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}${colorLesson(t)}</div><div class="ch-actions"><button class="btn ghost sm" id="btn-other" type="button">🔄 Andere opdracht</button><button class="btn ghost sm" id="btn-free" type="button">🎨 Vrij spelen</button></div>`;
+      if (P.colorMode || P.learningMode) {
+        const exit=h('button',{class:'btn ghost sm',type:'button'},'👗 Gewone opdrachten');
+        exit.onclick=()=>{P.colorMode=null;P.learningMode=null;P.budgetRun=null;pickTheme();renderAll();};
+        box.querySelector('.ch-actions').appendChild(exit);
+      }
       $('#btn-other').onclick = () => { Sound.play('klik'); pickTheme(t.id); renderChallenge(); renderStage(); };
     }
     $('#btn-free').onclick = () => { Sound.play('klik'); ui.free = !ui.free; if (!ui.free && ui.tab === 'bg') ui.tab = 'dress'; renderChallenge(); renderStage(); renderTabs(); renderGrid(); };
@@ -355,6 +409,31 @@
   function clearOutfit() { P.outfit = { hair: P.outfit.hair }; save(); renderStage(); renderGrid(); }
 
   /* ---------- winkel ---------- */
+  function selectLearningTheme(t) {
+    P.learningMode=t.learning;P.colorMode=null;P.themeId=t.id;P.themeColors=null;
+    P.budgetRun=t.learning==='budget'?LearningChallenges.startBudget(t):null;
+    save();
+  }
+  function activeBudget() {
+    const t=THEME_BY_ID[P?.themeId];
+    return !ui.duel&&P?.learningMode==='budget'&&t?.learning==='budget'?t:null;
+  }
+  function budgetSummary(t) {
+    const run=P.budgetRun;
+    if(!run||run.themeId!==t.id)return '<p>Start de budgetopdracht om je bestedingen bij te houden.</p>';
+    return `<div class="budget-summary"><b>🪙 ${t.budget} − ${run.spent} = ${t.budget-run.spent} munten opdrachtbudget over</b><p>${run.purchases.length} van maximaal ${t.maxBuys} nieuwe spullen gekocht.</p>${run.purchases.length?`<ul>${run.purchases.map(p=>`<li>${esc(ITEM_BY_ID[p.id]?.name||p.id)}: ${p.price} munten</li>`).join('')}</ul>`:'<p>Je hebt nog niets gekocht. Je eigen kast gebruiken is gratis.</p>'}<small>Dit is een bestedingsgrens, geen extra geld. Je betaalt uit je eigen ${P.coins} munten. Rekenbonussen verhogen je opdrachtbudget niet. Alle aankopen tellen mee, ook als je ze niet draagt.</small></div>`;
+  }
+  function openLearning() {
+    if(ui.duel){toast('Maak eerst je duel af.');return;}
+    openOverlay(`<h2 class="h">🌦️ Weer & budget</h2><p>Kies een opdracht. De jury kijkt of je keuzes bij de situatie passen.</p>${['weather','budget'].map(group=>`<h3>${group==='weather'?'🌦️ Kleden voor het weer':'🛍️ Winkelen met een budget'}</h3><div class="learning-scenarios">${THEMES.filter(t=>t.learning===group).map(t=>`<button type="button" class="btn ghost learning-scenario" data-lesson="${t.id}" ${P.level<t.lvl?'disabled':''}><b>${t.emoji} ${t.name}</b><small>${group==='budget'?`${t.budget} munten · maximaal ${t.maxBuys} nieuwe spullen`:`${t.desc}`}</small><small>${P.level<t.lvl?'Vanaf level '+t.lvl:(P.done[t.id]?'Beste: '+'⭐'.repeat(P.done[t.id]):'Nieuw!')}</small></button>`).join('')}</div>`).join('')}<p class="small">Begin eerst in je eigen kast. De winkel gebruikt je eigen munten. Elke opdracht heeft een lesje en een kleurentip.</p><button class="btn ghost" id="learning-close">Terug</button>`);
+    $('#learning-close').onclick=closeOverlay;
+    document.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>{
+      const t=THEME_BY_ID[b.dataset.lesson];if(t.lvl>P.level)return;
+      // Opnieuw openen van dezelfde lopende opdracht wist de kassabon niet.
+      if(P.learningMode!==t.learning||P.themeId!==t.id||(t.learning==='budget'&&!P.budgetRun))selectLearningTheme(t);
+      closeOverlay();startGame(P);
+    });
+  }
   function openShop(slot = null) {
     const cats = CATEGORIES.filter(c => !c.freeOnly);
     const slotCat = slot ? cats.find(c => (c.slots || [c.id]).includes(slot)) : null;
@@ -364,9 +443,10 @@
       const list = filter === 'alles' ? shopItems() : (cat.slots || [cat.id]).flatMap(s => shopItems(s));
       openOverlay(`
         <div class="shop-head"><h2 class="h">🛍️ Winkel</h2><div class="hud-stars coins">🪙 <span id="shop-coins">${P.coins}</span></div></div>
+        ${activeBudget()?budgetSummary(activeBudget()):''}
         <div class="shop-tabs"><button class="tab${filter === 'alles' ? ' active' : ''}" data-f="alles" type="button">Alles (${shopItems().length})</button>${cats.map(c => { const n = (c.slots || [c.id]).reduce((a, s) => a + shopItems(s).length, 0); return n ? `<button class="tab${filter === c.id ? ' active' : ''}" data-f="${c.id}" type="button"><span class="ti">${c.emoji}</span>${c.name} (${n})</button>` : ''; }).join('')}</div>
         ${list.length ? `<div class="shop-grid">${list.map(it => `<button class="item${P.coins < priceOf(it) ? ' poor' : ''}" data-id="${it.id}" type="button" title="${it.name}">${Avatar.thumb(it, thumbLook())}<span class="name">${it.name}</span><span class="price">🪙 ${priceOf(it)}</span></button>`).join('')}</div>` : `<div class="shop-empty">Alles gekocht! Speel een opdracht of haal een hoger level voor nieuwe spullen.</div>`}
-        <p class="center small">Munten verdien je bij de jury en met de kleurenpuzzel. Kies je kleding zelf en spaar voor wat je écht wilt.</p>
+        <p class="center small">Munten verdien je bij de jury en met de kleurenopdracht. Kies je kleding zelf en spaar voor wat je écht wilt.</p>
         <div class="row center"><button class="btn ghost" id="shop-close" type="button">Terug naar de kleedkamer</button></div>`, 'shop');
       $('#shop-close').onclick = () => { closeOverlay(); renderAll(); };
       document.querySelectorAll('.shop-tabs .tab').forEach(b => { b.onclick = () => { Sound.play('klik'); filter = b.dataset.f; draw(); }; });
@@ -376,7 +456,9 @@
   }
   function buyFlow(it, back) {
     const price = priceOf(it);
-    if (P.coins < price) { Sound.play('fout'); toast(`Nog ${price - P.coins} munten sparen voor ${it.name}. Speel een opdracht of doe de kleurenpuzzel!`); return; }
+    const budgetTheme=activeBudget();
+    if(budgetTheme){const reason=LearningChallenges.purchaseError(budgetTheme,P.budgetRun,price);if(reason){toast(reason);return;}}
+    if (P.coins < price) { Sound.play('fout'); toast(`Nog ${price - P.coins} munten sparen voor ${it.name}. Speel een opdracht of doe de kleurenopdracht!`); return; }
     Sound.play('klik');
     const rest = P.coins - price;
     // rekenvraagje: hoeveel houd je over?
@@ -400,6 +482,9 @@
         $('#buy-feedback').textContent = ok ? `Goed gerekend! Je krijgt 2 munten bonus. 🎉` : `Bijna! ${P.coins} − ${price} = ${rest}.`;
         P.coins = rest + (ok ? 2 : 0);
         P.owned.push(it.id);
+        if(budgetTheme&&P.budgetRun?.themeId===budgetTheme.id){
+          P.budgetRun.spent+=price;P.budgetRun.purchases.push({id:it.id,price});
+        }
         save();
         await wait(1300);
         Sound.play('tada');
@@ -412,6 +497,18 @@
   /* ---------- de jury ---------- */
   const wheelDist = (a, b) => { const d = Math.abs(a - b) % 6; return Math.min(d, 6 - d); };
   function evaluate(outfit, theme) {
+    if(theme.learning){
+      const result=LearningChallenges.assess(outfit,theme,ITEM_BY_ID,P.budgetRun);
+      const feedback=result.feedback.length?result.feedback:[theme.learning==='weather'?'Je outfit past bij alle weerswensen. Goed nagedacht!':'Je outfit past bij het uitje én blijft binnen het budget. Slim gekozen!'];
+      return {total:result.total,stars:result.stars,judges:JUDGES.map((judge,i)=>({judge,score:result.total,comment:feedback[i%feedback.length]})),weakest:result.list[0].ok?'thema':'compleet',factors:{thema:result.total/10,kleur:1,compleet:result.list[0].ok?1:0,glamour:1,accessoires:1},colorFeedback:feedback};
+    }
+    if (theme.rule) {
+      const check=ColorChallenges.assess(outfit,theme,ITEM_BY_ID);
+      const weights=[.85,.7,.8];
+      const judges=JUDGES.map((judge,i)=>({judge,score:Math.min(check.complete < .999 ? 7.9 : 10, Math.round((check.score*weights[i]+check.complete*(1-weights[i]))*100)/10),comment:check.feedback[i%check.feedback.length]}));
+      const total=Math.round(judges.reduce((n,j)=>n+j.score,0)/3*10)/10;
+      return {judges,total,stars:total>=8?3:total>=5.8?2:1,weakest:check.score<check.complete?'kleur':'compleet',factors:{kleur:check.score,thema:check.score,compleet:check.complete,glamour:1,accessoires:1},colorFeedback:check.feedback};
+    }
     const get = s => outfit[s] ? ITEM_BY_ID[outfit[s]] : null;
     const worn = OUTFIT_SLOTS.map(get).filter(Boolean);
     const themed = [...worn, get('pet'), get('mk_face')].filter(Boolean);
@@ -474,7 +571,7 @@
     return { factors, judges, total, stars, weakest };
   }
   // beloning uitdelen: xp, munten, level-up met cadeautjes; de rest van het level komt in de winkel
-  function award(p, res, theme) {
+  function award(p, res, theme, isShow = true) {
     let xp = XP_PER_STARS[res.stars];
     const first = !p.done[theme.id];
     if (first) xp += XP_FIRST_TIME;
@@ -482,7 +579,8 @@
     const prevLevel = p.level;
     p.xp += xp; p.level = levelFromXp(p.xp); p.coins += coins;
     p.done[theme.id] = Math.max(p.done[theme.id] || 0, res.stars);
-    p.shows++; p.stars += res.stars;
+    if (isShow) p.shows++;
+    p.stars += res.stars;
     const fresh = ITEMS.filter(i => i.lvl > prevLevel && i.lvl <= p.level);
     const gifts = shuffle(fresh).slice(0, GIFTS_PER_LEVEL * (p.level - prevLevel));
     gifts.forEach(g => p.owned.push(g.id));
@@ -527,11 +625,10 @@
       <div class="total">Gemiddeld <b>${res.total}</b> van de 10</div>
       <div class="xp-gain">+${g.xp} XP · +${g.coins} 🪙${g.first ? ' <small>eerste-keer-bonus!</small>' : ''}</div>
       <div class="xp"><div class="xp-bar"><div id="xp-fill-res"></div></div><small id="xp-text-res"></small></div>
-      ${res.stars < 3 ? `<div class="tip">💡 ${TIPS[res.weakest]}</div>` : ''}
+      ${res.stars < 3 && !theme.learning ? `<div class="tip">💡 ${TIPS[res.weakest]}</div>` : ''}
       ${lvlUp ? levelUpHtml(g, P) : ''}
-      ${bonusAvailable(res, theme) ? `<div class="bonus-offer"><span class="who">🌸</span><p>Madame Fleur: "Die kleuren waren nog geen vriendjes. Wil je een kleurenvraag over jouw outfit doen? Goed antwoord = <b>+4 munten</b>."</p><button class="btn mint" id="res-bonus" type="button">🎨 Bonusvraag!</button></div>` : ''}
+      <div class="tip">🌸 ${theme.lesson || ColorChallenges.lesson(theme)}${res.colorFeedback?'<ul>'+res.colorFeedback.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>':''}${theme.learning==='budget'?budgetSummary(theme):''}</div>
       <div class="row center wrap"><button class="btn ghost" id="res-back" type="button">🪞 Kleedkamer</button><button class="btn gold" id="res-shop" type="button">🛍️ Winkel</button><button class="btn big" id="res-next" type="button">Volgende opdracht ➜</button></div>`;
-    if ($('#res-bonus')) $('#res-bonus').onclick = () => bonusQuestion(res, theme, () => { closeOverlay(); pickTheme(theme.id); renderAll(); });
     [...r.querySelectorAll('.stars span')].forEach((s, i) => setTimeout(() => { s.classList.add('on'); if (i < res.stars) Sound.play('ster'); }, 150 + i * 350));
     setTimeout(() => Sound.play(lvlUp ? 'levelup' : res.stars === 3 ? 'tada' : 'ding'), 150 + 3 * 350);
     const cur = xpForLevel(P.level), next = P.level < MAX_LEVEL ? xpForLevel(P.level + 1) : null;
@@ -559,50 +656,6 @@
   }
 
   /* ---------- bonusvraag van Madame Fleur over jouw eigen outfit ---------- */
-  function wornColors() {
-    const hues = OUTFIT_SLOTS.map(s => P.outfit[s] && ITEM_BY_ID[P.outfit[s]]).filter(Boolean).map(i => i.hue).filter(hh => HUES[hh] && !HUES[hh].neutral && !HUES[hh].multi);
-    return [...new Set(hues)];
-  }
-  function bonusAvailable(res, theme) {
-    if (theme.multiColor || ui.duel) return false;
-    return res.factors.kleur < 0.6 && wornColors().length >= 2;
-  }
-  function bonusQuestion(res, theme, done) {
-    Sound.play('klik');
-    const cols = wornColors();
-    const a = cols[0];
-    const ia = WHEEL.indexOf(a);
-    // zoek een kleur die botst met a (2 stappen op het wiel), anders gewoon de tweede kleur
-    const b = cols.find(c => wheelDist(WHEEL.indexOf(c), ia) === 2) || cols[1];
-    const neighbours = [WHEEL[(ia + 1) % 6], WHEEL[(ia + 5) % 6]];
-    const wrong = WHEEL.filter(c => c !== a && !neighbours.includes(c));
-    const options = shuffle([rand(neighbours), ...shuffle(wrong).slice(0, 2)]);
-    openOverlay(`<div class="puzzle bonus"><h2 class="h">🌸 Bonusvraag van Madame Fleur</h2>
-      <div class="worn"><span class="dot" style="background:${HUES[a].swatch}"></span> ${HUES[a].label} <span>+</span> <span class="dot" style="background:${HUES[b].swatch}"></span> ${HUES[b].label}</div>
-      ${wheelSvg([a, b])}
-      <div class="question">Je droeg <b>${HUES[a].label}</b> met <b>${HUES[b].label}</b>. Die staan niet naast elkaar op het wiel. Welke kleur was een betere <b>buur</b> van ${HUES[a].label} geweest?</div>
-      <div class="color-options">${options.map(v => `<button class="color-opt" data-v="${v}" type="button"><span class="dot" style="background:${HUES[v].swatch}"></span>${HUES[v].label}</button>`).join('')}</div>
-      <p class="feedback" id="bq-feedback"></p>
-      <div class="row center"><button class="btn ghost sm" id="bq-skip" type="button">Overslaan</button></div></div>`, 'jury');
-    $('#bq-skip').onclick = done;
-    document.querySelectorAll('.color-opt').forEach(btn => {
-      btn.onclick = async () => {
-        if (btn.disabled) return;
-        const ok = neighbours.includes(btn.dataset.v);
-        document.querySelectorAll('.color-opt').forEach(x => { x.disabled = true; x.classList.add(neighbours.includes(x.dataset.v) ? 'right' : 'wrong'); });
-        const coins = ok ? 4 : 1;
-        P.coins += coins; save();
-        Sound.play(ok ? 'tada' : 'fout');
-        $('#bq-feedback').textContent = (ok ? `Precies! +${coins} munten. ` : `Bijna! +${coins} munt voor het proberen. `) + `${HUES[neighbours[0]].label} en ${HUES[neighbours[1]].label} zijn de buren van ${HUES[a].label}. Probeer dat de volgende keer!`;
-        $('#bq-skip').textContent = 'Volgende opdracht ➜';
-        $('#bq-skip').className = 'btn';
-        if (ok) confetti($('#overlay'), 40);
-        await wait(2600);
-        if ($('#bq-skip')) done();
-      };
-    });
-  }
-
   /* ---------- duel: twee spelers, één opdracht ---------- */
   function openDuelSetup() {
     Sound.play('klik');
@@ -673,68 +726,21 @@
     $('#duel-again').onclick = () => { closeOverlay(); startDuel(pa.id, pb.id); };
   }
 
-  /* ---------- kleurenpuzzel ---------- */
+  /* ---------- kleurenopdracht ---------- */
   // kleurenwiel; de gemarkeerde kleuren krijgen een rand en springen iets naar buiten
   const wheelSvg = (marks, extra = '') => {
     const marked = Array.isArray(marks) ? marks : (marks ? [marks] : []);
     const seg = (i, hue) => { const a0 = (i * 60 - 90 - 30) * Math.PI / 180, a1 = (i * 60 - 90 + 30) * Math.PI / 180; const R = 120, r = 46; const p = (ang, rad) => `${(150 + Math.cos(ang) * rad).toFixed(1)} ${(150 + Math.sin(ang) * rad).toFixed(1)}`; const on = marked.includes(hue); const mid = (i * 60 - 90) * Math.PI / 180; const tr = on ? ` transform="translate(${(Math.cos(mid) * 8).toFixed(1)} ${(Math.sin(mid) * 8).toFixed(1)})"` : ''; return `<path class="seg${on ? ' ask' : ''}" data-hue="${hue}"${tr} d="M${p(a0, r)} L${p(a0, R)} A${R} ${R} 0 0 1 ${p(a1, R)} L${p(a1, r)} A${r} ${r} 0 0 0 ${p(a0, r)} Z" fill="${HUES[hue].swatch}" stroke="#fff" stroke-width="3" opacity="${marked.length && !on ? .45 : 1}"/>`; };
     return `<svg class="wheel" viewBox="0 0 300 300" aria-hidden="true">${WHEEL.map((hh, i) => seg(i, hh)).join('')}<circle cx="150" cy="150" r="40" fill="var(--surface)"/><text x="150" y="158" text-anchor="middle" font-size="26">🎨</text>${extra}</svg>`;
   };
-  function makeQuestions() {
-    const qs = [];
-    // 1: buurkleur
-    { const i = Math.floor(Math.random() * 6); const hue = WHEEL[i]; const good = [WHEEL[(i + 1) % 6], WHEEL[(i + 5) % 6]]; const bad = WHEEL.filter(hh => hh !== hue && !good.includes(hh)); const correct = rand(good); qs.push({ type: 'color', ask: hue, text: `Welke kleur is een <b>buurkleur</b> van ${HUES[hue].label}? Buurkleuren staan naast elkaar op het wiel en passen mooi bij elkaar.`, options: shuffle([correct, ...shuffle(bad).slice(0, 2)]), correct: v => good.includes(v), explain: `${HUES[good[0]].label} en ${HUES[good[1]].label} zijn de buren van ${HUES[hue].label}.` }); }
-    // 2: tegenoverliggende kleur
-    { const i = Math.floor(Math.random() * 6); const hue = WHEEL[i]; const opp = WHEEL[(i + 3) % 6]; const bad = WHEEL.filter(hh => hh !== hue && hh !== opp); qs.push({ type: 'color', ask: hue, text: `Welke kleur ligt <b>tegenover</b> ${HUES[hue].label} op het wiel? Die twee laten elkaar knallen!`, options: shuffle([opp, ...shuffle(bad).slice(0, 2)]), correct: v => v === opp, explain: `Tegenover ${HUES[hue].label} ligt ${HUES[opp].label}.` }); }
-    // 3: welke outfit is rustig?
-    { const i = Math.floor(Math.random() * 6); const a = WHEEL[i], b = WHEEL[(i + (Math.random() < .5 ? 1 : 5)) % 6]; const others = WHEEL.filter(hh => hh !== a && hh !== b); const mk = (top, bottom, shoes) => ({ top, bottom, shoes }); const good = mk(a, b, Math.random() < .5 ? a : b); const clash1 = mk(others[0], others[1], others[2]); const clash2 = mk(a, WHEEL[(i + 2) % 6], WHEEL[(i + 4) % 6]); qs.push({ type: 'outfit', text: `Welke outfit heeft <b>kleuren die vriendjes zijn</b>? Kijk goed: rustig of een rommeltje?`, options: shuffle([{ o: good, ok: true }, { o: clash1, ok: false }, { o: clash2, ok: false }]), explain: `${HUES[a].label} en ${HUES[b].label} zijn buren, dat is rustig. Drie kleuren die ver uit elkaar liggen, worden een rommeltje.` }); }
-    return qs;
-  }
-  function outfitPreview(o) {
-    const items = { q_top: { cat: 'top', shape: 'tshirt', c: [HUES[o.top].swatch], tags: [] }, q_bot: { cat: 'bottom', shape: 'pants', c: [HUES[o.bottom].swatch, Avatar.dark(HUES[o.bottom].swatch, .2)], tags: [] }, q_sh: { cat: 'shoes', shape: 'sneaker', c: [HUES[o.shoes].swatch, '#fff'], tags: [] } };
-    return Avatar.render(P.look, { hair: P.outfit.hair, top: 'q_top', bottom: 'q_bot', shoes: 'q_sh' }, { bg: false, items });
-  }
-  function openPuzzle() {
-    Sound.play('klik');
-    if (P.puzzle.day !== today()) P.puzzle = { day: today(), count: 0 };
-    const rewarded = P.puzzle.count < PUZZLE_REWARDED_PER_DAY;
-    const qs = makeQuestions();
-    let idx = 0, right = 0;
-    const draw = () => {
-      const q = qs[idx];
-      const progress = `<div class="progress">${qs.map((x, i) => `<i class="${i < idx ? (x.result ? 'ok' : 'bad') : ''}${i === idx ? ' cur' : ''}"></i>`).join('')}</div>`;
-      const body = q.type === 'color'
-        ? `${wheelSvg(q.ask)}<div class="question">${q.text}</div><div class="color-options">${q.options.map(v => `<button class="color-opt" data-v="${v}" type="button"><span class="dot" style="background:${HUES[v].swatch}"></span>${HUES[v].label}</button>`).join('')}</div>`
-        : `<div class="question">${q.text}</div><div class="outfit-options">${q.options.map((op, i) => `<button class="outfit-opt" data-i="${i}" type="button">${outfitPreview(op.o)}</button>`).join('')}</div>`;
-      openOverlay(`<div class="puzzle"><h2 class="h">🎨 Kleurenpuzzel</h2>${progress}${body}<p class="feedback" id="pz-feedback"></p><button class="btn ghost sm" id="pz-close" type="button">Stoppen</button></div>`, 'puzzle-modal');
-      $('#pz-close').onclick = closeOverlay;
-      const answer = async (ok, markRight) => {
-        q.result = ok; if (ok) right++;
-        markRight();
-        Sound.play(ok ? 'ster' : 'fout');
-        $('#pz-feedback').textContent = (ok ? 'Goed zo! ' : 'Bijna! ') + q.explain;
-        await wait(1700);
-        idx++;
-        if (idx < qs.length) draw(); else finish();
-      };
-      document.querySelectorAll('.color-opt').forEach(b => {
-        b.onclick = () => { if (b.disabled) return; answer(q.correct(b.dataset.v), () => document.querySelectorAll('.color-opt').forEach(x => { x.disabled = true; x.classList.add(q.correct(x.dataset.v) ? 'right' : 'wrong'); })); };
-      });
-      document.querySelectorAll('.outfit-opt').forEach(b => {
-        b.onclick = () => { if (b.disabled) return; const op = q.options[+b.dataset.i]; answer(op.ok, () => document.querySelectorAll('.outfit-opt').forEach(x => { x.disabled = true; x.classList.add(q.options[+x.dataset.i].ok ? 'right' : 'wrong'); })); };
-      });
-    };
-    const finish = () => {
-      let coins = 0;
-      if (rewarded) { coins = right * PUZZLE_COIN_PER_ANSWER + (right === qs.length ? PUZZLE_BONUS_ALL_RIGHT : 0); P.coins += coins; P.puzzle.count++; save(); }
-      const left = Math.max(0, PUZZLE_REWARDED_PER_DAY - P.puzzle.count);
-      const ov = openOverlay(`<div class="puzzle"><h2 class="h">${right === qs.length ? '🌈 Alles goed!' : right >= 2 ? '👏 Goed bezig!' : '💪 Volgende keer beter!'}</h2><div class="stars">${[0, 1, 2].map(i => `<span class="on">${i < right ? '⭐' : '☆'}</span>`).join('')}</div><p>${right} van de ${qs.length} goed.</p>${coins ? `<div class="xp-gain">+${coins} 🪙</div>` : rewarded ? '' : '<p class="small">Voor vandaag heb je alle puzzelmunten al verdiend. Oefenen mag altijd!</p>'}${rewarded ? `<p class="small">Nog ${left} puzzelronde${left === 1 ? '' : 's'} vandaag die munten opleveren.</p>` : ''}<div class="row center wrap"><button class="btn ghost" id="pz-done" type="button">Terug</button><button class="btn mint" id="pz-again" type="button">🔁 Nog een keer</button></div></div>`);
-      if (right === qs.length) confetti(ov, 60);
-      Sound.play(right === qs.length ? 'tada' : 'ding');
-      $('#pz-done').onclick = () => { closeOverlay(); renderHUD(); };
-      $('#pz-again').onclick = () => { closeOverlay(); renderHUD(); openPuzzle(); };
-    };
-    draw();
+  function openColorAtelier() {
+    if (ui.duel) { toast('Maak eerst je duel af.'); return; }
+    const modes=[['mono','Eén kleurfamilie'],['buren','Buurkleuren'],['tegenover','Kleuren die knallen']];
+    openOverlay('<h2 class="h">🎨 Kleuratelier van de jury</h2><p>Madame Fleur geeft je een kleurdoel. Jij kleedt je eigen model aan en laat de jury kijken!</p><div class="row wrap">'+modes.map(([rule,label])=>'<button class="btn" data-color-rule="'+rule+'" '+(ColorChallenges.palettes(rule,P.owned,ITEM_BY_ID).length?'':'disabled')+'>'+label+'</button>').join('')+'</div><p class="small">Grijze opdrachten worden beschikbaar zodra je passende kleding in je kast hebt. Bij iedere opdracht krijg je een kort kleurenlesje.</p><button class="btn ghost" id="colors-close">Terug</button>');
+    $('#colors-close').onclick=closeOverlay;
+    document.querySelectorAll('[data-color-rule]').forEach(b=>b.onclick=()=>{
+      P.learningMode=null; P.budgetRun=null; P.colorMode=b.dataset.colorRule; pickTheme(); closeOverlay(); startGame(P);
+    });
   }
 
   /* ---------- foto ---------- */
@@ -766,20 +772,38 @@
   }
   function renderSoundButton() { const b = $('#btn-sound'); b.textContent = Sound.isOn() ? '🔊' : '🔇'; b.title = Sound.isOn() ? 'Geluid uit' : 'Geluid aan'; }
 
+  function unlockEverything() {
+    if (DB.settings?.developerMode !== true) return;
+    if (!DB.profiles.length) { toast('Maak eerst een speler.'); return; }
+    DB.profiles.forEach(p => { p.xp = Math.max(p.xp, xpForLevel(MAX_LEVEL)); p.level = MAX_LEVEL; p.owned = ITEMS.map(i => i.id); p.coins += 500; });
+    save(); renderStart();
+    if (P) { renderHUD(); renderGrid(); }
+    Sound.play('levelup'); toast('Alle spelers: level 20, alle spullen en 500 munten extra.');
+  }
+  function openSettings() {
+    const enabled=DB.settings?.developerMode === true;
+    openOverlay('<h2 class="h">⚙️ Instellingen</h2><label class="developer-switch"><input id="developer-mode" type="checkbox" '+(enabled?'checked':'')+'> <span><b>Developer mode</b><small>Toon testfuncties voor deze browser.</small></span></label><div id="developer-tools" '+(enabled?'':'hidden')+'><p>Alles vrijspelen zet <b>alle spelers</b> op level 20, geeft alle spullen en voegt per speler 500 munten toe. Uitschakelen draait dit niet terug.</p><button class="btn gold" id="btn-test-max" type="button">🧪 Alles vrijspelen</button></div><div class="row center"><button class="btn ghost" id="settings-close" type="button">Sluiten</button></div>');
+    $('#developer-mode').onchange=e=>{
+      DB.settings={...DB.settings,developerMode:e.target.checked};save();
+      $('#developer-tools').hidden=!e.target.checked;
+    };
+    $('#btn-test-max').onclick=unlockEverything;
+    $('#settings-close').onclick=closeOverlay;
+  }
+
   /* ---------- knoppen ---------- */
   function wire() {
+    document.querySelectorAll('[data-settings]').forEach(b=>b.onclick=openSettings);
+    $('#btn-learning').onclick=openLearning;
+    $('#btn-world-learning').onclick=openLearning;
+    $('#btn-world-parkour').onclick = openParkour;
+    $('#btn-parkour').onclick = openParkour;
     renderSoundButton();
     $('#btn-sound').onclick = () => { Sound.toggle(); renderSoundButton(); };
     $('#btn-next').onclick = showNextLevel;
     $('#btn-shop').onclick = () => { Sound.play('klik'); openShop(); };
-    $('#btn-puzzle').onclick = openPuzzle;
+    $('#btn-puzzle').onclick = openColorAtelier;
     $('#btn-duel').onclick = openDuelSetup;
-    // testknop: alle spelers naar het hoogste level met alle spullen en een zak munten
-    $('#btn-test-max').onclick = () => {
-      if (!DB.profiles.length) { toast('Maak eerst een speler.'); return; }
-      DB.profiles.forEach(p => { p.xp = Math.max(p.xp, xpForLevel(MAX_LEVEL)); p.level = MAX_LEVEL; p.owned = ITEMS.map(i => i.id); p.coins += 500; });
-      save(); renderStart(); Sound.play('levelup'); toast('Alle spelers staan op level 20 met alle kleding, kapsels en 500 munten extra.');
-    };
     $('#create-done').onclick = () => {
       const name = $('#name-input').value.trim().slice(0, 16) || 'Ster';
       const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor };

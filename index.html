@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Catwalk Sterren</title>
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/parkour.css">
 </head>
 <body>
 <div id="app">
@@ -19,7 +20,7 @@
     <div id="profiles" class="profiles"></div>
     <button class="btn violet big" id="btn-duel" type="button" hidden>⚔️ Samen spelen: duel!</button>
     <p class="footer-note">Jouw outfits, sterren en munten blijven op dit apparaat bewaard. <span>✦</span></p>
-    <button class="btn ghost sm" id="btn-test-max" type="button" title="Testknop: zet alle spelers op level 20 met alle spullen">🧪 Test: alles vrijspelen</button>
+    <button class="btn ghost sm" data-settings type="button">⚙️ Instellingen</button>
   </section>
 
   <!-- Model maken of aanpassen -->
@@ -46,6 +47,9 @@
   <section id="screen-world" class="screen world" hidden>
     <div class="world-top">
       <button class="btn ghost sm" id="btn-world-players" type="button">👤 Andere speler</button>
+      <button class="btn ghost sm" data-settings type="button">⚙️ Instellingen</button>
+      <button class="btn mint" id="btn-world-parkour" type="button">🏁 Raceparkours</button>
+      <button class="btn mint" id="btn-world-learning" type="button">🌦️ Weer & budget</button>
       <p class="eyebrow">LOOP NAAR EEN HUISJE</p>
     </div>
     <div id="world"></div>
@@ -62,11 +66,14 @@
       <div class="hud-stars">⭐ <span id="hud-stars">0</span></div>
       <div class="hud-stars coins">🪙 <span id="hud-coins">0</span></div>
       <button class="btn gold sm" id="btn-shop" type="button">🛍️ Winkel</button>
-      <button class="btn mint sm" id="btn-puzzle" type="button">🎨 Kleurenpuzzel</button>
+      <button class="btn mint sm" id="btn-puzzle" type="button">🎨 Kleuratelier</button>
+      <button class="btn mint sm" id="btn-learning" type="button">🌦️ Weer & budget</button>
+      <button class="btn mint sm" id="btn-parkour" type="button">🏁 Parkours</button>
       <button class="btn ghost sm" id="btn-next" type="button" title="Wat speel je straks vrij?">🎁 Volgend level</button>
       <button class="btn ghost sm" id="btn-world" type="button" title="Terug naar het dorp">🏡 Dorp</button>
       <button class="btn ghost sm" id="btn-look" type="button">🪞 Uiterlijk</button>
       <button class="btn ghost sm" id="btn-sound" type="button" aria-label="Geluid aan of uit">🔊</button>
+      <button class="btn ghost sm" data-settings type="button">⚙️ Instellingen</button>
     </header>
 
     <div class="challenge card" id="challenge"></div>
@@ -91,16 +98,21 @@
     </footer>
   </section>
 
+  <section id="screen-parkour" class="screen" hidden><main id="parkour"></main></section>
 </div>
 <div id="overlay" class="overlay" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script src="js/sound.js"></script>
 <script src="js/data.js"></script>
+<script src="js/color-challenges.js"></script>
+<script src="js/learning-challenges.js"></script>
 <script src="assets/doll-manifest.js"></script>
 <script src="js/bg.js"></script>
 <script src="js/avatar.js"></script>
 <script src="js/world.js"></script>
+<script src="js/parkour-rules.js"></script>
+<script src="js/parkour.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

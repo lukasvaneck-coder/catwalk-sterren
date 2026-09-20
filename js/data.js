@@ -578,6 +578,94 @@ add('mk_face', [
   { id: 'mf_baard',     shape: 'beard',     name: 'Piratenbaard',     c: ['#4a2f1d'], tags: ['piraat'], hue: 'bruin', lvl: 16 },
 ]);
 
+/* ---------- Uitbreiding: nieuwe kapsels en complete collecties ---------- */
+// Vervang de losse haarverlengingen in bestaande profielen door hun oorspronkelijke kapsel.
+Object.assign(HAIR_ALIASES, {
+  hair_bubble: 'hair_staart', hair_twinbubble: 'hair_staartjes',
+  hair_longbraids: 'hair_vlechten', hair_sidebraid_long: 'hair_zijvlecht',
+  hair_curlcascade: 'hair_krullen', hair_bunbraids: 'hair_spacebuns',
+  hair_puffcascade: 'hair_afro_puffs', hair_royalbraid: 'hair_kroonvlecht',
+  hair_bunbubble: 'hair_knot', hair_fairycurls: 'hair_halfop',
+});
+HAIR_COLORS.push(
+  { id: 'honing', name: 'Honingblond', c: '#dca64e', lvl: 1 },
+  { id: 'koper', name: 'Koper', c: '#ac542f', lvl: 2 },
+  { id: 'lavendel', name: 'Lavendel', c: '#c0a3ed', lvl: 6 },
+  { id: 'turquoise', name: 'Turquoise', c: '#34c6c7', lvl: 8 },
+  { id: 'kers', name: 'Kersenrood', c: '#a62f56', lvl: 10 },
+  { id: 'perzik', name: 'Perzik', c: '#ffb291', lvl: 13 },
+);
+
+// Elke collectie heeft losse stukken, zodat je alles onderling kunt combineren.
+const EXTRA_COLLECTIONS = [
+  { id: 'madelief', name: 'Madeliefjes', c: ['#64bb92', '#ffffff'], hue: 'groen', pattern: 'flowers', tags: ['bloemen', 'zomer', 'casual'], lvl: 1, glam: 1 },
+  { id: 'picknick', name: 'Picknick', c: ['#ef6b79', '#fff2de'], hue: 'rood', pattern: 'checks', tags: ['zomer', 'casual', 'strand'], lvl: 2, glam: 0 },
+  { id: 'lavendel', name: 'Lavendel', c: ['#b49ae5', '#ffffff'], hue: 'paars', pattern: 'dots', tags: ['school', 'casual', 'bloemen'], lvl: 3, glam: 1 },
+  { id: 'oceaan', name: 'Oceaan', c: ['#28a9c0', '#d3ffff'], hue: 'blauw', pattern: 'scales', tags: ['strand', 'zwemmen', 'sprookje'], lvl: 5, glam: 1 },
+  { id: 'streetdance', name: 'Streetdance', c: ['#3c345a', '#c9fa65'], hue: 'paars', pattern: 'stripes', tags: ['dans', 'sport', 'stoer', 'muziek'], lvl: 6, glam: 1 },
+  { id: 'kersen', name: 'Kersenroze', c: ['#fa9ebb', '#b72e57'], hue: 'roze', pattern: 'hearts', tags: ['feest', 'casual', 'zomer'], lvl: 8, glam: 1 },
+  { id: 'sterrenhemel', name: 'Sterrenhemel', c: ['#293a79', '#ffe09b'], hue: 'blauw', pattern: 'stars', tags: ['ruimte', 'pyjama', 'sprookje'], lvl: 10, glam: 2 },
+  { id: 'ijskristal', name: 'IJskristal', c: ['#a3d9f0', '#ffffff'], hue: 'blauw', pattern: 'glitter', tags: ['winter', 'prinses', 'feest'], lvl: 12, glam: 3 },
+  { id: 'boself', name: 'Boself', c: ['#47916a', '#cce9a5'], hue: 'groen', pattern: 'flowers', tags: ['sprookje', 'bloemen', 'prinses'], lvl: 14, glam: 2 },
+  { id: 'roségoud', name: 'Roségouden', c: ['#df9a87', '#fff0ca'], hue: 'roze', pattern: 'glitter', tags: ['bruiloft', 'chic', 'feest'], lvl: 16, glam: 3 },
+  { id: 'regenboogfeest', name: 'Regenboogfeest', c: ['#fa789f', '#ffffff'], hue: 'multi', pattern: 'rainbow', tags: ['disco', 'muziek', 'feest'], lvl: 18, glam: 3 },
+  { id: 'goudenster', name: 'Gouden Ster', c: ['#e3b745', '#fff4c8'], hue: 'goud', pattern: 'stars', tags: ['prinses', 'chic', 'feest'], lvl: 20, glam: 3 },
+];
+for (const collection of EXTRA_COLLECTIONS) {
+  const { id, name, ...base } = collection;
+  for (const [cat, shape, label] of [
+    ['top', 'tshirt', 'Shirt'], ['top', 'cardigan', 'Vest'],
+    ['bottom', 'pants', 'Broek'], ['bottom', 'skirt', 'Rok'],
+    ['dress', 'aline', 'Jurk'], ['shoes', 'sneaker', 'Sneakers'],
+  ]) add(cat, [{ ...base, id: `${cat}_collection_${id}_${shape}`, shape, name: `${name} ${label}` }]);
+}
+
+// Nieuwe accessoirevormen naast de bestaande hoeden, sieraden en tassen.
+for (const [cat, shape, id, name, c, hue, lvl, tags, glam] of [
+  ['hat', 'butterflyclip', 'vlinderspeld', 'Vlinderspeld', ['#b49ae5'], 'paars', 1, ['bloemen', 'casual'], 1],
+  ['hat', 'starclips', 'sterrenspeldjes', 'Gouden Sterrenspeldjes', ['#ffd36a'], 'goud', 4, ['feest', 'ruimte'], 2],
+  ['hat', 'daisyclip', 'madeliefspeld', 'Madeliefspeld', ['#ffffff'], 'wit', 2, ['bloemen', 'zomer'], 1],
+  ['hat', 'butterflyclip', 'vlinderroze', 'Roze Vlinderspeld', ['#ff80b4'], 'roze', 7, ['sprookje', 'prinses'], 2],
+  ['hat', 'starclips', 'sterrenzilver', 'Zilveren Sterrenspeldjes', ['#dce4f3'], 'zilver', 13, ['disco', 'ruimte'], 3],
+  ['hat', 'beret', 'baretlavendel', 'Lavendelbaret', ['#b49ae5'], 'paars', 3, ['chic', 'school'], 1],
+  ['neck', 'pearls', 'snoepparels', 'Roze Parelketting', ['#ffa0bc'], 'roze', 3, ['feest', 'prinses'], 2],
+  ['neck', 'scarf', 'sjaalmint', 'Zachte Mintsjaal', ['#89d9b5'], 'groen', 5, ['winter', 'warm'], 1],
+  ['neck', 'bowtie', 'striklavendel', 'Lavendelstrikje', ['#b49ae5'], 'paars', 8, ['chic', 'bruiloft'], 2],
+  ['neck', 'diamond', 'diamantoceaan', 'Oceaandiamant', ['#b8e5ef'], 'zilver', 15, ['prinses', 'chic'], 3],
+  ['bag', 'heartbag', 'hartentas', 'Hartjestasje', ['#fa77ad', '#f4c85c'], 'roze', 2, ['casual', 'feest'], 1],
+  ['bag', 'starbag', 'sterrentas', 'Sterrentasje', ['#f3cf66', '#fff4c8'], 'goud', 9, ['ruimte', 'disco'], 2],
+  ['bag', 'heartbag', 'hartlavendel', 'Lavendel Hartjestasje', ['#b49ae5', '#e2dafa'], 'paars', 12, ['bruiloft', 'chic'], 2],
+  ['bag', 'backpack', 'rugzakmint', 'Mintgroene Rugzak', ['#74c8a7'], 'groen', 1, ['school', 'casual'], 0],
+  ['hand', 'camera', 'camera', 'Fotocamera', ['#53546b'], 'zwart', 3, ['casual', 'zomer'], 1],
+  ['hand', 'paintbrush', 'penseel', 'Kunstenaarskwast', ['#ac7850'], 'bruin', 2, ['school', 'casual'], 0],
+  ['hand', 'lollipop', 'lolly', 'Feestlolly', ['#ff80b4'], 'roze', 4, ['feest', 'zomer'], 1],
+  ['hand', 'fan', 'waaier', 'Koninklijke Waaier', ['#b49ae5'], 'paars', 14, ['prinses', 'chic'], 3],
+  ['hand', 'lantern', 'lantaarn', 'Sprookjeslantaarn', ['#ffb55c'], 'oranje', 11, ['sprookje', 'eng'], 2],
+  ['glasses', 'hearts', 'hartmint', 'Mint Hartjesbril', ['#74c8a7'], 'groen', 5, ['feest', 'zomer'], 1],
+  ['glasses', 'stars', 'sterlavendel', 'Lavendel Sterrenbril', ['#b49ae5'], 'paars', 10, ['disco', 'muziek'], 2],
+  ['back', 'fairywings', 'vleugeloceaan', 'Oceaanvleugels', ['#55bbd2', '#b2eadc'], 'blauw', 17, ['sprookje', 'prinses'], 3],
+  ['pet', 'fox', 'vosje', 'Vrolijk Vosje', ['#e99749'], 'oranje', 6, ['sprookje', 'casual'], 1],
+  ['pet', 'owl', 'uiltje', 'Wijs Uiltje', ['#a57c56'], 'bruin', 8, ['sprookje', 'school'], 1],
+  ['pet', 'butterfly', 'vlinder', 'Vlindervriendje', ['#82b9f3'], 'blauw', 19, ['bloemen', 'sprookje'], 2],
+]) add(cat, [{ id: `${cat}_extra_${id}`, shape, name, c, hue, lvl, tags, glam }]);
+
+variants('bottom', 'wideleg', { tags: ['casual', 'school', 'chic'] }, [
+  { id: 'bot_wide_denim', name: 'Wijde Spijkerbroek', c: ['#5185b4'], hue: 'blauw', lvl: 1 },
+  { id: 'bot_wide_cream', name: 'Crème Palazzo', c: ['#eee2c9'], hue: 'wit', lvl: 2, glam: 1 },
+  { id: 'bot_wide_black', name: 'Zwarte Wijde Broek', c: ['#353340'], hue: 'zwart', lvl: 3, glam: 1 },
+  { id: 'bot_wide_pink', name: 'Roze Wijde Broek', c: ['#e98caf'], hue: 'roze', lvl: 4, glam: 1 },
+  { id: 'bot_wide_lilac', name: 'Lila Palazzo', c: ['#ac8fd0'], hue: 'paars', lvl: 6, glam: 2 },
+  { id: 'bot_wide_gold', name: 'Gouden Disco-Wijdepijpen', c: ['#d6ad4a', '#fff0b0'], pattern: 'glitter', hue: 'goud', lvl: 12, glam: 3, tags: ['disco', 'dans', 'feest', 'chic'] },
+]);
+variants('shoes', 'pumps', { tags: ['feest', 'chic', 'bruiloft'], glam: 2 }, [
+  { id: 'sh_pumps_black', name: 'Zwarte Hakjes', c: ['#353340'], hue: 'zwart', lvl: 1 },
+  { id: 'sh_pumps_pink', name: 'Roze Hakjes', c: ['#e98caf'], hue: 'roze', lvl: 2 },
+  { id: 'sh_pumps_red', name: 'Rode Lak-Hakjes', c: ['#ba334f'], hue: 'rood', lvl: 4 },
+  { id: 'sh_pumps_lilac', name: 'Lila Hakjes', c: ['#ac8fd0'], hue: 'paars', lvl: 6 },
+  { id: 'sh_pumps_silver', name: 'Zilveren Feesthakjes', c: ['#b9c6d8'], hue: 'zilver', lvl: 9, glam: 3 },
+  { id: 'sh_pumps_gold', name: 'Gouden Feesthakjes', c: ['#d6ad4a'], hue: 'goud', lvl: 12, glam: 3 },
+]);
+
 const ITEM_BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 
 /* ---------- Settings (decors) — horen bij een opdracht ---------- */
@@ -772,6 +860,18 @@ const THEMES = [
     desc: 'De modestad wil een meesterwerk in {a} en {b}. Chic, netjes en precies deze buurkleuren.',
     wants: ['chic'], avoid: ['sport', 'pyjama'], glam: 2.5 },
 ];
+THEMES.push(...[
+  { id:'weer_fris', name:'Een frisse schoolochtend', emoji:'🌤️', bg:'stad', lvl:1, wants:['school','warm'], weather:'cool', desc:'Het is 9 graden. Je loopt naar school. Kies een warme bovenkant, een lange broek en dichte schoenen.', lesson:'Een warme bovenkant helpt op een frisse ochtend. Een lange broek en dichte schoenen bedekken je benen en voeten.' },
+  { id:'weer_zon', name:'Picknick in de zon', emoji:'☀️', bg:'park', lvl:2, wants:['zomer'], weather:'sun', desc:'Het is 27 graden en zonnig. Kies luchtige kleding, lichte schoenen en een pet of zonnehoed.', lesson:'Luchtige kleding is prettig als het warm is. Een pet of zonnehoed geeft schaduw. Zoek ook schaduw op en neem water mee.' },
+  { id:'weer_sneeuw', name:'Sneeuwpret', emoji:'❄️', bg:'sneeuw', lvl:4, wants:['winter','warm'], weather:'snow', desc:'Het is rond het vriespunt. Kies warme bovenkleding, een lange broek, laarzen en een muts.', lesson:'Bij kou helpen bedekkende kleding, een warme muts en stevige laarzen. Natte kleding kun je na het spelen beter omwisselen.' },
+  { id:'weer_regen', name:'Door de regen naar de bibliotheek', emoji:'🌧️', bg:'regen', lvl:6, wants:['regen'], weather:'rain', desc:'Het regent flink. Houd je kleding droog met een regenjas of paraplu. Trek ook een lange broek en regenlaarzen aan.', lesson:'Een regenjas of paraplu houdt regen tegen. Regenlaarzen zijn handig bij plassen. Warm gekleed zijn is niet hetzelfde als droog blijven.' },
+  { id:'weer_wind', name:'Uitwaaien op het strand', emoji:'🌬️', bg:'strand', lvl:3, wants:['warm','strand'], weather:'wind', desc:'Het is 13 graden en het waait hard aan zee. Kies bedekkende bovenkleding, een lange broek en dichte schoenen. Laat losse hoeden en de paraplu thuis.', lesson:'Wind kan fris aanvoelen. Bedekkende kleding is dan prettig. Een losse hoed kan wegwaaien en een paraplu is onhandig bij harde wind.' },
+  { id:'budget_school', name:'Slim terug naar school', emoji:'🎒', bg:'stad', lvl:1, wants:['school'], budget:30, maxBuys:2, desc:'Maak een complete schooloutfit. Je mag maximaal 30 munten besteden aan hoogstens 2 nieuwe spullen. Je eigen kast gebruiken is gratis!', lesson:'Kijk eerst wat je al hebt. Tel de prijzen van nieuwe spullen bij elkaar op. Niet alles uitgeven is ook een slimme keuze.' },
+  { id:'budget_feest', name:'Feestelijk voor weinig', emoji:'🎈', bg:'feestkamer', lvl:1, wants:['feest'], budget:40, maxBuys:2, desc:'Je gaat naar een verjaardag. Maak een complete feestoutfit met maximaal 40 munten en hoogstens 2 nieuwe spullen.', lesson:'Eén feestelijk kledingstuk kan genoeg zijn om een outfit te veranderen. Vergelijk eerst de prijzen.' },
+  { id:'budget_sport', name:'Klaar voor de sportdag', emoji:'⚽', bg:'sportveld', lvl:1, wants:['sport'], budget:35, maxBuys:2, desc:'Stel een complete sportoutfit samen. Je hebt een bestedingsgrens van 35 munten en mag hoogstens 2 nieuwe spullen kopen.', lesson:'Denk eerst aan wat je nodig hebt om te bewegen. Gebruik daarna pas geld voor extra versiering.' },
+  { id:'budget_zomer', name:'Zomeruitje met spaargeld', emoji:'🏖️', bg:'strand', lvl:2, wants:['zomer','strand'], budget:45, maxBuys:3, desc:'Maak een complete outfit voor een zomeruitje. Besteed hoogstens 45 munten aan maximaal 3 nieuwe spullen.', lesson:'Drie goedkope dingen kunnen samen duurder zijn dan één groter kledingstuk. Kijk naar het totaal, niet alleen naar losse prijzen.' },
+  { id:'budget_hergebruik', name:'Eén nieuwe blikvanger', emoji:'♻️', bg:'park', lvl:1, wants:['casual'], budget:25, maxBuys:1, desc:'Maak een complete vrije-tijdsoutfit uit je kast. Je mag hoogstens 1 nieuw item kopen, voor maximaal 25 munten. Zonder aankoop mag ook!', lesson:'Door bestaande spullen anders te combineren maak je een nieuwe outfit. Je hoeft niet altijd iets te kopen.' },
+].map(t=>({avoid:[],glam:0,learning:t.weather?'weather':'budget',...t})));
 const THEME_BY_ID = Object.fromEntries(THEMES.map(t => [t.id, t]));
 
 /* ---------- Jury ---------- */
@@ -825,7 +925,4 @@ const COINS_PER_STARS = { 1: 10, 2: 15, 3: 25 };
 const COINS_START = 30;
 const GIFTS_PER_LEVEL = 2;             // cadeautjes bij een level-up, de rest komt in de winkel
 const DUEL_WIN_BONUS = { stars: 1, coins: 5 };
-const PUZZLE_REWARDED_PER_DAY = 5;     // zoveel puzzelrondes per dag leveren munten op
-const PUZZLE_COIN_PER_ANSWER = 2;
-const PUZZLE_BONUS_ALL_RIGHT = 3;
 function priceOf(item) { return 10 + item.lvl * 3 + item.glam * 8; }
