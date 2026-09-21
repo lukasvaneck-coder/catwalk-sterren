@@ -48,12 +48,15 @@
 
   <!-- Het dorp: loop naar een huisje -->
   <section id="screen-world" class="screen world" hidden>
-    <div class="world-top">
+    <div class="world-menu" id="world-menu">
+    <button class="world-menu-toggle" id="world-menu-toggle" type="button" aria-expanded="false" aria-controls="world-menu-options">☰ Menu</button>
+    <div class="world-top" id="world-menu-options">
       <button class="btn ghost sm" id="btn-world-players" type="button">👤 Andere speler</button>
       <button class="btn ghost sm" data-settings type="button">⚙️ Instellingen</button>
       <button class="btn mint" id="btn-world-parkour" type="button">🏁 Raceparkours</button>
       <button class="btn mint" id="btn-world-learning" type="button">🌦️ Weer & budget</button>
       <p class="eyebrow">LOOP NAAR EEN HUISJE</p>
+    </div>
     </div>
     <div id="world"></div>
   </section>

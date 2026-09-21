@@ -77,6 +77,8 @@ const World = (() => {
     if (profile.worldPos && walkableAt(profile.worldPos)) pos = { ...profile.worldPos };
     else pos = center(nearest(cellOf({ x: 52, y: 40 })));
     path = []; goal = null; keys.clear();
+    $('#world-menu').classList.remove('is-open');
+    $('#world-menu-toggle').setAttribute('aria-expanded', 'false');
     build();
     document.body.classList.add('in-world');
     last = performance.now();
@@ -88,12 +90,17 @@ const World = (() => {
     cancelAnimationFrame(frame); frame = 0;
     window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', clearKeys);
     document.body.classList.remove('in-world');
+    window.removeEventListener('resize', layout);
     if (P) { P.worldPos = { x: pos.x, y: pos.y }; if (cb.save) cb.save(); }
   }
   const clearKeys = () => keys.clear();
 
   function build() {
     const root = $('#world');
+    const menu = $('#world-menu');
+    const setMenu = open => { menu.classList.toggle('is-open', open); $('#world-menu-toggle').setAttribute('aria-expanded', String(open)); if (open) { keys.clear(); path = []; goal = null; } };
+    $('#world-menu-toggle').onclick = () => setMenu(!menu.classList.contains('is-open'));
+    menu.onclick = e => { if (e.target.closest('.world-top button')) setMenu(false); };
     root.innerHTML = `
       <div class="village-viewport" id="village-viewport">
         <div class="village-hud">
@@ -151,6 +158,7 @@ const World = (() => {
   const nearby = () => HOUSES.find(h => dist(pos, h) < 3);
 
   function onKey(e) {
+    if ($('#world-menu').classList.contains('is-open')) return;
     if (e.target.closest && e.target.closest('input,textarea,select')) return;
     if (!$('#overlay').hidden) return;
     const k = e.key.toLowerCase();
