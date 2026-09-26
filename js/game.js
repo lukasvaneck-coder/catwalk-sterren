@@ -87,6 +87,7 @@
 
   /* ---------- schermen & hulpjes ---------- */
   function showScreen(id) {
+    closeGameDialogs();
     if (document.body.dataset.screen === 'screen-parkour' && id !== 'screen-parkour') Parkour.hide();
     if (document.body.dataset.screen === 'screen-world' && id !== 'screen-world') World.hide();
     document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; }); document.body.dataset.screen = id; window.scrollTo(0, 0);
@@ -121,7 +122,8 @@
     });
   }
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 2400); }
-  function openOverlay(html, cls = '') { const ov = $('#overlay'); ov.innerHTML = `<div class="modal ${cls}">${html}</div>`; ov.hidden = false; ov.scrollTop = 0; return ov; }
+  function openOverlay(html, cls = '') { closeGameDialogs(); const ov = $('#overlay'); ov.innerHTML = `<div class="modal ${cls}">${html}</div>`; ov.hidden = false; ov.scrollTop = 0; return ov; }
+  function closeGameDialogs() { document.querySelectorAll('.game-dialog[open]').forEach(dialog => dialog.close()); }
   function closeOverlay() { const ov = $('#overlay'); ov.hidden = true; ov.innerHTML = ''; }
   const modalLocked = () => !!$('#overlay .jury, #overlay .duel-lock');
 
@@ -294,6 +296,10 @@
   }
   function renderChallenge() {
     const box = $('#challenge');
+    const summaryTheme = ui.free ? null : currentTheme() || pickTheme();
+    $('#challenge-emoji').textContent = summaryTheme?.emoji || '🎨';
+    $('#challenge-title').textContent = summaryTheme?.name || 'Jouw eigen modeshow';
+    $('#challenge-mode').textContent = ui.duel ? `Beurt van ${P.name}` : ui.free ? 'Vrij spelen' : 'Jouw opdracht';
     if (ui.duel) {
       const t = currentTheme();
       const other = DB.profiles.find(p => p.id === ui.duel.ids[1 - ui.duel.turn]);
@@ -793,6 +799,21 @@
 
   /* ---------- knoppen ---------- */
   function wire() {
+    const compact = matchMedia('(max-width: 760px)');
+    for (const [buttonId, dialogId] of [['game-menu-toggle','game-menu'],['challenge-toggle','challenge-dialog']]) {
+      const button = $('#'+buttonId), dialog = $('#'+dialogId);
+      button.onclick = () => { if (compact.matches) { dialog.showModal(); button.setAttribute('aria-expanded','true'); } };
+      dialog.addEventListener('close', () => button.setAttribute('aria-expanded','false'));
+      dialog.querySelector('[data-close-game-dialog]').onclick = () => dialog.close();
+      dialog.addEventListener('click', e => {
+        if (e.target !== dialog) return;
+        const rect = dialog.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) dialog.close();
+      });
+    }
+    $('#game-menu').addEventListener('click', e => { if (e.target.closest('.hud-tools button:not(#btn-sound)')) closeGameDialogs(); }, true);
+    $('#challenge-dialog').addEventListener('click', e => { if (e.target.closest('.ch-actions button')) closeGameDialogs(); }, true);
+    compact.addEventListener('change', () => { if (!compact.matches) closeGameDialogs(); });
     document.querySelectorAll('[data-settings]').forEach(b=>b.onclick=openSettings);
     $('#btn-learning').onclick=openLearning;
     $('#btn-world-learning').onclick=openLearning;

@@ -77,6 +77,28 @@ Het poppetje, het dorp en de decors komen uit de illustraties van *Sterreneiland
 
 De decors zijn uitsneden uit de wereldillustraties (`assets/bg/`), soms met een sfeerlaag (nacht, regen, slingers), of worden in dezelfde zachte stijl getekend (`js/bg.js`). Het dorp is de dorpskaart met een loopraster dat uit de padkleur is afgeleid.
 
+## Mobiele portrettest
+
+De Playwright-CLI is te installeren met `npm install -g @playwright/cli@latest` ([officiële installatie](https://playwright.dev/docs/getting-started-cli)). Start de game lokaal in een aparte terminal:
+
+```powershell
+py -3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Voer daarna de mobiele regressietest uit:
+
+```powershell
+playwright-cli -s=portrait open http://127.0.0.1:4173 --device="Pixel 7" --browser=chrome
+playwright-cli -s=portrait run-code --filename=tools/test-mobile-portrait.js
+playwright-cli -s=portrait close
+```
+
+Voor WebKit: `playwright-cli install-browser webkit`, open daarna met `--device="iPhone SE" --browser=webkit` en voer hetzelfde testbestand uit. De test gebruikt een eigen browsercontext met touch, zonder bestaande spelers te wijzigen. Hij controleert 320 × 568, 375 × 667 en 412 × 839: het model blijft in beeld bij scrollen door de kast, de juryknop heeft eigen ruimte, menu en opdrachtuitleg zijn bereikbaar en de racebediening past onder het vergrote speelveld. Ook hoge vensters, terugkeer naar het dorp, achtergronden, springen en pauzeren worden gecontroleerd. In Chromium wordt springen met twee gelijktijdige vingers getest; WebKit controleert een gewone aanraking.
+
+De uitgebreide speeltest van 26 september 2026 staat lokaal in `test-results/mobile-portrait/report.md`, met screenshots en JSON-resultaten. Testuitvoer en tijdelijke CLI-bestanden worden niet door Git bijgehouden.
+
+De daaropvolgende mobiele indeling staat beschreven in `test-results/mobile-ui/report.md`. In portretstand scroll je alleen door de kledingkast. Tik op **Uitleg** voor de volledige opdracht, kleurenles en andere spelkeuzes; **Menu** bevat de winkel, spelmodi, voortgang en instellingen. Races gebruiken een camera die aan de schermverhouding wordt aangepast; doolhof en tikkertje hebben een kleine overzichtskaart.
+
 ## Projectstructuur
 
 | Bestand | Wat erin zit |

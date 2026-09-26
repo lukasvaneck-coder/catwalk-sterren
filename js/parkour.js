@@ -4,7 +4,8 @@ const Parkour = (() => {
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const seconds=n=>`${n.toFixed(1)} s`;
   let profile, callbacks={}, selected='school', state=null, frame=0, last=0, paused=false, active=false, sprites=[];
-  const keys=new Set();let controls=null;
+  const keys=new Set();let controls=null, canvasObserver=null;
+  let view={width:960,height:540};
   const dadLook={skin:'s3',eyes:'e1',hairColor:'donker',build:65};
   const slots=[['top','Bovenkleding'],['bottom','Onderkleding'],['dress','Jurk / pak'],['shoes','Schoenen'],['hat','Hoedje'],['neck','Sieraad'],['bag','Tas'],['hand','In de hand'],['back','Op de rug'],['glasses','Bril'],['pet','Huisdier']];
   function show(p, cb) {
@@ -16,6 +17,7 @@ const Parkour = (() => {
     lobby();
   }
   function hide() {
+    document.body.classList.remove('in-race');canvasObserver?.disconnect();
     active=false;cancelAnimationFrame(frame);frame=0;keys.clear();state=null;controls?.abort();
     window.removeEventListener('keydown',keyDown);window.removeEventListener('keyup',keyUp);
     window.removeEventListener('blur',autoPause);document.removeEventListener('visibilitychange',visibility);
@@ -32,6 +34,7 @@ const Parkour = (() => {
     }).join('');
   }
   function lobby() {
+    document.body.classList.remove('in-race');canvasObserver?.disconnect();
     cancelAnimationFrame(frame);state=null;keys.clear();controls?.abort();
     window.scrollTo(0,0);
     const course=R.courses.find(c=>c.id===selected), root=$('#parkour');
@@ -61,19 +64,28 @@ const Parkour = (() => {
       return;
     }
     state=R.create(selected,profile.outfit,profile.parkour.dadOutfit,ITEM_BY_ID);paused=false;keys.clear();
+    document.body.classList.add('in-race');
     sprites=[Avatar.compose(profile.look,profile.outfit), ...state.npcs.map((n,i)=>Avatar.compose(selected==='dad'?dadLook:{...profile.look,hairColor:i?'rood':'blond'},selected==='dad'?profile.parkour.dadOutfit:{hair:i?'hair_staartjes':'hair_staart',top:i?'top_tshirt_rood':'top_tshirt_groen',bottom:'bot_jeans',shoes:'sh_sneakers'}))];
     $('#parkour').innerHTML=`<div class="pk-race-head"><button class="btn ghost sm" id="pk-back">← Banen</button><b>${state.course.icon} ${state.course.name}</b><button class="btn ghost sm" id="pk-pause">⏸ Pauze</button></div>
-      <div class="pk-live"><strong id="pk-clock">0.0 s</strong><span id="pk-live-stars">⭐⭐⭐</span><span id="pk-progress">Klaar voor de start</span><span>Outfit +${Math.round(state.stats.bonus)}%</span></div>
-      <div class="pk-times">${timing(state.course)}</div><div class="pk-canvas-wrap"><canvas id="pk-canvas" width="960" height="540" tabindex="0" aria-label="Raceveld. Gebruik pijltjestoetsen om te lopen en spatie om te springen."></canvas><div id="pk-pause-panel" hidden><h2>Even pauze</h2><p>De klok staat stil.</p><button class="btn" id="pk-resume">Verder rennen</button></div></div>
+      <div class="pk-live"><strong id="pk-clock">0.0 s</strong><span id="pk-live-stars">⭐⭐⭐</span><span id="pk-progress">Klaar voor de start</span><span class="pk-outfit-bonus">Outfit +${Math.round(state.stats.bonus)}%</span></div>
+      <div class="pk-times">${timing(state.course)}</div><div class="pk-canvas-wrap"><canvas id="pk-canvas" width="960" height="540" tabindex="0" aria-label="Raceveld. Gebruik de loopknoppen en Spring, of pijltjestoetsen en spatie."></canvas><div id="pk-pause-panel" hidden><h2>Even pauze</h2><p>De klok staat stil.</p><div class="pk-times">${timing(state.course)}</div><button class="btn" id="pk-resume">Verder rennen</button></div></div>
       <p id="pk-message" class="pk-message" role="status">${selected==='dad'?'Tik steeds opnieuw op Sprint of Enter!':'Volg de route naar de geblokte finish.'}</p>
       <div class="pk-controls"><div class="pk-arrows" ${selected==='dad'?'hidden':''}><button data-move="up" aria-label="Omhoog">↑</button><button data-move="left" aria-label="Links">←</button><button data-move="down" aria-label="Omlaag">↓</button><button data-move="right" aria-label="Rechts">→</button></div><button class="btn mint" id="pk-jump" ${selected==='dad'?'hidden':''}>Spring ⤴ <small>spatie</small></button><button class="btn" id="pk-sprint" ${selected!=='dad'?'hidden':''}>⚡ Sprint! <small>tik / Enter</small></button><label id="pk-energy-label" ${selected!=='dad'?'hidden':''}>Sprintmeter <meter id="pk-energy" min="0" max="1" value="0"></meter></label></div><div id="pk-result" role="status"></div>`;
     $('#pk-back').onclick=lobby;$('#pk-pause').onclick=()=>setPaused(!paused);$('#pk-resume').onclick=()=>setPaused(false);
     $('#pk-jump').onclick=()=>{if(!paused)R.jump(state);};$('#pk-sprint').onclick=()=>{if(!paused)R.tap(state);};
     controls=new AbortController();
+    // Een tweede vinger geeft geen click terwijl een looppijl ingedrukt blijft.
+    $('#pk-jump').addEventListener('pointerdown',e=>{
+      if(e.pointerType==='touch'||e.pointerType==='pen'){e.preventDefault();if(!paused)R.jump(state);}
+    },{signal:controls.signal});
     document.querySelectorAll('[data-move]').forEach(b=>{
       b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.move);},{signal:controls.signal});
       for(const type of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(type,()=>keys.delete(b.dataset.move),{signal:controls.signal});
     });
+    canvasObserver?.disconnect();
+    canvasObserver=new ResizeObserver(()=>{if(state&&$('#pk-canvas')){resizeCanvas();draw();}});
+    canvasObserver.observe($('#pk-canvas'));
+    resizeCanvas();
     window.scrollTo(0,0);$('#pk-canvas').focus({preventScroll:true});last=performance.now();frame=requestAnimationFrame(tick);
   }
   function setPaused(value) {
@@ -110,12 +122,13 @@ const Parkour = (() => {
     $('#pk-live-stars').textContent='⭐'.repeat(R.starsFor(state.time,state.course))||'Tijd op';
     $('#pk-progress').textContent=state.course.id==='tag'?`Vlaggen ${state.checkpoint}/5`: `${Math.min(100,Math.round(state.player.x/state.finish.x*100))}%`;
     $('#pk-energy').value=state.energy;
-    const text=state.countdown>0?`Start over ${Math.ceil(state.countdown)}…`:state.freeze>0?`${state.notice} Nog ${Math.ceil(state.freeze)} s.`:state.course.id==='dad'?'Blijf tikken om te sprinten!':state.jump>0?'Hop!':state.course.id==='tag'?(state.checkpoint<5?`Pak vlag ${state.checkpoint+1} en ontwijk je vriendinnen.`:'Alle vlaggen! Nu naar de finish.'):'Spatie of Spring = springen. P = pauze.';
+    const text=state.countdown>0?`Start over ${Math.ceil(state.countdown)}…`:state.freeze>0?`${state.notice} Nog ${Math.ceil(state.freeze)} s.`:state.course.id==='dad'?'Blijf tikken om te sprinten!':state.jump>0?'Hop!':state.course.id==='tag'?(state.checkpoint<5?`Pak vlag ${state.checkpoint+1} en ontwijk je vriendinnen.`:'Alle vlaggen! Nu naar de finish.'):view.portrait?'Houd een pijl vast. Tik op Spring.':'Spatie of Spring = springen. P = pauze.';
     if($('#pk-message').textContent!==text)$('#pk-message').textContent=text;
     $('#pk-jump').disabled=paused||state.cooldown>0||state.freeze>0||state.countdown>0;
     $('#pk-sprint').disabled=paused||state.countdown>0;
   }
   function finish() {
+    document.body.classList.remove('in-race');
     keys.clear();controls?.abort();$('#pk-pause').disabled=true;
     $('#pk-jump').disabled=true;$('#pk-sprint').disabled=true;
     const stars=state.success?R.starsFor(state.time,state.course):0;
@@ -130,11 +143,25 @@ const Parkour = (() => {
     $('#pk-retry').onclick=start;$('#pk-outfit').onclick=lobby;
     $('#pk-result').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   }
+  function resizeCanvas() {
+    const canvas=$('#pk-canvas'), width=canvas.clientWidth, height=canvas.clientHeight;
+    if(!width||!height)return;
+    const portrait=matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
+    const ratio=width/height;
+    const worldWidth=portrait?Math.max(420,Math.min(640,ratio*540)):960;
+    view={width:worldWidth,height:worldWidth/ratio,portrait};
+    const dpr=Math.min(devicePixelRatio||1,2);
+    const pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);
+    if(canvas.width!==pixelWidth||canvas.height!==pixelHeight){canvas.width=pixelWidth;canvas.height=pixelHeight;}
+  }
   function draw() {
     const canvas=$('#pk-canvas'), g=canvas.getContext('2d'), s=state;
-    const cameraX=Math.max(0,Math.min(s.course.length-960,s.player.x-330));
-    const cameraY=Math.max(0,Math.min(s.course.height-540,s.player.y-300));
-    g.clearRect(0,0,960,540);g.fillStyle=selected==='rain'?'#a9c7c5':'#b6db95';g.fillRect(0,0,960,540);
+    const {width,height}=view;
+    const camera=(world,visible,position,anchor,pad=0)=>world+2*pad<=visible?(world-visible)/2:Math.max(-pad,Math.min(world-visible+pad,position-visible*anchor));
+    const cameraX=camera(s.course.length,width,s.player.x,.32);
+    const cameraY=camera(s.course.height,height,s.player.y,.58,view.portrait?28:0);
+    g.setTransform(canvas.width/width,0,0,canvas.height/height,0,0);
+    g.clearRect(0,0,width,height);g.fillStyle=selected==='rain'?'#a9c7c5':'#b6db95';g.fillRect(0,0,width,height);
     g.save();g.translate(-cameraX,-cameraY);
     // Grass details, trees and houses decorate the edges, leaving the track clear.
     g.font='26px "Segoe UI Emoji",sans-serif';g.textAlign='center';
@@ -175,10 +202,23 @@ const Parkour = (() => {
       g.fillStyle=r.player?'#7453b9':'#ffffffdf';g.beginPath();g.roundRect(r.p.x-w/2,r.p.y-103-hop,w,20,8);g.fill();g.fillStyle=r.player?'white':'#584566';g.fillText(name,r.p.x,r.p.y-89-hop);
     }
     g.restore();
-    if(selected==='rain'){g.strokeStyle='#52789550';g.lineWidth=2;for(let i=0;i<65;i++){const x=(i*73+s.time*35)%960,y=(i*97+s.time*230)%540;g.beginPath();g.moveTo(x,y);g.lineTo(x-6,y+16);g.stroke();}}
-    if(s.countdown>0){g.fillStyle='#40305a66';g.fillRect(0,0,960,540);g.fillStyle='white';g.textAlign='center';g.font='bold 80px system-ui';g.fillText(Math.ceil(s.countdown),480,290);}
+    if(selected==='rain'){g.strokeStyle='#52789550';g.lineWidth=2;for(let i=0;i<65;i++){const x=(i*73+s.time*35)%width,y=(i*97+s.time*230)%height;g.beginPath();g.moveTo(x,y);g.lineTo(x-6,y+16);g.stroke();}}
+    if(s.countdown>0){g.fillStyle='#40305a66';g.fillRect(0,0,width,height);g.fillStyle='white';g.textAlign='center';g.font='bold 80px system-ui';g.fillText(Math.ceil(s.countdown),width/2,height/2+28);}
     // Direction cue remains visible even when the finish is beyond the camera.
-    if(s.countdown<=0&&!s.finished){const target=s.flags[s.checkpoint]||s.finish;g.fillStyle='#ffffffed';g.beginPath();g.roundRect(730,14,215,38,16);g.fill();g.fillStyle='#62488b';g.font='bold 15px system-ui';g.textAlign='center';const dx=target.x-s.player.x,dy=target.y-s.player.y;g.fillText(`${Math.abs(dx)>Math.abs(dy)?dx>0?'→':'←':dy>0?'↓':'↑'} ${s.flags[s.checkpoint]?'Volgende vlag':'Naar de finish'} · ${Math.round(Math.hypot(dx,dy)/10)} m`,838,39);}
+    if(s.countdown<=0&&!s.finished){const target=s.flags[s.checkpoint]||s.finish;g.fillStyle='#ffffffed';g.beginPath();g.roundRect(width-229,14,215,38,16);g.fill();g.fillStyle='#62488b';g.font='bold 15px system-ui';g.textAlign='center';const dx=target.x-s.player.x,dy=target.y-s.player.y;g.fillText(`${Math.abs(dx)>Math.abs(dy)?dx>0?'→':'←':dy>0?'↓':'↑'} ${s.flags[s.checkpoint]?'Volgende vlag':'Naar de finish'} · ${Math.round(Math.hypot(dx,dy)/10)} m`,width-121.5,39);}
+    if(width<800&&['gym','tag'].includes(selected))drawMap(g,s,s.player.x-cameraX,s.player.y-cameraY);
+  }
+  function drawMap(g,s,playerX,playerY) {
+    const scale=Math.min(112/s.course.length,70/s.course.height);
+    // Houd het kaartje uit de buurt van de speler en de richtingsaanwijzer.
+    const nearMap=playerX+45>view.width-134&&playerY+8>view.height-92&&playerY-125<view.height-10;
+    const x=nearMap?10:view.width-134,y=nearMap?10:view.height-92;
+    g.save();g.fillStyle='#ffffffed';g.beginPath();g.roundRect(x,y,124,82,10);g.fill();
+    g.translate(x+6,y+6);g.scale(scale,scale);
+    g.fillStyle='#75a762';s.walls.forEach(w=>g.fillRect(w.x,w.y,w.w,w.h));
+    for(const [i,f] of s.flags.entries()){g.fillStyle=i<s.checkpoint?'#d7d0df':i===s.checkpoint?'#e3a10d':'#8873a8';g.beginPath();g.arc(f.x,f.y,3/scale,0,Math.PI*2);g.fill();}
+    g.fillStyle='#49365e';g.fillRect(s.finish.x-3/scale,s.finish.y-3/scale,6/scale,6/scale);
+    g.fillStyle='#ff4d92';g.beginPath();g.arc(s.player.x,s.player.y,4/scale,0,Math.PI*2);g.fill();g.restore();
   }
   return {show,hide};
 })();
