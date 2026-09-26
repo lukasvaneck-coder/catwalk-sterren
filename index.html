@@ -68,9 +68,13 @@
         <span id="hud-avatar" class="mini"></span>
         <span class="chip-text"><b id="hud-name"></b><small id="hud-level"></small></span>
       </button>
-      <div class="xp"><div class="xp-bar"><div id="xp-fill"></div></div><small id="xp-text"></small></div>
       <div class="hud-stars">⭐ <span id="hud-stars">0</span></div>
       <div class="hud-stars coins">🪙 <span id="hud-coins">0</span></div>
+      <button class="btn ghost sm mobile-control" id="game-menu-toggle" type="button" aria-haspopup="dialog" aria-controls="game-menu" aria-expanded="false">☰ Menu</button>
+      <dialog id="game-menu" class="game-dialog" aria-labelledby="game-menu-title">
+      <div class="dialog-heading mobile-control"><h2 class="h" id="game-menu-title">Jouw kleedkamer</h2><button class="btn ghost sm" data-close-game-dialog type="button" aria-label="Menu sluiten">✕</button></div>
+      <div class="xp"><div class="xp-bar"><div id="xp-fill"></div></div><small id="xp-text"></small></div>
+      <div class="hud-tools">
       <button class="btn gold sm" id="btn-shop" type="button">🛍️ Winkel</button>
       <button class="btn mint sm" id="btn-puzzle" type="button">🎨 Kleuratelier</button>
       <button class="btn mint sm" id="btn-learning" type="button">🌦️ Weer & budget</button>
@@ -80,17 +84,25 @@
       <button class="btn ghost sm" id="btn-look" type="button">🪞 Uiterlijk</button>
       <button class="btn ghost sm" id="btn-sound" type="button" aria-label="Geluid aan of uit">🔊</button>
       <button class="btn ghost sm" data-settings type="button">⚙️ Instellingen</button>
+      </div>
+      </dialog>
     </header>
 
-    <div class="challenge card" id="challenge"></div>
+    <button class="challenge-toggle mobile-control" id="challenge-toggle" type="button" aria-haspopup="dialog" aria-controls="challenge-dialog" aria-expanded="false">
+      <span id="challenge-emoji" aria-hidden="true">👗</span><span class="challenge-label"><small id="challenge-mode">Opdracht</small><b id="challenge-title"></b></span><span class="challenge-info">Uitleg ›</span>
+    </button>
+    <dialog id="challenge-dialog" class="game-dialog" aria-label="Opdracht en tips">
+      <div class="dialog-heading mobile-control"><h2 class="h">Opdracht & tips</h2><button class="btn ghost sm" data-close-game-dialog type="button" aria-label="Opdracht sluiten">✕</button></div>
+      <div class="challenge card" id="challenge"></div>
+    </dialog>
 
     <main class="room">
       <div class="stage card">
         <div id="stage"></div>
         <div class="stage-tools">
-          <button class="btn ghost sm" id="btn-random" type="button">🎲 Verras me</button>
-          <button class="btn ghost sm" id="btn-photo" type="button">📸 Foto</button>
-          <button class="btn ghost sm" id="btn-clear" type="button">🧺 Alles uit</button>
+          <button class="btn ghost sm" id="btn-random" type="button" aria-label="Verras me" title="Verras me"><span aria-hidden="true">🎲</span><span class="tool-label">Verras me</span></button>
+          <button class="btn ghost sm" id="btn-photo" type="button" aria-label="Foto" title="Foto"><span aria-hidden="true">📸</span><span class="tool-label">Foto</span></button>
+          <button class="btn ghost sm" id="btn-clear" type="button" aria-label="Alles uit" title="Alles uit"><span aria-hidden="true">🧺</span><span class="tool-label">Alles uit</span></button>
         </div>
       </div>
       <aside class="closet card">

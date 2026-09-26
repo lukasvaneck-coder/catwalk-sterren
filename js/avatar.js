@@ -128,6 +128,7 @@ const Avatar = (() => {
   }
   // tekent een emoji met het midden op (x, y); geeft het kader terug
   function emoji(ctx, ch, x, y, size, o = {}) {
+    if (!(size > 0)) return [x, y, x, y];
     const c = emojiCanvas(ch, size, o.color);
     ctx.save(); ctx.translate(x, y); if (o.rot) ctx.rotate(o.rot); if (o.flip) ctx.scale(-1, 1); if (o.alpha != null) ctx.globalAlpha = o.alpha;
     if (o.shadow !== false) { ctx.shadowColor = 'rgba(40,20,60,.28)'; ctx.shadowBlur = size * 0.12; ctx.shadowOffsetY = size * 0.05; }

@@ -76,7 +76,7 @@ const World = (() => {
     P = profile; cb = callbacks || {};
     if (profile.worldPos && walkableAt(profile.worldPos)) pos = { ...profile.worldPos };
     else pos = center(nearest(cellOf({ x: 52, y: 40 })));
-    path = []; goal = null; keys.clear();
+    path = []; goal = null; keys.clear(); overview = false; tick.did = false;
     $('#world-menu').classList.remove('is-open');
     $('#world-menu-toggle').setAttribute('aria-expanded', 'false');
     build();
