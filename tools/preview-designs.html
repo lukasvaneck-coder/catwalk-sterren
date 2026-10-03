@@ -1,0 +1,12 @@
+<!doctype html><html lang="nl"><meta charset="utf-8"><title>Ontwerpen en nieuwe vriendjes</title><base href="../"><link rel="icon" href="assets/favicon-32.png">
+<style>body{font:15px 'Trebuchet MS',sans-serif;background:#faf5ef;color:#493854;padding:20px}main{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}article{background:white;border:1px solid #e4d9cb;border-radius:20px;text-align:center;padding:12px}canvas{width:100%;height:auto}h1{font-size:26px}small{display:block}</style>
+<h1>Nieuwe vriendjes & kleding uit het naaiatelier</h1><p id="status">Laden…</p><main></main>
+<script src="assets/doll-manifest.js"></script><script src="js/data.js"></script><script src="js/clothing-designs.js"></script><script src="js/avatar.js"></script>
+<script>
+const look={skin:'s2',eyes:'e3',hairColor:'bruin',build:40};
+const friends=ITEMS.filter(it=>['hd_coco','hd_bibi','hd_lila','hd_bamboe','pt_pip','pt_moos','pt_ollie','pt_prik'].includes(it.id));
+const designs=ClothingDesigns.TYPES.flatMap(t=>t.shapes.map(s=>ClothingDesigns.item({cat:t.id,shape:s[0],name:s[1],c:['#a68bd5','#fff1c9'],pattern:'stars',stickers:[{kind:'bunny',x:50,y:50,size:28,rotation:-15}]},'preview_'+s[0],'preview')));
+document.querySelector('main').innerHTML=[...friends,...designs].map(it=>`<article>${Avatar.thumb(it,look)}<b>${it.name}</b><small>${it.custom?'Eigen kleding':'Nieuw vriendje'}</small></article>`).join('')+friends.slice(0,4).map(it=>`<article>${Avatar.render(look,{hair:'hair_knot',top:'top_tshirt_blauw',bottom:'bot_jeans',shoes:'sh_sneakers',hand:it.id},{bg:false})}<b>${it.name}</b></article>`).join('');
+let errors=[];window.addEventListener('error',e=>errors.push(e.message));
+const timer=setInterval(()=>{if(!Avatar.isReady())return;Avatar.mountAll();document.querySelector('#status').textContent=`${document.querySelectorAll('canvas[data-ok]').length} voorbeelden · ${errors.length} fouten`;clearInterval(timer)},100);
+</script></html>

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const root=path.join(__dirname,'..'),ctx=vm.createContext({localStorage:{setItem(){}}});
-for(const file of ['js/data.js','js/color-challenges.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
+for(const file of ['js/data.js','js/clothing-designs.js','js/color-challenges.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
 let game=fs.readFileSync(path.join(root,'js/game.js'),'utf8');
 game=game.slice(0,game.indexOf('  /* ---------- start ---------- */'))+'globalThis.api={evaluate,newProfile,pickTheme,currentTheme,set:p=>P=p};})();';vm.runInContext(game,ctx);
 const {C,catalog,items,themes}=vm.runInContext('({C:ColorChallenges,catalog:ITEM_BY_ID,items:ITEMS,themes:THEMES})',ctx);

@@ -137,7 +137,20 @@ const Avatar = (() => {
   }
 
   /* ---------- verf: kleur of patroon dat over een grijze laag wordt vermenigvuldigd ---------- */
-  function designOf(it) { return { c: it.c && it.c.length ? it.c : ['#ffffff'], pattern: it.pattern || null }; }
+  function designOf(it) { return { c: it.c && it.c.length ? it.c : ['#ffffff'], pattern: it.pattern || null, stickers: it.stickers, cat: it.cat, shape: it.shape }; }
+  // Stickers worden vóór het stofmasker getekend: ze blijven altijd op de kleding.
+  function paintStickers(ctx, d) {
+    if (!d.stickers?.length || typeof ClothingDesigns === 'undefined') return;
+    const boxes = { top: [165, 193, 235, 235], bottom: [160, 253, 240, 298], dress: [160, 194, 240, 278], shoes: [158, 368, 187, 383] };
+    const box = d.cat === 'bottom' && d.shape === 'shorts' ? [163, 250, 237, 264] : boxes[d.cat]; if (!box) return;
+    d.stickers.forEach(s => {
+      const sticker = ClothingDesigns.STICKERS.find(x => x.id === s.kind); if (!sticker) return;
+      const x = box[0] + (box[2] - box[0]) * s.x / 100, y = box[1] + (box[3] - box[1]) * s.y / 100;
+      const size = s.size * (d.cat === 'shoes' ? .48 : 1);
+      emoji(ctx, sticker.emoji, x, y, size, { rot: s.rotation * Math.PI / 180, shadow: false });
+      if (d.cat === 'shoes') emoji(ctx, sticker.emoji, 400 - x, y, size, { rot: -s.rotation * Math.PI / 180, shadow: false });
+    });
+  }
   function paintDesign(g, d, w, h, ox, oy) {
     const c0 = d.c[0], c1 = d.c[1] || dark(c0, .2);
     g.save(); g.translate(-ox, -oy);            // patronen in frame-coördinaten, dan sluiten lagen op elkaar aan
@@ -171,6 +184,9 @@ const Avatar = (() => {
     g.drawImage(atlas, ax, ay, w, h, 0, 0, w, h);
     g.globalCompositeOperation = 'multiply';
     if (typeof fill === 'string') { g.fillStyle = fill; g.fillRect(0, 0, w, h); } else paintDesign(g, fill, w, h, ox, oy);
+    if (typeof fill === 'object' && fill.stickers?.length) {
+      g.globalCompositeOperation = 'source-over'; g.save(); g.translate(-ox, -oy); paintStickers(g, fill); g.restore();
+    }
     g.globalCompositeOperation = 'destination-in'; g.drawImage(atlas, ax, ay, w, h, 0, 0, w, h);
     g.restore();
     ctx.drawImage(scratch, 0, 0, w, h, ox, oy, w, h);
@@ -180,7 +196,7 @@ const Avatar = (() => {
 
   /* ---------- welke sprite hoort bij welke kledingvorm ---------- */
   // een 'stap' is { k: laagsleutel, d: design, sx: extra breedte } ; k = T0..T3 tops, B0..B7 broeken/rokken, J1..J3 jasjes, S0..S3 schoenen, D jurk
-  const second = (it, fb = '#ffffff') => ({ c: [it.c[1] || fb] });
+  const second = (it, fb = '#ffffff') => ({ c: [it.c[1] || fb], stickers: it.stickers, cat: it.cat, shape: it.shape });
   const TOP_RECIPES = {
     tshirt: it => [{ k: 'T0', d: designOf(it) }],
     tank: it => [{ k: 'T0', d: designOf(it) }],
@@ -239,6 +255,7 @@ const Avatar = (() => {
       const shade = ctx.createLinearGradient(140, 0, 260, 0);
       [[0,'#00000055'],[.22,'#ffffff22'],[.47,'#00000044'],[.55,'#00000033'],[.78,'#ffffff22'],[1,'#00000055']].forEach(([p,c])=>shade.addColorStop(p,c));
       ctx.fillStyle = shade; ctx.fillRect(138, 239, 124, 140);
+      paintStickers(ctx, step.d);
       ctx.strokeStyle = dark(color, .22); ctx.lineWidth = 1.5;
       [177, 222].forEach(x=>{ctx.beginPath();ctx.moveTo(x,256);ctx.lineTo(x+(x<200?-7:7),369);ctx.stroke();});
       ctx.strokeStyle = light(color, .25); ctx.beginPath();ctx.moveTo(153,251);ctx.lineTo(244,251);ctx.stroke();
@@ -385,7 +402,38 @@ const Avatar = (() => {
     chainbag: { front: (ctx, it, g) => { ctx.strokeStyle = c1(it); ctx.lineWidth = 3; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(g.cx + 40, 206); ctx.lineTo(HAND_R[0] + 6, HAND_R[1] + 4); ctx.stroke(); ctx.setLineDash([]); return union([emoji(ctx, '👝', HAND_R[0] + 8, HAND_R[1] + 28, 66, { color: c0(it) }), [g.cx + 40, 200, HAND_R[0] + 10, HAND_R[1]]]); } },
   };
 
+  function plush(ctx, it) {
+    const x = HAND_R[0] + 7, y = HAND_R[1] + 20;
+    const fur = c0(it), trim = c1(it), panda = it.shape === 'plushpanda';
+    const limb = panda ? trim : fur;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-.1);
+    if (it.shape === 'plushrabbit') {
+      blob(ctx, -15, -62, 10, 38, fur, -.12); blob(ctx, 15, -60, 10, 36, fur, .18);
+      blob(ctx, -15, -65, 4.5, 27, trim, -.12); blob(ctx, 15, -63, 4.5, 25, trim, .18);
+    } else if (it.shape === 'plushaxolotl') {
+      [-1, 1].forEach(side => { [-.6, 0, .6].forEach(a => blob(ctx, side * 29, -31 + a * 22, 7, 15, '#ce72aa', side * (1 + a))); });
+    } else {
+      [-1, 1].forEach(side => { blob(ctx, side * 21, -49, 12, 12, limb); blob(ctx, side * 21, -49, 6, 6, panda ? fur : trim); });
+    }
+    blob(ctx, 0, 8, 25, 32, fur); blob(ctx, 0, 12, 17, 23, panda ? '#fffaf0' : trim);
+    [-1, 1].forEach(side => {
+      blob(ctx, side * 26, 3, 10, 20, limb, side * -.4);
+      blob(ctx, side * 16, 34, 13, 16, limb, side * -.25);
+      if (!panda) blob(ctx, side * 16, 37, 7, 8, trim);
+    });
+    blob(ctx, 0, -28, 29, 25, fur);
+    if (panda) [-1, 1].forEach(side => blob(ctx, side * 12, -30, 10, 12, trim, side * .35));
+    [-1, 1].forEach(side => { blob(ctx, side * 11, -30, 3, 3.7, '#40343b'); blob(ctx, side * 11 - .7, -31, .9, .9, '#ffffff'); });
+    blob(ctx, 0, -20, 4, 2.8, '#bb8c86');
+    ctx.strokeStyle = '#79685c'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(0, -14); ctx.quadraticCurveTo(-4, -11, -7, -15); ctx.moveTo(0, -14); ctx.quadraticCurveTo(4, -11, 7, -15); ctx.stroke();
+    ctx.setLineDash([2, 3]); ctx.strokeStyle = dark(fur, .3);
+    ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(0, 31); ctx.stroke(); ctx.setLineDash([]);
+    blob(ctx, -6, -4, 7, 4, '#b6c6ac', .4); blob(ctx, 6, -4, 7, 4, '#b6c6ac', -.4); blob(ctx, 0, -4, 3, 3, '#90a487');
+    ctx.restore(); return [x - 48, y - (it.shape === 'plushrabbit' ? 104 : 66), x + 48, y + 56];
+  }
   const HAND = {
+    plushrabbit: plush, plushbear: plush, plushaxolotl: plush, plushpanda: plush,
     camera: E('📷', HAND_R[0] + 6, HAND_R[1] + 14, 60),
     paintbrush: E('🖌️', HAND_R[0] + 6, HAND_R[1] - 20, 65),
     lollipop: E('🍭', HAND_R[0] + 6, HAND_R[1] - 22, 65, { tint: 0 }),
@@ -427,6 +475,8 @@ const Avatar = (() => {
   };
 
   const PETS = {
+    hamster: E('🐹', 332, 354, 74, { tint: 0 }), turtle: E('🐢', 332, 356, 78, { tint: 0 }),
+    otter: E('🦦', 332, 350, 82, { tint: 0 }), hedgehog: E('🦔', 332, 356, 76, { tint: 0 }),
     fox: E('🦊', 332, 350, 76), owl: E('🦉', 332, 350, 76), butterfly: E('🦋', 330, 230, 60, { tint: 0 }),
     puppy: E('🐶', 332, 350, 80, { tint: 0 }), kitten: E('🐱', 332, 352, 76, { tint: 0 }), rabbit: E('🐰', 332, 352, 76),
     pony: E('🐴', 336, 346, 88, { tint: 0 }), unicorn: E('🦄', 336, 346, 88), penguin: E('🐧', 330, 352, 76),
@@ -459,7 +509,8 @@ const Avatar = (() => {
   const buildScale = b => 0.88 + Math.max(0, Math.min(100, typeof b === 'number' ? b : 40)) / 100 * 0.3;
   const cache = new Map();
   function compose(look, outfit, opts = {}) {
-    const key = JSON.stringify([look.skin, look.eyes, look.hairColor, look.build, outfit, opts.items ? Object.values(opts.items) : 0]);
+    const key = JSON.stringify([look.skin, look.eyes, look.hairColor, look.build, outfit, opts.items ? Object.values(opts.items) : 0,
+      Object.values(outfit).map(id => ITEM_BY_ID[id]).filter(it => it?.custom)]);
     if (cache.has(key)) return cache.get(key);
     const get = slot => outfit[slot] ? ((opts.items && opts.items[outfit[slot]]) || ITEM_BY_ID[outfit[slot]]) : null;
     const hi = headIndex(get('hair') || ITEM_BY_ID.hair_lang), geo = headGeo(hi);

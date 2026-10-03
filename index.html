@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/parkour.css">
 <link rel="stylesheet" href="css/speeltuin.css">
+<link rel="stylesheet" href="css/designer.css">
+<link rel="stylesheet" href="css/town.css">
+<link rel="stylesheet" href="css/town-activities.css">
 </head>
 <body>
 <div id="app">
@@ -57,6 +60,7 @@
       <button class="btn mint" id="btn-world-parkour" type="button">🏁 Raceparkours</button>
       <button class="btn mint" id="btn-world-speeltuin" type="button">🛝 Binnenspeeltuin</button>
       <button class="btn mint" id="btn-world-learning" type="button">🌦️ Weer & budget</button>
+      <button class="btn gold" id="btn-world-designer" type="button">✂️ Kleding maken</button>
       <p class="eyebrow">LOOP NAAR EEN HUISJE</p>
     </div>
     </div>
@@ -78,6 +82,7 @@
       <div class="xp"><div class="xp-bar"><div id="xp-fill"></div></div><small id="xp-text"></small></div>
       <div class="hud-tools">
       <button class="btn gold sm" id="btn-shop" type="button">🛍️ Winkel</button>
+      <button class="btn gold sm" id="btn-designer" type="button">✂️ Kleding maken</button>
       <button class="btn mint sm" id="btn-puzzle" type="button">🎨 Kleuratelier</button>
       <button class="btn mint sm" id="btn-learning" type="button">🌦️ Weer & budget</button>
       <button class="btn mint sm" id="btn-parkour" type="button">🏁 Parkours</button>
@@ -120,18 +125,25 @@
 
   <section id="screen-parkour" class="screen" hidden><main id="parkour"></main></section>
   <section id="screen-speeltuin" class="screen" hidden><main id="speeltuin"></main></section>
+  <section id="screen-designer" class="screen" hidden><main id="designer"></main></section>
+  <section id="screen-town-activities" class="screen" hidden><div id="town-activities"></div></section>
 </div>
 <div id="overlay" class="overlay" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script src="js/sound.js"></script>
 <script src="js/data.js"></script>
+<script src="js/clothing-designs.js"></script>
 <script src="js/color-challenges.js"></script>
 <script src="js/learning-challenges.js"></script>
 <script src="assets/doll-manifest.js"></script>
 <script src="js/bg.js"></script>
 <script src="js/avatar.js"></script>
+<script src="js/designer.js"></script>
+<script src="js/town-rules.js"></script>
+<script src="js/village-art.js"></script>
 <script src="js/world.js"></script>
+<script src="js/town-activities.js"></script>
 <script src="js/parkour-rules.js"></script>
 <script src="js/parkour.js"></script>
 <script src="js/speeltuin-rules.js"></script>

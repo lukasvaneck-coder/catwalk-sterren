@@ -1,0 +1,54 @@
+body[data-screen="screen-town-activities"] { overflow:hidden; }
+body[data-screen="screen-town-activities"] #app { height:100dvh; min-height:0; padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left)); }
+#screen-town-activities,#town-activities { height:100%; min-height:0; }
+#town-activities { display:flex; flex-direction:column; gap:14px; }
+.activity-header { display:flex; align-items:center; gap:16px; flex-shrink:0; }
+.activity-header .eyebrow { font-size:10px; margin-bottom:4px; }
+.activity-header .h { font-size:27px; }
+.activity-sound { margin-left:auto; min-width:44px; min-height:44px; }
+.activity-layout { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr); gap:20px; min-height:0; flex:1; }
+.activity-scene { position:relative; min-height:0; background-size:cover; background-position:center bottom; overflow:hidden; border-radius:25px; border:1px solid var(--line); box-shadow:var(--shadow); }
+.activity-scene::after { content:''; position:absolute; inset:0; box-shadow:inset 0 0 100px #3f204822; pointer-events:none; }
+.activity-room-sign { position:absolute; top:18px; left:50%; transform:translateX(-50%); font-weight:bold; font-size:10px; letter-spacing:2px; white-space:nowrap; background:#fffaf0ec; color:#725977; padding:10px 15px; border-radius:30px; z-index:2; }
+#activity-model { height:89%; width:90%; position:absolute; bottom:0; left:5%; transform-origin:center bottom; }
+#activity-model canvas { width:100%; height:100%; object-fit:contain; }
+.activity-panel { overflow-y:auto; padding:24px; overscroll-behavior:contain; min-height:0; }
+.activity-panel h2 { font-size:22px; line-height:1.25; }
+.activity-panel p { font-size:14px; line-height:1.6; }
+.activity-panel .small { font-size:12px; color:var(--ink2); }
+.activity-example { background:var(--lilac); color:var(--primary); padding:24px 12px; border-radius:18px; font-size:28px; text-align:center; }
+.activity-cue { position:absolute; left:50%; top:64px; transform:translateX(-50%) scale(var(--beat-scale,1)); width:112px; height:112px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column; background:#fffaf1f2; border:7px solid #bda1d9; color:#6744bb; font-size:42px; font-weight:bold; box-shadow:0 4px 20px #2b164344; z-index:3; }
+.activity-cue small { font-size:11px; }
+.activity-cue.on-beat { background:#f8efb2; border-color:#e7b44f; color:#7a561c; }
+.activity-cue.paused { border-color:#b5aab9; }
+.activity-game-top { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; }
+#activity-instruction { min-height:44px; font-weight:bold; color:var(--ink2); }
+.activity-pads { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:15px 0; }
+.activity-pad { border:2px solid #d5c8e4; border-radius:20px; background:#f6f0fd; box-shadow:0 4px 0 #e3d9ee; color:var(--primary); padding:16px; font-size:40px; min-height:98px; }
+.activity-pad small { display:block; font-size:12px; font-weight:bold; }
+.activity-pad:active,.activity-pad.lit { background:#ffe6ad; border-color:#d6b15b; transform:translateY(2px); }
+.activity-pad:disabled { cursor:default; opacity:.7; }.activity-pad.lit:disabled { opacity:1; }
+.activity-finish { padding:15px; margin-top:16px; border-radius:18px; background:var(--gold); text-align:center; }
+.activity-finish h2 { margin:0; }.activity-finish .levelup { font-size:12px; }
+.activity-field { display:flex; flex-direction:column; font-weight:bold; font-size:13px; gap:7px; margin:14px 0; }
+.activity-field select { width:100%; font:inherit; font-size:16px; padding:12px; border:1px solid var(--line); border-radius:13px; background:var(--surface2); color:var(--ink); }
+.activity-care,.activity-photo-choices { display:flex; flex-direction:column; gap:10px; margin:16px 0; }
+.activity-photo-choices [aria-pressed="true"] { background:var(--lilac); border-color:var(--primary); }
+.activity-hop { animation:town-dance .32s ease-in-out; }
+@keyframes town-dance { 40% { transform:translateY(-14px) rotate(-4deg); } 80% { transform:rotate(3deg); } }
+@media(max-width:760px){
+  body[data-screen="screen-town-activities"] #app { padding:max(6px,env(safe-area-inset-top)) 8px max(6px,env(safe-area-inset-bottom)); }
+  #town-activities { gap:8px; }.activity-header { gap:12px; }.activity-header .h { font-size:21px; }.activity-header .eyebrow { display:none; }
+  .activity-layout { grid-template-columns:1fr; grid-template-rows:minmax(150px,.9fr) minmax(245px,1fr); gap:8px; }
+  .activity-panel { padding:14px; border-radius:17px; }.activity-panel h2 { font-size:18px; margin:8px 0; }.activity-panel p { font-size:12px; margin:8px 0; }
+  .activity-panel .btn.big { font-size:16px; padding:12px 20px; }
+  .activity-room-sign { top:8px; padding:6px 10px; font-size:8px; letter-spacing:1px; }
+  #activity-model { height:95%; width:66%; left:2%; }
+  .activity-cue { top:52px; left:auto; right:18px; transform:scale(var(--beat-scale,1)); width:82px; height:82px; font-size:31px; border-width:5px; }
+  .activity-cue small { font-size:9px; }.activity-pads { grid-template-columns:repeat(4,1fr); gap:7px; margin:10px 0; }
+  .activity-pad { padding:10px 2px; min-height:70px; font-size:28px; border-radius:14px; }.activity-pad small { font-size:9px; }
+  #activity-instruction { min-height:20px; }.activity-example { padding:10px; font-size:21px; }
+  .activity-care { gap:8px; }.activity-care .btn { padding:10px; }.activity-photo-choices { display:grid; grid-template-columns:1fr 1fr; }.activity-photo-choices .btn { font-size:12px; padding:11px; }
+}
+@media(max-height:470px) and (orientation:landscape){.activity-layout{grid-template-columns:1fr 1.2fr;grid-template-rows:minmax(0,1fr)}.activity-header .eyebrow{display:none}.activity-panel{padding:12px}.activity-pads{grid-template-columns:repeat(4,1fr);gap:6px}.activity-pad{min-height:66px;padding:8px 2px;font-size:28px}}
+@media(prefers-reduced-motion:reduce){.activity-hop{animation:none}.activity-cue{--beat-scale:1!important} }

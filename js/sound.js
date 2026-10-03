@@ -49,5 +49,15 @@ const Sound = (() => {
   function play(name) { if (muted || !FX[name]) return; try { FX[name](); } catch (e) { /* stil */ } }
   function toggle() { muted = !muted; try { localStorage.setItem(KEY, muted ? 'uit' : 'aan'); } catch (e) { /* stil */ } if (!muted) play('pop'); return !muted; }
   const isOn = () => !muted;
-  return { play, toggle, isOn };
+  // Een korte, warme dansmaat. Los afspelen houdt pauzeren en dempen direct.
+  function danceBeat(index) {
+    if(muted)return;
+    try {
+      const roots=[261.63,349.23,392,329.63],root=roots[Math.floor(index/3)%roots.length];
+      tone(root/2,0,.3,.08,'sine');
+      [1,1.25,1.5].forEach((ratio,i)=>tone(root*ratio,i*.07,.25,.025,'triangle'));
+      tone(root*2,.4,.12,.025,'sine');
+    } catch(e) { /* Ook zonder audio blijft het visuele ritme speelbaar. */ }
+  }
+  return { play, toggle, isOn, danceBeat };
 })();

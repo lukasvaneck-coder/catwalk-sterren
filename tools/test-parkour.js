@@ -1,7 +1,7 @@
 const fs=require('node:fs'), vm=require('node:vm'), assert=require('node:assert/strict');
 const path=require('node:path'), root=path.join(__dirname,'..');
 const ctx=vm.createContext({});
-for(const file of ['js/data.js','js/parkour-rules.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
+for(const file of ['js/data.js','js/clothing-designs.js','js/parkour-rules.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
 const {R,items}=vm.runInContext('({R:ParkourRules,items:ITEM_BY_ID})',ctx);
 const outfit={top:'top_tshirt_blauw',bottom:'bot_jeans',shoes:'sh_sneakers'};
 assert(items[outfit.top]&&items[outfit.bottom]&&items[outfit.shoes]);

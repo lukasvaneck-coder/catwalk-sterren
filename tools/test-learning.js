@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const root=path.join(__dirname,'..'),ctx=vm.createContext({localStorage:{setItem(){}}});
-for(const file of ['js/data.js','js/color-challenges.js','js/learning-challenges.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
+for(const file of ['js/data.js','js/clothing-designs.js','js/color-challenges.js','js/learning-challenges.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
 let game=fs.readFileSync(path.join(root,'js/game.js'),'utf8');game=game.slice(0,game.indexOf('  /* ---------- start ---------- */'))+'globalThis.api={evaluate,newProfile,pickTheme,currentTheme,migrate,selectLearningTheme,activeBudget,set:p=>P=p};})();';vm.runInContext(game,ctx);
 const {L,items,byId,themes,settings}=vm.runInContext('({L:LearningChallenges,items:ITEMS,byId:ITEM_BY_ID,themes:THEMES,settings:SETTING_BY_ID})',ctx);
 const p=ctx.api.newProfile('Test',{skin:'s2',eyes:'e1',hairColor:'bruin'},'hair_lang');ctx.api.set(p);

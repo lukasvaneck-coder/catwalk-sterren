@@ -10,7 +10,7 @@ De voortgang wordt per speler in de browser bewaard (localStorage), dus meerdere
 ## Hoe het spel werkt
 
 - **Model maken**: huidskleur, ogen, postuur (slider van dun naar dik), kapsel (twintig sprites) en twintig haarkleuren.
-- **Het dorp**: na het kiezen van je speler sta je met je poppetje op het bloemenplein. Loop met de pijltjes, WASD, de loopknoppen of door op het pad te tikken naar een van de vier huisjes: **Modehuis** (opdrachten en kleedkamer), **Sterrenwinkel**, **Kleurenhuis** (kleuratelier) en **Duelhuis** (samen spelen). Bij de deur druk je op Enter of de knop om naar binnen te gaan. Vanuit de kleedkamer kom je met 🏡 Dorp weer buiten.
+- **Het dorp**: wandel door vier buurten met dertien gebouwen, parkjes, een fontein en een vijver met brug. Gebruik de pijltjes, WASD, loopknoppen of tik op de grond. Via **🗺️ Kaart** kies je een gebouw en loop je er automatisch heen. Bij aankomst ga je naar binnen; wie zelf naar een deur loopt gebruikt Enter of de knop. **📖 Dorpsboek** bevat opdrachten van bewoners en je dorpspaspoort. Vanuit activiteiten keer je terug bij de deur waar je naar binnen ging.
 - **Opdrachten**: elke ronde krijg je een thema (bijv. Dagje Strand, Balletles, Prinsessenthee, Ruimtereis). De stickers bij de opdracht laten zien wat de jury zoekt. De setting hoort bij de opdracht; alleen bij vrij spelen kies je zelf waar je staat.
 - **Kast**: je ziet alleen wat je al hebt vrijgespeeld. Wat er op het volgende level bijkomt blijft een verrassing, je ziet alleen de aantallen.
 - **Jury**: drie juryleden beoordelen elk met een eigen smaak:
@@ -24,6 +24,48 @@ De voortgang wordt per speler in de browser bewaard (localStorage), dus meerdere
 - **Kleurenopdrachten**: vier opdrachten (Buurkleurenfeest, Eén-kleur-dag, Knalcombinatie, Kleurenmeester) waarin het kleurenwiel op de kaart laat zien welke kleuren gevraagd worden. De kleuren wisselen per keer.
 - **Kleurenlesje**: elke opdracht heeft een kort lesje. Bij kleuropdrachten staat het meteen open; na de jury volgt uitleg over jouw outfit en welke kledingstukken je kunt aanpassen.
 - **Vrij spelen**: aankleden zonder jury, met een modeshow als finale.
+
+## Nieuwe vriendjes en zelf kleding maken
+
+Bij **Extra → In je hand** vind je **Coco**, een beige knuffelkonijn met lange oren, en de nieuwe knuffels Bibi (beer, level 2), Lila (axolotl, level 3) en Bamboe (panda, level 5). Bij **Extra → Huisdier** komen Pip (hamster), Moos (schildpad, level 2), Ollie (otter, level 4) en Prik (egeltje, level 6). Coco en Pip zijn gratis beschikbaar voor nieuwe én bestaande spelers; de overige vriendjes gebruiken de bestaande cadeaus en winkel. Je kunt tegelijk een knuffel vasthouden en een huisdier meenemen.
+
+Open **✂️ Kleding maken** via het dorpsmenu, het kleedkamermenu of bovenaan een kledingcategorie. Het naaiatelier is gratis vanaf level 1:
+
+- Kies een top, broek of rok, jurk of schoenen, met in totaal 16 vormen.
+- Kies een hoofdkleur en patroonkleur, uit de kleurvakjes of met de vrije kleurkiezer. Er zijn tien stofkeuzes, waaronder effen, strepen, bloemen, glitter en regenboog.
+- Voeg maximaal vijf stickers toe. Kies een geplakte sticker om de plaats, grootte en draaiing met schuifjes aan te passen. De stickers blijven op de stof; bij schoenen komen ze op beide schoenen.
+- Geef je kleding een naam en kies **Opslaan & aantrekken**. Het ontwerp staat daarna ook in de gewone kledingkast en werkt bij de jury, foto’s, duels en races.
+- Bij **Mijn ontwerpen** kun je een ontwerp opnieuw openen en aanpassen, of **Bewaar als nieuw** kiezen voor een variant. Iedere speler heeft een eigen collectie van maximaal 60 ontwerpen. Een onafgemaakt ontwerp blijft als werkversie bewaard bij teruggaan en herladen, zolang browseropslag beschikbaar is.
+
+Op telefoons blijven het voorbeeld en de bewaarknop zichtbaar terwijl je door de werktafel scrolt. Ontwerpen veranderen je gedragen outfit pas na opslaan. Een mislukte opslag toont een melding en behoudt je eerdere ontwerp.
+
+De ontwerpregels staan in `js/clothing-designs.js`, het atelier in `js/designer.js` en `css/designer.css`. Controleer regels en migratie met `node tools/test-designs.js`. Met een lokale server: `playwright-cli -s=atelier open http://127.0.0.1:4173 --browser=chrome`, daarna `playwright-cli -s=atelier run-code --filename=tools/test-designer-browser.js`. Deze test gebruikt een afzonderlijke browsercontext. `tools/preview-designs.html` toont alle nieuwe vriendjes en kledingvormen voor visuele controle.
+
+## Een gezellig dorp om te ontdekken
+
+De grotere wereld is 2480 × 1760 wereldpixels. De camera volgt je model; huizen en de vijver blokkeren de doorgang, de brug is begaanbaar. Je kunt ook over het gras wandelen. Gebouwen, bewoners en zoekvoorwerpen hebben een eigen plek. Klikken op een verre plek laat je erheen lopen. Kaart, dorpsboek en menu pauzeren het wandelen; pijltjes of WASD onderbreken een gekozen route. De wandelpositie wordt per speler bewaard. Spelers van de oude kaart beginnen op het nieuwe Modeplein met behoud van hun kleding en voortgang.
+
+| Gebouw | Wat je er doet |
+| --- | --- |
+| Modehuis | Aankleden, modeopdrachten, jury en vrij spelen |
+| Naaiatelier | Eigen kleding ontwerpen, dragen en aanpassen |
+| Sterrenwinkel | Spullen kopen met een rekenvraag |
+| Kleurenhuis | Kleurcombinaties oefenen met de jury |
+| Spiegelsalon | Je model, kapsel en uiterlijk aanpassen |
+| Duelhuis | Met twee spelers een modeduel spelen |
+| Wijzerhuis | Weer- en budgetopdrachten kiezen |
+| Raceclub | De vijf bestaande raceparcoursen |
+| Binnenspeeltuin | De bestaande springbaan en trampoline |
+| Fotostudio | Een decor kiezen en je outfit als foto bewaren |
+| Knuffelhuis | Huisdier en knuffel kiezen; aaien, water geven en spelen |
+| Sterrenclub | Twaalf pijlen op het ritme aantikken |
+| Rozenzaal | Vier steeds langere reeksen danspassen onthouden en nadoen |
+
+De Sterrenclub beloont 10–12 goede passen met drie sterren, 6–9 met twee en 1–5 met één. Je hebt ongeveer 0,43 seconde aan elke kant van de tel; per tel telt maximaal één poging. De Rozenzaal heeft reeksen van drie tot zes passen, met onbeperkt opnieuw kijken. Na alle vier reeksen krijg je drie sterren bij maximaal twee vergissingen, twee bij maximaal vijf, anders één. Dansen pauzeert bij tab- of vensterwissel, met P/Escape of de pauzeknop. Je kunt beide spellen opnieuw spelen; records blijven per speler bewaard. Het Knuffelhuis geeft één verzorgingsbeloning per huisdier; daarna kun je je vriendje blijven verzorgen.
+
+Fleur vraagt om drie bloembakken water te geven. Noor wil feestlintjes laten bezorgen bij het Naaiatelier, de Sterrenclub en de Rozenzaal. Bo zoekt vijf gouden knopen in het dorp. Neem een opdracht aan via de bewoner of het dorpsboek. Je paspoort verzamelt automatisch dertien stempels door gebouwen te bezoeken. Met **Wijs de weg** krijg je hulp bij je volgende bestemming. Iedere dorpsopdracht beloont één keer sterren, XP en munten; herladen geeft geen tweede beloning. Er zijn geen tijdslimieten of dagelijkse verplichtingen.
+
+`js/town-rules.js` bevat kaart, routes, opdrachten en dansregels. `js/village-art.js` tekent het dorp; `js/world.js` regelt lopen en interacties. `js/town-activities.js` verzorgt de nieuwe binnenactiviteiten. `node tools/test-town.js` controleert alle deuren, routes, de brug, opslag, opdrachten en dansregels. De browsertest is `playwright-cli -s=town run-code --filename=tools/test-town-browser.js` met het spel in die browsersessie geopend; deze test gebruikt een eigen context.
 
 ## Raceparkours
 
@@ -94,7 +136,7 @@ Controle: `node tools/test-learning.js` (weercriteria, haalbaarheid per level, b
 
 Het poppetje, het dorp en de decors komen uit de illustraties van *Sterreneiland* (`styling inspo.zip`). Het poppetje is een 3D-achtige pop die uit losse lagen wordt opgebouwd: elke laag is een grijze uitsnede uit `assets/doll.png` die in het spel met een kleur wordt vermenigvuldigd. Zo krijgen huid, ogen, haar en elk kledingstuk hun eigen kleur, met de schaduwen van de illustratie erin. Hoedjes, brillen, sieraden, tassen, spulletjes, vleugels en huisdieren zijn emoji (in de gekozen kleur) of kleine getekende vormpjes, geplaatst op de ogen-, mond- en handposities uit het manifest.
 
-De decors zijn uitsneden uit de wereldillustraties (`assets/bg/`), soms met een sfeerlaag (nacht, regen, slingers), of worden in dezelfde zachte stijl getekend (`js/bg.js`). Het dorp is de dorpskaart met een loopraster dat uit de padkleur is afgeleid.
+De decors zijn uitsneden uit de wereldillustraties (`assets/bg/`), soms met een sfeerlaag (nacht, regen, slingers), of worden in dezelfde zachte stijl getekend (`js/bg.js`). Het grotere dorp heeft een eigen SVG-illustratie met winkelpanden, bomen, paden, parkjes en een vijver. De illustratie en het loopraster gebruiken dezelfde gebouwcoördinaten; de oude kaart in `assets/village.jpg` blijft als oorspronkelijke referentie aanwezig.
 
 Het ijspaleis, de balzaal en de disco en alle plaatjes van de binnenspeeltuin (`assets/speeltuin/`: de speelhal en de blokken, bal, pion, ster en trampoline) zijn in Blender gebouwd en gerenderd, in een zachte speelgoedstijl die bij de illustraties past. Zie *Blender-decors* hieronder.
 
@@ -129,7 +171,9 @@ De daaropvolgende mobiele indeling staat beschreven in `test-results/mobile-ui/r
 | `js/data.js` | Alle items, thema's, jury en levelcurve. Hier voeg je nieuwe spullen toe |
 | `js/avatar.js` | Het model samenstellen uit de sprite-lagen; accessoires en make-up |
 | `js/bg.js` | De decors (settings) |
-| `js/world.js` | Het dorp: lopen, route zoeken, huisjes |
+| `js/world.js` | Het dorp: lopen, deuren, bewoners, kaart en dorpsboek |
+| `js/town-rules.js`, `js/village-art.js` | Dorpskaart, botsingen, routes, opdrachten, dansregels en illustraties |
+| `js/town-activities.js` | Disco, balzaal, Knuffelhuis en Fotostudio |
 | `js/speeltuin-rules.js`, `js/speeltuin.js` | Binnenspeeltuin: regels en scherm van de Springbaan en de Trampoline |
 | `js/game.js` | Spellogica: profielen, kleedkamer, beoordeling, voortgang |
 | `assets/` | Gegenereerd: sprite-atlas, manifest, dorpskaart, decors |
