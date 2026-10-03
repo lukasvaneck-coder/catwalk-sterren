@@ -47,6 +47,25 @@ Besturing: pijltjes/WASD of schermpijlen; spatie/Spring voor een sprong; Enter/S
 
 `js/parkour-rules.js` bevat parcoursen, scores en simulatie. `js/parkour.js` verzorgt de schermen, bediening en canvas. Controleer regels en beloningen met `node tools/test-parkour.js`. `tools/preview-parkour.html` is een aparte speeltest met een profiel in geheugen, zonder echte opslag te wijzigen.
 
+## Binnenspeeltuin
+
+Open **🛝 Binnenspeeltuin** in het dorp. Er zijn twee spelletjes in een speelhal met een ballenbak, regenboog, klimmuur en klimrek met glijbaan:
+
+| Spel | Hoe het werkt | Sterren |
+| --- | --- | --- |
+| 🧱 Springbaan | Je rent vanzelf. Spring over schuimblokken, pionnen en rollende strandballen; bij een hoge toren spring je in de lucht nog een keer (dubbele sprong). Drie hartjes; elke botsing kost er één. Onderweg hangen boogjes sterren op springhoogte. Elke ronde is een nieuwe, willekeurige baan van ongeveer 21 seconden. | 1 voor de finish, +1 als je niets raakt, +1 voor minstens 60% van de sterren |
+| 🤸 Trampolinesterren | 40 seconden stuiteren. Druk op Spring als je de mat raakt (vlak ervoor of tijdens het indeuken), dan ga je een niveau hoger (max. 5); niet of te vroeg drukken laat je zakken. Stuur met links/rechts naar de sterren. Een ster die 7 seconden niet gepakt wordt, verschijnt ergens anders. De springknop licht geel op op het goede moment. | 25 / 15 / 6 gevangen sterren |
+
+Besturing: spatie, pijltje omhoog, W, de Spring-knop of (bij de springbaan) tikken op het speelveld; links/rechts met pijltjes, A/D of de schermknoppen. P/Escape pauzeert; bij tab- of vensterwissel pauzeert het spel vanzelf. Sterren geven XP, munten en sterren via de bestaande levelcurve (`speeltuin_springbaan` en `speeltuin_trampoline`); het record (meeste gevangen sterren) wordt per speler bewaard. Bij de springbaan telt een record alleen als je de finish haalt.
+
+`js/speeltuin-rules.js` bevat de regels en simulatie, `js/speeltuin.js` de schermen, bediening en canvas. `node tools/test-speeltuin.js` controleert sprongen, hartjes, timing en de sterrengrenzen met bots (een perfecte speler, een kind met slordige timing, alleen sturen en alleen rammelen: rammelen of alleen sturen levert hooguit één ster op). `tools/test-speeltuin-browser.js` speelt beide spelletjes echt uit in de browser en controleert beloning, opslag, de telefoonindeling, aanraken en pauze:
+
+```powershell
+playwright-cli -s=speeltuin open http://127.0.0.1:4173 --browser=chrome
+playwright-cli -s=speeltuin run-code --filename=tools/test-speeltuin-browser.js
+playwright-cli -s=speeltuin close
+```
+
 ## Kleden voor het weer en winkelen met een budget
 
 Via **🌦️ Weer & budget** in het dorp of de kleedkamer kies je gericht een scenario. Elk scenario heeft een lesje, concrete kledingcriteria en een kleurentip. Alle criteria gehaald met een complete outfit geeft drie sterren. De bestaande jury deelt XP en munten uit; persoonlijke scores blijven bewaard.
@@ -76,6 +95,8 @@ Controle: `node tools/test-learning.js` (weercriteria, haalbaarheid per level, b
 Het poppetje, het dorp en de decors komen uit de illustraties van *Sterreneiland* (`styling inspo.zip`). Het poppetje is een 3D-achtige pop die uit losse lagen wordt opgebouwd: elke laag is een grijze uitsnede uit `assets/doll.png` die in het spel met een kleur wordt vermenigvuldigd. Zo krijgen huid, ogen, haar en elk kledingstuk hun eigen kleur, met de schaduwen van de illustratie erin. Hoedjes, brillen, sieraden, tassen, spulletjes, vleugels en huisdieren zijn emoji (in de gekozen kleur) of kleine getekende vormpjes, geplaatst op de ogen-, mond- en handposities uit het manifest.
 
 De decors zijn uitsneden uit de wereldillustraties (`assets/bg/`), soms met een sfeerlaag (nacht, regen, slingers), of worden in dezelfde zachte stijl getekend (`js/bg.js`). Het dorp is de dorpskaart met een loopraster dat uit de padkleur is afgeleid.
+
+Het ijspaleis, de balzaal en de disco en alle plaatjes van de binnenspeeltuin (`assets/speeltuin/`: de speelhal en de blokken, bal, pion, ster en trampoline) zijn in Blender gebouwd en gerenderd, in een zachte speelgoedstijl die bij de illustraties past. Zie *Blender-decors* hieronder.
 
 ## Mobiele portrettest
 
@@ -109,9 +130,11 @@ De daaropvolgende mobiele indeling staat beschreven in `test-results/mobile-ui/r
 | `js/avatar.js` | Het model samenstellen uit de sprite-lagen; accessoires en make-up |
 | `js/bg.js` | De decors (settings) |
 | `js/world.js` | Het dorp: lopen, route zoeken, huisjes |
+| `js/speeltuin-rules.js`, `js/speeltuin.js` | Binnenspeeltuin: regels en scherm van de Springbaan en de Trampoline |
 | `js/game.js` | Spellogica: profielen, kleedkamer, beoordeling, voortgang |
 | `assets/` | Gegenereerd: sprite-atlas, manifest, dorpskaart, decors |
 | `tools/build-assets.py` | Maakt `assets/` uit de illustraties van de zip |
+| `tools/blender/` | Blender-scripts voor de gerenderde decors en de speeltuinplaatjes |
 | `build-artifact.js` | Maakt `dist/artifact.html` (zonder assets; alleen voor een snelle preview) |
 
 ## Een nieuw item toevoegen
@@ -132,3 +155,19 @@ python tools/build-assets.py <map>/public --preview <map-voor-controlebladen>
 ```
 
 Nodig: Python 3 met Pillow, NumPy en SciPy. Het script splitst de sprites in lagen (stof, huid, haar, ogen, vaste details), bouwt de atlas en het manifest, maakt de dorpskaart met loopraster en de decor-uitsneden.
+
+### Blender-decors
+
+De gerenderde plaatjes worden door scripts in `tools/blender/` opgebouwd (gedeelde vormen, materialen, licht en renderinstellingen in `lib.py`). Ze draaien in een losse Blender-instantie, dus een geopend Blender-bestand blijft onaangeroerd:
+
+```powershell
+& "C:\Program Files\Blender Foundation\Blender 5.1\blender.exe" -b --factory-startup --python tools/blender/disco.py -- render
+```
+
+| Script | Maakt | Kopieer naar |
+| --- | --- | --- |
+| `ijspaleis.py`, `balzaal.py`, `disco.py` | `<naam>.jpg` (480 × 720) | `assets/bg/` |
+| `speeltuin-hal.py` | `speeltuin-hal.jpg`: naadloos herhalende strook van de speelhal | `assets/speeltuin/hal.jpg` |
+| `speeltuin-sprites.py` | `<naam>-klein.png` met doorzichtige achtergrond | `assets/speeltuin/<naam>.png` |
+
+Elk script schrijft ook een `.blend` en een grote PNG in de uitvoermap, om in Blender verder te kijken. Getest met Blender 5.1 (Eevee).

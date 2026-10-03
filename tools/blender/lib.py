@@ -6,6 +6,8 @@ Elk decorscript (ijspaleis.py, balzaal.py, disco.py, ...) doet:
   ... bouwen met mat/box/cyl/cone/sphere/torus/star ...
   lib.sky(...) / lib.light(...) / lib.camera(...)
   lib.render(scene, OUT, 'id')        -> <OUT>/<id>.png (960x1440), .jpg (480x720) en .blend
+Andere formaten (de speelhal, losse plaatjes met doorzichtige achtergrond):
+  lib.setup_render(scene, (b, h), transparent=True) en lib.still(scene, png, (b2, h2), fmt='PNG')
 
 Draaien:
   blender -b --factory-startup --python tools/blender/<id>.py -- <uitvoermap>
@@ -86,7 +88,7 @@ def finish(o, m, bevel=0.0, smooth=True, sub=0):
 def box(loc, size, m, bevel=0.12):
     bpy.ops.mesh.primitive_cube_add(location=loc)
     o = bpy.context.object; o.scale = (size[0] / 2, size[1] / 2, size[2] / 2)
-    bpy.ops.object.transform_apply(scale=True)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     return finish(o, m, bevel, smooth=False)
 
 
@@ -210,11 +212,13 @@ def camera(scene, loc, target, lens=30):
 
 
 # ------------------------------------------------------------------ renderen
-def render(scene, out, name, exposure=-0.35, samples=128, bloom=0.05):
+def setup_render(scene, size=(960, 1440), exposure=-0.35, samples=128, bloom=0.05, transparent=False):
     r = scene.render
     r.engine = 'BLENDER_EEVEE'
-    r.resolution_x, r.resolution_y, r.resolution_percentage = 960, 1440, 100
+    r.resolution_x, r.resolution_y, r.resolution_percentage = size[0], size[1], 100
     r.image_settings.file_format = 'PNG'
+    r.image_settings.color_mode = 'RGBA' if transparent else 'RGB'
+    r.film_transparent = transparent
     ee = scene.eevee
     for attr, val in [('taa_render_samples', samples), ('use_raytracing', True), ('use_shadows', True),
                       ('use_bloom', True), ('bloom_intensity', bloom), ('use_gtao', True)]:
@@ -223,15 +227,27 @@ def render(scene, out, name, exposure=-0.35, samples=128, bloom=0.05):
     scene.view_settings.view_transform = 'Standard'
     scene.view_settings.exposure = exposure
 
-    png = os.path.join(out, name + '.png')
-    r.filepath = png
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + '.blend'))
-    bpy.ops.render.render(write_still=True)
 
-    # verkleinde jpg zoals het spel hem gebruikt (assets/bg/<id>.jpg)
-    # (Image.save, niet save_render: die zou exposure/view transform nog een keer toepassen)
+def still(scene, png, small=None, fmt='JPEG'):
+    """Rendert naar png; met small=(b, h) ook een verkleinde kopie (jpg, of png bij fmt='PNG').
+    (Image.save, niet save_render: die zou exposure/view transform nog een keer toepassen.)"""
+    scene.render.filepath = png
+    bpy.ops.render.render(write_still=True)
+    if not small:
+        return png
     img = bpy.data.images.load(png)
-    img.scale(480, 720)
-    img.file_format = 'JPEG'
-    img.save(filepath=os.path.join(out, name + '.jpg'), quality=86)
-    print('KLAAR', png)
+    img.scale(*small)
+    img.file_format = fmt
+    base = os.path.splitext(png)[0]
+    path = base + ('.jpg' if fmt == 'JPEG' else '-klein.png')
+    img.save(filepath=path, quality=86)
+    bpy.data.images.remove(img)
+    print('KLAAR', path)
+    return path
+
+
+def render(scene, out, name, exposure=-0.35, samples=128, bloom=0.05):
+    """Decor: <out>/<name>.png (960x1440), .jpg (480x720, voor assets/bg) en .blend."""
+    setup_render(scene, (960, 1440), exposure, samples, bloom)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + '.blend'))
+    still(scene, os.path.join(out, name + '.png'), (480, 720))

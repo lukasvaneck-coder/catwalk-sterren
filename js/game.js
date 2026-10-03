@@ -89,6 +89,7 @@
   function showScreen(id) {
     closeGameDialogs();
     if (document.body.dataset.screen === 'screen-parkour' && id !== 'screen-parkour') Parkour.hide();
+    if (document.body.dataset.screen === 'screen-speeltuin' && id !== 'screen-speeltuin') Speeltuin.hide();
     if (document.body.dataset.screen === 'screen-world' && id !== 'screen-world') World.hide();
     document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; }); document.body.dataset.screen = id; window.scrollTo(0, 0);
   }
@@ -117,6 +118,20 @@
       exit: () => enterWorld(P),
       reward: (stars, courseId) => {
         const gained = award(P, { stars }, { id: `parkour_${courseId}` }, false);
+        return { ...gained, extra: P.level > gained.prevLevel ? levelUpHtml(gained, P) : '' };
+      },
+    });
+  }
+  function openSpeeltuin() {
+    if (!P) return;
+    if (ui.duel) { toast('Maak eerst het duel af voordat je gaat spelen.'); return; }
+    closeOverlay();
+    showScreen('screen-speeltuin');
+    Speeltuin.show(P, {
+      save,
+      exit: () => enterWorld(P),
+      reward: (stars, gameId) => {
+        const gained = award(P, { stars }, { id: `speeltuin_${gameId}` }, false);
         return { ...gained, extra: P.level > gained.prevLevel ? levelUpHtml(gained, P) : '' };
       },
     });
@@ -818,6 +833,7 @@
     $('#btn-learning').onclick=openLearning;
     $('#btn-world-learning').onclick=openLearning;
     $('#btn-world-parkour').onclick = openParkour;
+    $('#btn-world-speeltuin').onclick = openSpeeltuin;
     $('#btn-parkour').onclick = openParkour;
     renderSoundButton();
     $('#btn-sound').onclick = () => { Sound.toggle(); renderSoundButton(); };
