@@ -44,6 +44,7 @@ const Avatar = (() => {
 
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
   const scratch = mk(F, F);
+  const paint = mk(F, F);      // stof + patroon, normaal geschilderd; daarna in één keer over de grijze laag vermenigvuldigd
 
   /* ---------- kleurhulpjes ---------- */
   const hex2rgb = h => { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -183,7 +184,15 @@ const Avatar = (() => {
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, w, h);
     g.drawImage(atlas, ax, ay, w, h, 0, 0, w, h);
     g.globalCompositeOperation = 'multiply';
-    if (typeof fill === 'string') { g.fillStyle = fill; g.fillRect(0, 0, w, h); } else paintDesign(g, fill, w, h, ox, oy);
+    if (typeof fill === 'string') { g.fillStyle = fill; g.fillRect(0, 0, w, h); }
+    else {
+      // Patroon eerst los schilderen: anders wordt de patroonkleur óók met de stofkleur vermenigvuldigd
+      // (wit verdwijnt, lichte kleuren worden donker).
+      const p = paint.getContext('2d');
+      p.save(); p.setTransform(1, 0, 0, 1, 0, 0); p.globalCompositeOperation = 'source-over'; p.clearRect(0, 0, w, h);
+      paintDesign(p, fill, w, h, ox, oy); p.restore();
+      g.drawImage(paint, 0, 0, w, h, 0, 0, w, h);
+    }
     if (typeof fill === 'object' && fill.stickers?.length) {
       g.globalCompositeOperation = 'source-over'; g.save(); g.translate(-ox, -oy); paintStickers(g, fill); g.restore();
     }

@@ -36,7 +36,7 @@ const TownActivities = (() => {
     if(!state||state.finished||paused)return;
     let good=false;
     if(place==='disco')good=R.rhythmPress(state,pad);
-    else{const result=R.memoryPress(state,pad);good=['ok','round','finish'].includes(result);if(result==='retry'){$('#activity-instruction').textContent='Bijna! Kijk nog een keer en probeer opnieuw.';$('#activity-replay').hidden=false;}if(result==='finish'){finish();return;}}
+    else{const result=R.memoryPress(state,pad);good=['ok','round','finish'].includes(result);if(result==='retry'){$('#activity-instruction').textContent='Bijna! Kijk nog een keer en probeer opnieuw.';$('#activity-replay').hidden=false;}if(result==='finish'){$('#activity-score').textContent=`Ronde 4 / 4 · ${state.sequence.length}/${state.sequence.length} passen`;finish();return;}}
     if(good){Sound.play('pop');$('#activity-model').classList.remove('activity-hop');void $('#activity-model').offsetWidth;$('#activity-model').classList.add('activity-hop');}
     updateGame();
   }

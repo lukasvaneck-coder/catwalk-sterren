@@ -91,8 +91,13 @@ const World = (() => {
     const region=pos.y>1190?(pos.x>1330?'Feestbuurt':'Wandelpark'):pos.x>1370?'Speelbuurt':'Modeplein';
     if(els.status.textContent!==status)els.status.textContent=status;if(els.region.textContent!==region)els.region.textContent=region;
   }
-  function layout(){if(!active||!els.viewport)return;const vw=els.viewport.clientWidth,vh=els.viewport.clientHeight,scale=vw<600?.9:1;
-    const x=Math.max(vw-R.WIDTH*scale,Math.min(0,vw/2-pos.x*scale)),y=Math.max(vh-R.HEIGHT*scale,Math.min(0,vh*.54-pos.y*scale));
+  // De knoppenbalk zweeft over de kaart: de camera telt alleen het zichtbare deel erboven,
+  // zodat het poppetje daarin centreert en ook de onderste huizen boven de balk kunnen komen.
+  function coveredByBar(){const bar=document.querySelector('#world .world-bottom');if(!bar||!els.viewport)return 0;const v=els.viewport.getBoundingClientRect(),b=bar.getBoundingClientRect();return b.height&&b.top<v.bottom&&b.bottom>v.top?Math.max(0,v.bottom-b.top+8):0;}
+  function layout(){if(!active||!els.viewport)return;const vw=els.viewport.clientWidth,vh=els.viewport.clientHeight-coveredByBar(),scale=vw<600?.9:1;
+    // voeten op 54% van het zichtbare deel, maar nooit zo hoog dat het hoofd onder de knoppen bovenin verdwijnt
+    const feet=Math.min(vh-10,Math.max(vh*.54,(els.avatar?.offsetHeight||140)*scale+44));
+    const x=Math.max(vw-R.WIDTH*scale,Math.min(0,vw/2-pos.x*scale)),y=Math.max(vh-R.HEIGHT*scale,Math.min(0,feet-pos.y*scale));
     els.plane.style.width=R.WIDTH+'px';els.plane.style.height=R.HEIGHT+'px';els.plane.style.transform=`translate(${x}px,${y}px) scale(${scale})`;}
   function dialog(title,html){keys.clear();const d=$('#town-dialog');d.innerHTML=`<header><h2 class="h" id="town-dialog-title">${title}</h2><button class="btn ghost sm" id="town-dialog-close" type="button" aria-label="Sluiten">✕</button></header>${html}`;$('#town-dialog-close').onclick=()=>d.close();if(!d.open)d.showModal();return d;}
   function miniMap(){return `<svg viewBox="0 0 ${R.WIDTH} ${R.HEIGHT}" class="town-minimap" aria-label="Plattegrond van het dorp"><rect width="2480" height="1760" rx="80" fill="#b6cd98"/><g fill="none" stroke="#efe0b9" stroke-width="70" stroke-linecap="round">${R.PATHS.map(p=>`<polyline points="${p.map(v=>v.join(',')).join(' ')}"/>`).join('')}</g><ellipse cx="1680" cy="940" rx="172" ry="152" fill="#8abdc5"/>${HOUSES.map((h,i)=>`<g><rect x="${h.x-h.w/2}" y="${h.y-h.h}" width="${h.w}" height="${h.h}" rx="30" fill="${h.color}" stroke="#fff2d1" stroke-width="8"/><text x="${h.x}" y="${h.y-h.h/2+22}" text-anchor="middle" fill="white" font-family="sans-serif" font-size="70" font-weight="bold">${i+1}</text></g>`).join('')}<circle cx="${pos.x}" cy="${pos.y}" r="38" fill="#6744bb" stroke="white" stroke-width="13"/></svg>`;}
