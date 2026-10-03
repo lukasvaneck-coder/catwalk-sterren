@@ -519,6 +519,21 @@ add('hand', [
   { id: 'hd_wortel',        shape: 'carrot',    name: 'Wortel voor het Paard', c: ['#ff8c42', '#3fbf63'], tags: ['paard'], hue: 'oranje', lvl: 7 },
 ]);
 
+// Coco en Pip zijn een welkomstcadeau, ook voor bestaande spelers.
+const COMPANION_GIFTS = ['hd_coco', 'pt_pip'];
+add('hand', [
+  { id: 'hd_coco', shape: 'plushrabbit', name: 'Coco · knuffelkonijn', c: ['#d7bd98', '#f4e6d3'], tags: ['pyjama', 'casual', 'sprookje'], hue: 'bruin', lvl: 1 },
+  { id: 'hd_bibi', shape: 'plushbear', name: 'Bibi · knuffelbeer', c: ['#b78059', '#efd4b2'], tags: ['pyjama', 'casual'], hue: 'bruin', lvl: 2 },
+  { id: 'hd_lila', shape: 'plushaxolotl', name: 'Lila · knuffelaxolotl', c: ['#e7a9d3', '#fbddea'], tags: ['pyjama', 'zwemmen', 'sprookje'], hue: 'roze', lvl: 3 },
+  { id: 'hd_bamboe', shape: 'plushpanda', name: 'Bamboe · knuffelpanda', c: ['#f6f1e8', '#494454'], tags: ['pyjama', 'casual', 'sprookje'], hue: 'wit', lvl: 5 },
+]);
+add('pet', [
+  { id: 'pt_pip', shape: 'hamster', name: 'Pip · hamster', c: ['#d8aa70', '#fff4df'], tags: ['casual', 'school', 'pyjama'], hue: 'bruin', lvl: 1 },
+  { id: 'pt_moos', shape: 'turtle', name: 'Moos · schildpad', c: ['#75a85d', '#c4d99a'], tags: ['casual', 'strand', 'zwemmen'], hue: 'groen', lvl: 2 },
+  { id: 'pt_ollie', shape: 'otter', name: 'Ollie · otter', c: ['#a97751', '#e5c9a5'], tags: ['casual', 'zwemmen', 'strand'], hue: 'bruin', lvl: 4 },
+  { id: 'pt_prik', shape: 'hedgehog', name: 'Prik · egeltje', c: ['#9c7658', '#e8cfb3'], tags: ['casual', 'bloemen', 'sprookje'], hue: 'bruin', lvl: 6 },
+]);
+
 /* ---------- Op je rug ---------- */
 add('back', [
   { id: 'bk_vleugels',      shape: 'fairywings',name: 'Feeënvleugels',       c: ['#bfe3ff', '#ffffff'], tags: ['sprookje', 'feest', 'prinses'], glam: 2, hue: 'blauw', lvl: 4 },

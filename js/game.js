@@ -37,6 +37,7 @@
   }
   // oude spelers meenemen naar de nieuwe versie
   function migrate(p) {
+    ClothingDesigns.restore(p);
     p.look = p.look || {};
     if (!FACE_SHAPES.some(f => f.id === p.look.face)) p.look.face = 'ovaal';
     if (typeof p.look.build !== 'number') p.look.build = 40;
@@ -46,15 +47,19 @@
     // kapsels uit eerdere versies krijgen het kapsel dat er nu het meest op lijkt
     if (HAIR_ALIASES[p.outfit.hair]) p.outfit.hair = HAIR_ALIASES[p.outfit.hair];
     if (Array.isArray(p.owned)) p.owned = p.owned.map(id => HAIR_ALIASES[id] || id);
-    for (const slot of Object.keys(p.outfit)) if (!ITEM_BY_ID[p.outfit[slot]]) delete p.outfit[slot];
+    for (const slot of Object.keys(p.outfit)) {
+      const it = ITEM_BY_ID[p.outfit[slot]];
+      if (!it || (it.custom && (it.ownerId !== p.id || it.cat !== slot))) delete p.outfit[slot];
+    }
     if (!p.outfit.hair) p.outfit.hair = 'hair_lang';
     if (!SETTING_BY_ID[p.freeBg]) p.freeBg = 'kamer';
     p.done = p.done || {};
     p.level = levelFromXp(p.xp || 0);
     if (typeof p.coins !== 'number') p.coins = COINS_START;
     // wie al speelde, houdt alles wat toen open stond
-    if (!Array.isArray(p.owned)) p.owned = ITEMS.filter(i => i.lvl <= p.level).map(i => i.id);
-    p.owned = p.owned.filter(id => ITEM_BY_ID[id]);
+    if (!Array.isArray(p.owned)) p.owned = ITEMS.filter(i => !i.custom && i.lvl <= p.level).map(i => i.id);
+    p.owned = p.owned.filter(id => ITEM_BY_ID[id] && (!ITEM_BY_ID[id].custom || ITEM_BY_ID[id].ownerId === p.id));
+    p.owned = [...new Set([...p.owned, ...COMPANION_GIFTS, ...p.customDesigns.map(i => i.id)])];
     for (const slot of Object.keys(p.outfit)) if (!p.owned.includes(p.outfit[slot])) p.owned.push(p.outfit[slot]);
     if (!['mono','buren','tegenover'].includes(p.colorMode)) p.colorMode = null;
     if (!['weather','budget'].includes(p.learningMode)) p.learningMode = null;
@@ -67,12 +72,12 @@
     }
     p.duels = p.duels || { played: 0, won: 0 };
   }
-  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(DB)); } catch (e) { /* stil doorgaan */ } }
+  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(DB)); return true; } catch (e) { return false; } }
 
   function levelFromXp(xp) { let l = 1; while (l < MAX_LEVEL && xp >= xpForLevel(l + 1)) l++; return l; }
-  const owned = it => P.owned.includes(it.id);
+  const owned = it => (!it.custom || it.ownerId === P.id) && P.owned.includes(it.id);
   const itemsOf = slot => ITEMS.filter(i => i.cat === slot && owned(i)).sort((a, b) => a.lvl - b.lvl || a.name.localeCompare(b.name));
-  const shopItems = slot => ITEMS.filter(i => i.lvl <= P.level && !owned(i) && (!slot || i.cat === slot)).sort((a, b) => priceOf(a) - priceOf(b) || a.name.localeCompare(b.name));
+  const shopItems = slot => ITEMS.filter(i => !i.custom && i.lvl <= P.level && !owned(i) && (!slot || i.cat === slot)).sort((a, b) => priceOf(a) - priceOf(b) || a.name.localeCompare(b.name));
 
   function newProfile(name, look, hairStyle) {
     const p = {
@@ -89,6 +94,8 @@
   function showScreen(id) {
     closeGameDialogs();
     if (document.body.dataset.screen === 'screen-parkour' && id !== 'screen-parkour') Parkour.hide();
+    if (document.body.dataset.screen === 'screen-speeltuin' && id !== 'screen-speeltuin') Speeltuin.hide();
+    if (document.body.dataset.screen === 'screen-town-activities' && id !== 'screen-town-activities') TownActivities.hide();
     if (document.body.dataset.screen === 'screen-world' && id !== 'screen-world') World.hide();
     document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; }); document.body.dataset.screen = id; window.scrollTo(0, 0);
   }
@@ -99,10 +106,18 @@
     showScreen('screen-world');
     World.show(P, {
       save,
+      toast,
+      reward: (stars,id) => townReward(stars,id),
       enter: id => {
         if (id === 'kleedkamer') startGame(P);
         else if (id === 'winkel') openShop();
         else if (id === 'puzzel') openColorAtelier();
+        else if (id === 'atelier') openDesigner();
+        else if (id === 'race') openParkour();
+        else if (id === 'speeltuin') openSpeeltuin();
+        else if (id === 'leshuis') openLearning();
+        else if (id === 'salon') openCreate(P);
+        else if (['disco','balzaal','knuffel','foto'].includes(id)) openTownActivity(id);
         else if (id === 'duel') { if (DB.profiles.length < 2) toast('Voor een duel heb je twee spelers nodig. Maak op het startscherm nog een speler.'); else openDuelSetup(); }
       },
     });
@@ -121,7 +136,63 @@
       },
     });
   }
+  function townReward(stars,id) {
+    const gained=award(P,{stars},{id:`town_${id}`},false);
+    return {...gained,extra:P.level>gained.prevLevel?levelUpHtml(gained,P):''};
+  }
+  function openTownActivity(id) {
+    closeOverlay();showScreen('screen-town-activities');
+    TownActivities.show(P,id,{save,exit:()=>enterWorld(P),reward:townReward,photo:bg=>makePhoto(bg)});
+  }
+  function openSpeeltuin() {
+    if (!P) return;
+    if (ui.duel) { toast('Maak eerst het duel af voordat je gaat spelen.'); return; }
+    closeOverlay();
+    showScreen('screen-speeltuin');
+    Speeltuin.show(P, {
+      save,
+      exit: () => enterWorld(P),
+      reward: (stars, gameId) => {
+        const gained = award(P, { stars }, { id: `speeltuin_${gameId}` }, false);
+        return { ...gained, extra: P.level > gained.prevLevel ? levelUpHtml(gained, P) : '' };
+      },
+    });
+  }
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 2400); }
+  function openDesigner(cat) {
+    if (!P) return;
+    if (ui.duel) { toast('Maak eerst het duel af voordat je kleding gaat ontwerpen.'); return; }
+    const from = document.body.dataset.screen;
+    closeOverlay(); showScreen('screen-designer');
+    Designer.show(P, {
+      saveDraft: save,
+      exit: () => {
+        if (from === 'screen-world') enterWorld(P);
+        else { renderAll(); renderTabs(); showScreen('screen-game'); }
+      },
+      commit: (draft, editingId) => {
+        const existing = P.customDesigns.find(it => it.id === editingId);
+        if (!existing && P.customDesigns.length >= ClothingDesigns.LIMIT) return { error: 'Je kast heeft al 60 eigen ontwerpen. Pas een bestaand ontwerp aan.' };
+        const id = existing?.id || `custom_${P.id}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`;
+        const it = ClothingDesigns.item(draft, id, P.id);
+        const previous = { customDesigns: P.customDesigns, owned: P.owned, outfit: P.outfit, designDraft: P.designDraft };
+        const dadOutfit = P.parkour?.dadOutfit;
+        P.customDesigns = existing ? P.customDesigns.map(d => d.id === id ? it : d) : [...P.customDesigns, it];
+        P.owned = [...new Set([...P.owned, id])];
+        const clean = outfit => Object.fromEntries(Object.entries(outfit).filter(([slot, itemId]) => itemId !== id || slot === it.cat));
+        P.outfit = ClothingDesigns.outfitWith(clean(P.outfit), it);
+        if (dadOutfit) P.parkour.dadOutfit = clean(dadOutfit);
+        delete P.designDraft;
+        if (!save()) {
+          Object.assign(P, previous); if (dadOutfit) P.parkour.dadOutfit = dadOutfit;
+          return { error: 'Opslaan is niet gelukt. Je ontwerp staat nog hier. Maak ruimte in je browser en probeer opnieuw.' };
+        }
+        ClothingDesigns.register(it);
+        ui.tab = it.cat;
+        return { item: it };
+      },
+    }, ClothingDesigns.TYPES.some(t => t.id === cat) ? cat : 'top');
+  }
   function openOverlay(html, cls = '') { closeGameDialogs(); const ov = $('#overlay'); ov.innerHTML = `<div class="modal ${cls}">${html}</div>`; ov.hidden = false; ov.scrollTop = 0; return ov; }
   function closeGameDialogs() { document.querySelectorAll('.game-dialog[open]').forEach(dialog => dialog.close()); }
   function closeOverlay() { const ov = $('#overlay'); ov.hidden = true; ov.innerHTML = ''; }
@@ -168,6 +239,7 @@
 
   /* ---------- model maken / aanpassen ---------- */
   function openCreate(profile) {
+    ui.createReturn = document.body.dataset.screen;
     ui.editMode = !!profile;
     ui.temp = profile
       ? { skin: profile.look.skin, eyes: profile.look.eyes, face: profile.look.face, build: profile.look.build, hairColor: profile.look.hairColor, hairStyle: profile.outfit.hair || 'hair_lang', name: profile.name }
@@ -361,6 +433,10 @@
       return;
     }
     const slots = cat.slots || [cat.id];
+    if (ClothingDesigns.TYPES.some(t => t.id === cat.id)) {
+      const create = h('button', { class: 'design-closet-link', type: 'button' }, '✂️ Maak je eigen ' + ({ top: 'top', bottom: 'broek of rok', dress: 'jurk', shoes: 'schoenen' }[cat.id]) + ' <span>＋</span>');
+      create.onclick = () => openDesigner(cat.id); grid.appendChild(create);
+    }
     slots.forEach(slot => {
       if (slots.length > 1) grid.appendChild(section(SLOT_NAMES[slot]));
       grid.appendChild(noneCard(slot));
@@ -383,7 +459,7 @@
   }
   function itemCard(it) {
     const b = h('button', { class: 'item' + (P.outfit[it.cat] === it.id ? ' selected' : ''), type: 'button', title: it.name });
-    b.innerHTML = Avatar.thumb(it, thumbLook()) + `<span class="name">${it.name}</span>`;
+    b.innerHTML = Avatar.thumb(it, thumbLook()) + `<span class="name">${it.custom ? '✂️ ' : ''}${esc(it.name)}</span>`;
     b.onclick = () => { Sound.play('pop'); wear(it); };
     return b;
   }
@@ -750,8 +826,8 @@
   }
 
   /* ---------- foto ---------- */
-  function makePhoto() {
-    const c = Avatar.stage(P.look, P.outfit, currentBg());
+  function makePhoto(bg = currentBg()) {
+    const c = Avatar.stage(P.look, P.outfit, bg);
     let data = '';
     try { data = c.toDataURL('image/png'); } catch (e) { data = ''; }
     if (!data) { toast('De foto kan alleen opgeslagen worden als het spel via een website draait (niet vanaf een los bestand).'); return; }
@@ -781,7 +857,7 @@
   function unlockEverything() {
     if (DB.settings?.developerMode !== true) return;
     if (!DB.profiles.length) { toast('Maak eerst een speler.'); return; }
-    DB.profiles.forEach(p => { p.xp = Math.max(p.xp, xpForLevel(MAX_LEVEL)); p.level = MAX_LEVEL; p.owned = ITEMS.map(i => i.id); p.coins += 500; });
+    DB.profiles.forEach(p => { p.xp = Math.max(p.xp, xpForLevel(MAX_LEVEL)); p.level = MAX_LEVEL; p.owned = ITEMS.filter(i => !i.custom || i.ownerId === p.id).map(i => i.id); p.coins += 500; });
     save(); renderStart();
     if (P) { renderHUD(); renderGrid(); }
     Sound.play('levelup'); toast('Alle spelers: level 20, alle spullen en 500 munten extra.');
@@ -817,7 +893,10 @@
     document.querySelectorAll('[data-settings]').forEach(b=>b.onclick=openSettings);
     $('#btn-learning').onclick=openLearning;
     $('#btn-world-learning').onclick=openLearning;
+    $('#btn-world-designer').onclick = () => openDesigner();
+    $('#btn-designer').onclick = () => openDesigner();
     $('#btn-world-parkour').onclick = openParkour;
+    $('#btn-world-speeltuin').onclick = openSpeeltuin;
     $('#btn-parkour').onclick = openParkour;
     renderSoundButton();
     $('#btn-sound').onclick = () => { Sound.toggle(); renderSoundButton(); };
@@ -828,10 +907,10 @@
     $('#create-done').onclick = () => {
       const name = $('#name-input').value.trim().slice(0, 16) || 'Ster';
       const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor };
-      if (ui.editMode) { P.name = name; P.look = look; P.outfit.hair = ui.temp.hairStyle; save(); startGame(P); }
+      if (ui.editMode) { P.name = name; P.look = look; P.outfit.hair = ui.temp.hairStyle; save(); if(ui.createReturn==='screen-world')enterWorld(P);else startGame(P); }
       else { const p = newProfile(name, look, ui.temp.hairStyle); DB.profiles.push(p); save(); enterWorld(p); }
     };
-    $('#create-cancel').onclick = () => { if (ui.editMode) startGame(P); else { renderStart(); showScreen('screen-start'); } };
+    $('#create-cancel').onclick = () => { if (ui.editMode) {if(ui.createReturn==='screen-world')enterWorld(P);else startGame(P);} else { renderStart(); showScreen('screen-start'); } };
     $('#name-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('#create-done').click(); });
     $('#build-range').addEventListener('input', e => { ui.temp.build = +e.target.value; renderCreate(true); });
     $('#hud-profile').onclick = () => { ui.duel = null; renderStart(); showScreen('screen-start'); };

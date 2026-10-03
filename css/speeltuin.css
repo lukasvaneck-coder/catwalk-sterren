@@ -1,0 +1,36 @@
+/* Binnenspeeltuin. Gebruikt verder de pk-klassen uit parkour.css (kop, live-balk, knoppen). */
+#speeltuin{width:100%;max-width:1240px;margin:auto;padding:24px;color:#49365e}
+.st-hero{height:clamp(120px,22vw,230px);border:5px solid #fff;border-radius:24px;background:#d5f2eb url(../assets/speeltuin/hal.jpg) 30% 72%/cover;box-shadow:0 8px 30px #44305918;margin:4px 0 22px}
+.st-games{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.st-game{display:grid;grid-template-columns:128px 1fr;gap:18px;align-items:start;padding:24px}
+.st-game img{width:128px;height:auto}.st-game h2{margin:0 0 6px}.st-game p{line-height:1.6}.st-game .pk-note{margin:6px 0}
+#st-canvas{display:block;width:100%;max-height:65vh;aspect-ratio:16/9;background:#d5f2eb;touch-action:none;cursor:pointer}
+#st-canvas.tramp{cursor:default}
+#st-canvas:focus-visible{outline:4px solid #815dc6;outline-offset:-5px}
+#st-pause-panel{position:absolute;inset:0;background:#403057b8;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+#st-pause-panel[hidden]{display:none}
+#st-jump{min-width:190px;min-height:64px;font-size:20px;transition:transform .1s,box-shadow .1s}
+#st-jump.now{background:#ffc531;color:#4a3410;box-shadow:0 0 0 6px #ffc53166;transform:scale(1.05)}
+.st-controls button{touch-action:none;user-select:none}
+@media(max-width:760px){#speeltuin{padding:12px}.st-games{grid-template-columns:1fr;gap:14px}.st-game{grid-template-columns:72px 1fr;gap:12px;padding:16px}.st-game img{width:72px}}
+@media(prefers-reduced-motion:reduce){#st-jump{transition:none}#st-jump.now{transform:none}}
+
+/* Portret op de telefoon: speelveld en knoppen delen het scherm zonder scrollen. */
+@media(max-width:760px) and (orientation:portrait){
+  body.in-speeltuin{overflow:hidden}
+  .in-speeltuin #app{height:100dvh;min-height:0;max-width:none;padding:0}
+  .in-speeltuin #screen-speeltuin{height:100%;min-height:0}
+  .in-speeltuin #speeltuin{height:100%;min-height:0;margin:0;display:grid;grid-template-rows:auto auto minmax(120px,1fr) auto auto;gap:6px;padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+  .in-speeltuin .pk-race-head{gap:6px;flex-wrap:nowrap;font-size:12px;min-width:0}
+  .in-speeltuin .pk-race-head b{flex:1;min-width:0;text-align:center;line-height:1.25}
+  .in-speeltuin .pk-race-head button{min-height:44px;padding:8px;font-size:12px;flex:none}
+  .in-speeltuin .pk-live{margin:0;padding:6px 12px;gap:6px;min-height:36px;flex-wrap:nowrap;font-size:12px}
+  .in-speeltuin .pk-live strong{font-size:18px}
+  .in-speeltuin .pk-canvas-wrap{min-height:0;border-width:3px;border-radius:18px}
+  .in-speeltuin #st-canvas{height:100%;width:100%;max-height:none;aspect-ratio:auto}
+  .in-speeltuin .pk-message{margin:0;min-height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1.25}
+  .in-speeltuin .st-controls{justify-content:space-between;gap:8px;padding:0 6px;min-height:80px;flex-wrap:nowrap}
+  .in-speeltuin .st-controls small{display:none}
+  .in-speeltuin #st-jump{flex:1;max-width:260px;min-height:64px}
+  .in-speeltuin #st-result:empty{display:none}
+}
