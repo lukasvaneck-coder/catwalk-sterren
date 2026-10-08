@@ -361,10 +361,15 @@
   const themeIcon = t => t.rule ? `<div class="ch-wheel">${wheelSvg(t.colors)}</div>` : `<div class="ch-emoji">${t.emoji}</div>`;
   function colorLesson(t) {
     if(t.learning) {
-      const requirements=LearningChallenges.checks(P.outfit,t,ITEM_BY_ID);
-      return `<details class="color-lesson" open><summary>💡 Lesje van de jury</summary><p>${t.lesson}</p><ul>${requirements.map(c=>`<li>${c.label}</li>`).join('')}</ul>${t.learning==='budget'?budgetSummary(t):''}</details><details class="color-lesson"><summary>🎨 Kleurtip erbij</summary><p>${ColorChallenges.lesson(t)}</p></details>`;
+      return `<details class="color-lesson" open><summary>📝 Dit wil de jury zien</summary><ul class="learning-checks" id="learning-checks">${learningChecks(t)}</ul><p>💡 ${t.lesson}</p>${t.learning==='budget'?budgetSummary(t):''}</details><details class="color-lesson"><summary>🎨 Kleurtip erbij</summary><p>${ColorChallenges.lesson(t)}</p></details>`;
     }
     return '<details class="color-lesson" '+(t.rule?'open':'')+'><summary>🌸 Kleurenlesje van Madame Fleur</summary><p>'+ColorChallenges.lesson(t)+'</p><small>We kijken naar de hoofdkleur van elk kledingstuk. Wit, zwart, grijs, bruin, goud en zilver mogen als neutrale kleuren erbij.</small></details>';
+  }
+  // Vinkjes verschijnen meteen terwijl je aankleedt, zodat je ziet wat nog mist.
+  const learningChecks = t => LearningChallenges.assess(P.outfit,t,ITEM_BY_ID,P.budgetRun).list.map(c=>`<li class="${c.ok?'ok':''}">${c.ok?'✅':'⬜'} ${c.label}</li>`).join('');
+  function refreshLearningChecks() {
+    const ul=$('#learning-checks'), t=currentTheme();
+    if(ul&&t?.learning) ul.innerHTML=learningChecks(t);
   }
   function renderChallenge() {
     const box = $('#challenge');
@@ -478,7 +483,7 @@
       if (slot === 'dress') { delete P.outfit.top; delete P.outfit.bottom; }
       if (slot === 'top' || slot === 'bottom') delete P.outfit.dress;
     }
-    save(); renderStage(); renderGrid();
+    save(); renderStage(); renderGrid(); refreshLearningChecks();
   }
   function randomOutfit() {
     const pick = (slot, prob = 1) => { const opts = itemsOf(slot); if (opts.length && Math.random() < prob) P.outfit[slot] = rand(opts).id; else delete P.outfit[slot]; };
@@ -486,9 +491,9 @@
     else { delete P.outfit.dress; pick('top'); pick('bottom'); }
     pick('shoes'); pick('hat', .5); pick('glasses', .3); pick('neck', .45); pick('bag', .3); pick('hand', .35); pick('back', .25); pick('pet', .3);
     pick('mk_eyes', .4); pick('mk_lips', .4); pick('mk_blush', .5); pick('mk_face', .25); pick('hair');
-    save(); renderStage(); renderGrid();
+    save(); renderStage(); renderGrid(); refreshLearningChecks();
   }
-  function clearOutfit() { P.outfit = { hair: P.outfit.hair }; save(); renderStage(); renderGrid(); }
+  function clearOutfit() { P.outfit = { hair: P.outfit.hair }; save(); renderStage(); renderGrid(); refreshLearningChecks(); }
 
   /* ---------- winkel ---------- */
   function selectLearningTheme(t) {
@@ -502,12 +507,13 @@
   }
   function budgetSummary(t) {
     const run=P.budgetRun;
-    if(!run||run.themeId!==t.id)return '<p>Start de budgetopdracht om je bestedingen bij te houden.</p>';
-    return `<div class="budget-summary"><b>🪙 ${t.budget} − ${run.spent} = ${t.budget-run.spent} munten opdrachtbudget over</b><p>${run.purchases.length} van maximaal ${t.maxBuys} nieuwe spullen gekocht.</p>${run.purchases.length?`<ul>${run.purchases.map(p=>`<li>${esc(ITEM_BY_ID[p.id]?.name||p.id)}: ${p.price} munten</li>`).join('')}</ul>`:'<p>Je hebt nog niets gekocht. Je eigen kast gebruiken is gratis.</p>'}<small>Dit is een bestedingsgrens, geen extra geld. Je betaalt uit je eigen ${P.coins} munten. Rekenbonussen verhogen je opdrachtbudget niet. Alle aankopen tellen mee, ook als je ze niet draagt.</small></div>`;
+    if(!run||run.themeId!==t.id)return '<p>Start de opdracht opnieuw om bij te houden wat je koopt.</p>';
+    const things=n=>n===1?'ding':'dingen';
+    return `<div class="budget-summary"><b>🐷 Je mag nog ${t.budget-run.spent} van de ${t.budget} munten uitgeven</b><p>🛍️ Gekocht: ${run.purchases.length} van de ${t.maxBuys} nieuwe ${things(t.maxBuys)}</p>${run.purchases.length?`<ul>${run.purchases.map(p=>`<li>${esc(ITEM_BY_ID[p.id]?.name||p.id)}: ${p.price} munten</li>`).join('')}</ul>`:'<p>Je hebt nog niks gekocht. Kleren uit je eigen kast zijn gratis!</p>'}<small>Je betaalt met je eigen munten (je hebt er ${P.coins}). Alles wat je koopt telt mee, ook als je het niet aantrekt.</small></div>`;
   }
   function openLearning() {
     if(ui.duel){toast('Maak eerst je duel af.');return;}
-    openOverlay(`<h2 class="h">🌦️ Weer & budget</h2><p>Kies een opdracht. De jury kijkt of je keuzes bij de situatie passen.</p>${['weather','budget'].map(group=>`<h3>${group==='weather'?'🌦️ Kleden voor het weer':'🛍️ Winkelen met een budget'}</h3><div class="learning-scenarios">${THEMES.filter(t=>t.learning===group).map(t=>`<button type="button" class="btn ghost learning-scenario" data-lesson="${t.id}" ${P.level<t.lvl?'disabled':''}><b>${t.emoji} ${t.name}</b><small>${group==='budget'?`${t.budget} munten · maximaal ${t.maxBuys} nieuwe spullen`:`${t.desc}`}</small><small>${P.level<t.lvl?'Vanaf level '+t.lvl:(P.done[t.id]?'Beste: '+'⭐'.repeat(P.done[t.id]):'Nieuw!')}</small></button>`).join('')}</div>`).join('')}<p class="small">Begin eerst in je eigen kast. De winkel gebruikt je eigen munten. Elke opdracht heeft een lesje en een kleurentip.</p><button class="btn ghost" id="learning-close">Terug</button>`);
+    openOverlay(`<h2 class="h">🌦️ Weer & Winkelhuis</h2><p>Kies een opdracht. Kleed je aan en de jury kijkt of het klopt!</p>${['weather','budget'].map(group=>`<h3>${group==='weather'?'🌦️ Wat trek je aan bij dit weer?':'🛍️ Slim winkelen met je munten'}</h3><div class="learning-scenarios">${THEMES.filter(t=>t.learning===group).map(t=>`<button type="button" class="btn ghost learning-scenario" data-lesson="${t.id}" ${P.level<t.lvl?'disabled':''}><b>${t.emoji} ${t.name}</b><small>${group==='budget'?`🪙 ${t.budget} munten · ${t.maxBuys} nieuwe ${t.maxBuys===1?'ding':'dingen'}`:`${t.desc}`}</small><small>${P.level<t.lvl?'Vanaf level '+t.lvl:(P.done[t.id]?'Beste: '+'⭐'.repeat(P.done[t.id]):'Nieuw!')}</small></button>`).join('')}</div>`).join('')}<p class="small">Tip: kijk eerst in je eigen kast. Die kleren zijn gratis!</p><button class="btn ghost" id="learning-close">Terug</button>`);
     $('#learning-close').onclick=closeOverlay;
     document.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>{
       const t=THEME_BY_ID[b.dataset.lesson];if(t.lvl>P.level)return;
@@ -581,7 +587,7 @@
   function evaluate(outfit, theme) {
     if(theme.learning){
       const result=LearningChallenges.assess(outfit,theme,ITEM_BY_ID,P.budgetRun);
-      const feedback=result.feedback.length?result.feedback:[theme.learning==='weather'?'Je outfit past bij alle weerswensen. Goed nagedacht!':'Je outfit past bij het uitje én blijft binnen het budget. Slim gekozen!'];
+      const feedback=result.feedback.length?result.feedback:[theme.learning==='weather'?'Super! Je bent helemaal klaar voor dit weer.':'Super! Mooie outfit en je hebt niet te veel uitgegeven.'];
       return {total:result.total,stars:result.stars,judges:JUDGES.map((judge,i)=>({judge,score:result.total,comment:feedback[i%feedback.length]})),weakest:result.list[0].ok?'thema':'compleet',factors:{thema:result.total/10,kleur:1,compleet:result.list[0].ok?1:0,glamour:1,accessoires:1},colorFeedback:feedback};
     }
     if (theme.rule) {

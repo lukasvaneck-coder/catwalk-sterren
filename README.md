@@ -53,7 +53,7 @@ De grotere wereld is 2480 × 1760 wereldpixels. De camera volgt je model; huizen
 | Kleurenhuis | Kleurcombinaties oefenen met de jury |
 | Spiegelsalon | Je model, kapsel en uiterlijk aanpassen |
 | Duelhuis | Met twee spelers een modeduel spelen |
-| Wijzerhuis | Weer- en budgetopdrachten kiezen |
+| Weer & Winkelhuis | Aankleden voor het weer en slim winkelen met een beetje geld |
 | Raceclub | De vijf bestaande raceparcoursen |
 | Binnenspeeltuin | De bestaande springbaan en trampoline |
 | Fotostudio | Een decor kiezen en je outfit als foto bewaren |
