@@ -4,6 +4,10 @@ const Designer = (() => {
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let profile, callbacks, draft, editingId, activeSticker = -1, dirty = false, returnFocus;
+  const colorHint = type => draft.pattern === 'rainbow' ? 'Regenboogstof gebruikt alle regenboogkleuren.'
+    : type.accent ? 'De tweede kleur zie je in de steentjes en versiering.'
+    : draft.pattern === 'plain' ? 'Kies een patroon om ook je tweede kleur te zien.' : 'Tip: tik op een kleurvakje voor elke kleur die je wilt.';
+  const colorName = (type, i) => i ? (type.accent ? 'Versierkleur' : 'Patroonkleur') : 'Hoofdkleur';
   const choice = (value, label, selected, attr) => `<button type="button" class="design-choice" ${attr}="${esc(value)}" aria-pressed="${selected}">${label}</button>`;
   function show(p, cb, cat = 'top') {
     profile = p; callbacks = cb; returnFocus = document.activeElement;
@@ -26,7 +30,7 @@ const Designer = (() => {
   function render() {
     const type = D.TYPES.find(t => t.id === draft.cat);
     $('#designer').innerHTML = `
-      <header class="design-header"><button class="btn ghost sm" id="design-back" type="button">← Terug</button><div><p class="eyebrow">JOUW EIGEN COLLECTIE</p><h1 class="h">✂️ Kleding maken</h1></div><span class="design-free">Helemaal gratis</span></header>
+      <header class="design-header"><button class="btn ghost sm" id="design-back" type="button">← Terug</button><div><p class="eyebrow">JOUW EIGEN COLLECTIE</p><h1 class="h">✂️ Zelf maken</h1></div><span class="design-free">Helemaal gratis</span></header>
       <div class="design-layout">
         <aside class="design-preview card" aria-label="Voorbeeld van jouw ontwerp">
           <span class="design-preview-label">${editingId ? 'ONTWERP AANPASSEN' : 'IN HET NAAIATELIER'}</span>
@@ -34,18 +38,18 @@ const Designer = (() => {
           <b id="design-preview-name"></b><p>Jouw idee. Jouw stijl. ✨</p>
         </aside>
         <div class="design-workspace" id="design-workspace">
-          <section class="design-panel card"><h2>1. Kies je kledingstuk</h2>
+          <section class="design-panel card"><h2>1. Wat ga je maken?</h2>
             <div class="design-types">${D.TYPES.map(t => choice(t.id, `${t.emoji} ${t.name}`, t.id === draft.cat, 'data-design-type')).join('')}</div>
             <label class="design-field" for="design-shape">Vorm<select id="design-shape">${type.shapes.map(s => `<option value="${s[0]}" ${s[0] === draft.shape ? 'selected' : ''}>${s[1]}</option>`).join('')}</select></label>
           </section>
-          <section class="design-panel card"><h2>2. Geef je stof kleur</h2><div class="design-colors">
-            ${[0, 1].map(i => `<div><label class="design-color-label" for="design-color-${i}"><input type="color" id="design-color-${i}" value="${draft.c[i]}"><span>${i ? 'Patroonkleur' : 'Hoofdkleur'}</span></label><div class="design-swatches">${D.PALETTE.map(c => `<button type="button" class="design-swatch" style="--swatch:${c}" data-design-color="${i}" data-color="${c}" aria-label="${i ? 'Patroonkleur' : 'Hoofdkleur'} ${c}" aria-pressed="${draft.c[i] === c}"></button>`).join('')}</div></div>`).join('')}
-          </div><div class="design-patterns" aria-label="Stofpatroon">${D.PATTERNS.map(([id, name, icon]) => choice(id, `<span aria-hidden="true">${icon}</span> ${name}`, draft.pattern === id, 'data-pattern')).join('')}</div><p class="design-hint" id="design-color-hint">${draft.pattern === 'rainbow' ? 'Regenboogstof gebruikt alle regenboogkleuren.' : draft.pattern === 'plain' ? 'Kies een patroon om ook je tweede kleur te zien.' : 'Tip: tik op een kleurvakje voor elke kleur die je wilt.'}</p></section>
-          <section class="design-panel card"><h2>3. Plak er iets leuks op <small id="design-sticker-count"></small></h2>
+          <section class="design-panel card"><h2>2. ${type.accent ? 'Kies je kleuren' : 'Geef je stof kleur'}</h2><div class="design-colors">
+            ${[0, 1].map(i => `<div><label class="design-color-label" for="design-color-${i}"><input type="color" id="design-color-${i}" value="${draft.c[i]}"><span>${colorName(type, i)}</span></label><div class="design-swatches">${D.PALETTE.map(c => `<button type="button" class="design-swatch" style="--swatch:${c}" data-design-color="${i}" data-color="${c}" aria-label="${colorName(type, i)} ${c}" aria-pressed="${draft.c[i] === c}"></button>`).join('')}</div></div>`).join('')}
+          </div><div class="design-patterns" aria-label="Stofpatroon">${D.PATTERNS.filter(([id]) => !type.patterns || type.patterns.includes(id)).map(([id, name, icon]) => choice(id, `<span aria-hidden="true">${icon}</span> ${name}`, draft.pattern === id, 'data-pattern')).join('')}</div><p class="design-hint" id="design-color-hint">${colorHint(type)}</p></section>
+          <section class="design-panel card" ${type.stickers === false ? 'hidden' : ''}><h2>3. Plak er iets leuks op <small id="design-sticker-count"></small></h2>
             <div class="design-sticker-palette">${D.STICKERS.map(s => `<button class="design-sticker-add" type="button" data-add-sticker="${s.id}" aria-label="Sticker ${s.name} toevoegen" title="${s.name}">${s.emoji}</button>`).join('')}</div>
             <div id="design-sticker-editor"></div>
           </section>
-          <section class="design-panel card"><h2>4. Geef je ontwerp een naam</h2><label class="design-field" for="design-name">Naam op het label<input id="design-name" maxlength="32" value="${esc(draft.name)}" autocomplete="off"></label><p class="design-hint">Je ontwerp komt in je eigen kledingkast. Je kunt het dragen bij de jury en op het raceparkours.</p></section>
+          <section class="design-panel card"><h2>${type.stickers === false ? 3 : 4}. Geef je ontwerp een naam</h2><label class="design-field" for="design-name">Naam op het label<input id="design-name" maxlength="32" value="${esc(draft.name)}" autocomplete="off"></label><p class="design-hint">Je ontwerp komt in je eigen kledingkast. Je kunt het dragen bij de jury en op het raceparkours.</p></section>
           <section class="design-panel card"><div class="design-library-heading"><h2>Mijn ontwerpen <small>${profile.customDesigns.length}/${D.LIMIT}</small></h2><button class="btn ghost sm" type="button" id="design-new">＋ Nieuw</button></div><div class="design-library">${profile.customDesigns.length ? profile.customDesigns.map(it => `<button class="design-saved${it.id === editingId ? ' selected' : ''}" type="button" data-edit-design="${it.id}" aria-label="${esc(it.name)} aanpassen">${Avatar.thumb(it, profile.look)}<span>${esc(it.name)}</span><small>✎ Aanpassen</small></button>`).join('') : '<p class="design-hint">Hier komen jouw zelfgemaakte kledingstukken te hangen.</p>'}</div></section>
         </div>
       </div>
@@ -68,7 +72,7 @@ const Designer = (() => {
     document.querySelectorAll('[data-pattern]').forEach(b => b.onclick = () => {
       draft.pattern = b.dataset.pattern; remember(); preview();
       document.querySelectorAll('[data-pattern]').forEach(x => x.setAttribute('aria-pressed', x === b));
-      $('#design-color-hint').textContent = draft.pattern === 'rainbow' ? 'Regenboogstof gebruikt alle regenboogkleuren.' : draft.pattern === 'plain' ? 'Kies een patroon om ook je tweede kleur te zien.' : 'Tip: tik op een kleurvakje voor elke kleur die je wilt.';
+      $('#design-color-hint').textContent = colorHint(type);
     });
     document.querySelectorAll('[data-add-sticker]').forEach(b => b.onclick = () => {
       if (draft.stickers.length >= D.STICKER_LIMIT) return;

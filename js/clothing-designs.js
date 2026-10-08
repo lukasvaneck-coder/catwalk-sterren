@@ -15,9 +15,23 @@ const ClothingDesigns = (() => {
       ['aline', 'A-lijnjurk', ['casual', 'feest'], 1], ['ballgown', 'Baljurk', ['chic', 'prinses', 'feest'], 3],
       ['princess', 'Prinsessenjurk', ['prinses', 'sprookje', 'feest'], 2],
     ] },
-    { id: 'shoes', name: 'Schoenen', emoji: '👟', shapes: [
+    { id: 'shoes', name: 'Schoenen & hakjes', emoji: '👠', shapes: [
       ['sneaker', 'Sneakers', ['casual', 'school', 'sport'], 0], ['boot', 'Laarzen', ['casual', 'winter'], 1],
-      ['rainboot', 'Regenlaarzen', ['regen'], 0],
+      ['rainboot', 'Regenlaarzen', ['regen'], 0], ['pumps', 'Hakjes', ['chic', 'feest'], 2],
+      ['strappy', 'Hakjes met bandje', ['chic', 'feest', 'dans'], 2], ['bowheels', 'Hakjes met strik', ['feest', 'prinses', 'chic'], 2],
+    ] },
+    // Hoofdjes en oorbellen zijn klein: geen stickers, en de tweede kleur zit altijd in de details.
+    { id: 'hat', name: 'Op je hoofd', emoji: '👑', stickers: false, accent: true, shapes: [
+      ['hairband', 'Haarband', ['casual', 'school'], 0], ['bigbow', 'Grote strik', ['feest', 'casual'], 1],
+      ['tiara', 'Tiara', ['prinses', 'chic', 'feest'], 2], ['royal', 'Kroon', ['prinses', 'sprookje', 'chic'], 3],
+      ['beanie', 'Muts', ['winter', 'warm'], 0], ['beret', 'Baret', ['chic', 'casual'], 1],
+      ['catears', 'Kattenoortjes', ['feest', 'casual'], 1], ['bunnyears', 'Konijnenoortjes', ['feest', 'casual'], 1],
+    ] },
+    { id: 'ears', name: 'Oorbellen', emoji: '💎', stickers: false, accent: true, patterns: ['plain', 'glitter', 'rainbow'], shapes: [
+      ['studs', 'Knopjes', ['casual', 'school'], 1], ['hoops', 'Ringen', ['casual', 'disco', 'dans'], 1],
+      ['hearts', 'Hartjes', ['feest', 'casual'], 1], ['stars', 'Sterretjes', ['feest', 'ruimte'], 1],
+      ['flowers', 'Bloemetjes', ['bloemen', 'zomer'], 1], ['pearls', 'Parels', ['chic', 'bruiloft', 'prinses'], 2],
+      ['drops', 'Hangers', ['chic', 'feest'], 2],
     ] },
   ];
   const PATTERNS = [
@@ -52,9 +66,9 @@ const ClothingDesigns = (() => {
   function normalize(raw = {}) {
     const type = TYPES.find(t => t.id === raw.cat) || TYPES[0];
     const shape = type.shapes.find(s => s[0] === raw.shape) || type.shapes[0];
-    const pattern = PATTERNS.some(p => p[0] === raw.pattern) ? raw.pattern : 'plain';
+    const pattern = PATTERNS.some(p => p[0] === raw.pattern) && (!type.patterns || type.patterns.includes(raw.pattern)) ? raw.pattern : 'plain';
     const c = [color(raw.c?.[0], '#a68bd5'), color(raw.c?.[1], '#fff1c9')];
-    const stickers = (Array.isArray(raw.stickers) ? raw.stickers : []).filter(s => s && STICKERS.some(x => x.id === s.kind)).slice(0, STICKER_LIMIT).map(s => ({
+    const stickers = (Array.isArray(raw.stickers) && type.stickers !== false ? raw.stickers : []).filter(s => s && STICKERS.some(x => x.id === s.kind)).slice(0, STICKER_LIMIT).map(s => ({
       kind: s.kind, x: number(s.x, 50, 0, 100), y: number(s.y, 50, 0, 100),
       size: number(s.size, 22, 12, 42), rotation: number(s.rotation, 0, -180, 180),
     }));
