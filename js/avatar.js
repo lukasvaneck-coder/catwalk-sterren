@@ -152,7 +152,7 @@ const Avatar = (() => {
       if (d.cat === 'shoes') emoji(ctx, sticker.emoji, 400 - x, y, size, { rot: -s.rotation * Math.PI / 180, shadow: false });
     });
   }
-  function paintDesign(g, d, w, h, ox, oy) {
+  function paintDesign(g, d, w, h, ox, oy, fine = false) {
     const c0 = d.c[0], c1 = d.c[1] || dark(c0, .2);
     g.save(); g.translate(-ox, -oy);            // patronen in frame-coördinaten, dan sluiten lagen op elkaar aan
     if (d.pattern === 'rainbow' || isRainbow(c0)) {
@@ -171,7 +171,8 @@ const Avatar = (() => {
       case 'checks': for (let y = y0; y < y1; y += 16) for (let x = x0; x < x1; x += 16) { if (((x + y) / 16) % 2 === 0) g.fillRect(x, y, 16, 16); } break;
       case 'scales': g.lineWidth = 2; for (let y = y0; y < y1; y += 12) for (let x = x0; x < x1; x += 16) { g.beginPath(); g.arc(x + (y / 12 % 2) * 8, y, 8, 0, Math.PI); g.stroke(); } break;
       case 'flowers': for (let y = y0; y < y1; y += 26) for (let x = x0; x < x1; x += 26) { const fx = x + (y / 26 % 2) * 13; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; g.beginPath(); g.arc(fx + Math.cos(a) * 4, y + Math.sin(a) * 4, 3, 0, 7); g.fill(); } g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(fx, y, 2.2, 0, 7); g.fill(); g.fillStyle = c1; } break;
-      case 'glitter': { const r = seeded(7); for (let i = 0; i < 90; i++) { const x = ox + r() * w, y = oy + r() * h; g.fillStyle = i % 3 ? '#ffffff' : light(c1, .5); starPath(g, x, y, 2 + r() * 3, 1, 4); g.fill(); } break; }
+      // Kleine sieraden krijgen minder en fijnere glinsters, anders worden ze helemaal wit.
+      case 'glitter': { const r = seeded(7), n = fine ? Math.max(3, Math.round(w * h / 45)) : 90; for (let i = 0; i < n; i++) { const x = ox + r() * w, y = oy + r() * h, size = fine ? .8 + r() * 1.4 : 2 + r() * 3; g.fillStyle = i % 3 ? '#ffffff' : light(c1, .5); starPath(g, x, y, size, fine ? size * .4 : 1, 4); g.fill(); } break; }
     }
     g.restore();
   }
@@ -243,7 +244,7 @@ const Avatar = (() => {
   };
   const SHOE_KEY = { sneaker: 'S0', boot: 'S1', rainboot: 'S1', snowboot: 'S1', monster: 'S1', bunny: 'S1', pirateboot: 'S2', spaceboot: 'S2', heels: 'S3', dress: 'S3', ballet: 'S3', flipflop: 'S3', clog: 'S3', sandal: 'S3', elf: 'S3', platform: 'S3' };
   const SHOE_BY_ID = { sh_rijlaarzen: 'S2', sh_cowboy: 'S2', sh_boots: 'S2', sh_hightops: 'S1' };
-  const shoeRecipe = it => ['pumps', 'heels'].includes(it.shape) ? [{ k: 'Spumps', d: designOf(it), custom: 'pumps' }] : [{ k: SHOE_BY_ID[it.id] || SHOE_KEY[it.shape] || 'S0', d: designOf(it) }];
+  const shoeRecipe = it => ['pumps', 'heels', 'strappy', 'bowheels'].includes(it.shape) ? [{ k: 'Spumps', d: designOf(it), custom: 'pumps' }] : [{ k: SHOE_BY_ID[it.id] || SHOE_KEY[it.shape] || 'S0', d: designOf(it) }];
   const SUBLAYERS = { T: ['skin', 'fab', 'keep'], B: ['skin', 'fab', 'keep'], D: ['skin', 'fab', 'keep'], J: ['fab', 'skin'], S: ['fab', 'keep'] };
 
   // Eigen silhouetten, gedeeld door de miniaturen en het aangeklede model.
@@ -272,18 +273,33 @@ const Avatar = (() => {
       blob(ctx, 200, 246, 2.5, 2.5, '#c5b68d');
       return;
     }
-    [-1, 1].forEach(side => {
-      ctx.save(); ctx.translate(200, 0); ctx.scale(side, 1);
-      // Three-quarter pumps: the block heel and the arch remain visible below the upper.
-      rrect(ctx, 9, 379, 9, 14, 2); clayFill(ctx, dark(color,.25), 9,379,18,393);
-      ctx.beginPath();ctx.moveTo(9,363);ctx.quadraticCurveTo(17,367,24,363);
+    // Three-quarter pumps: the block heel and the arch remain visible below the upper.
+    const mirrored = (side, draw) => { ctx.save(); ctx.translate(200, 0); ctx.scale(side, 1); draw(); ctx.restore(); };
+    const upper = () => { ctx.moveTo(9,363);ctx.quadraticCurveTo(17,367,24,363);
       ctx.quadraticCurveTo(28,373,42,378);ctx.quadraticCurveTo(50,382,43,388);
-      ctx.lineTo(31,390);ctx.quadraticCurveTo(23,378,10,382);ctx.closePath();
-      clayFill(ctx,color,10,361,44,389);
-      ctx.strokeStyle=dark(color,.45);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(31,390);ctx.quadraticCurveTo(45,389,47,385);ctx.stroke();
-      ctx.strokeStyle=light(color,.5);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(28,377);ctx.quadraticCurveTo(35,378,40,382);ctx.stroke();
-      ctx.restore();
-    });
+      ctx.lineTo(31,390);ctx.quadraticCurveTo(23,378,10,382);ctx.closePath(); };
+    const accent = step.d.c[1] || light(color, .5), shape = step.d.shape;
+    const fancy = step.d.pattern && step.d.pattern !== 'plain' || isRainbow(color), base = isRainbow(color) ? '#8a7a90' : color;
+    [-1, 1].forEach(side => mirrored(side, () => {
+      rrect(ctx, 9, 379, 9, 14, 2); clayFill(ctx, dark(base,.25), 9,379,18,393);
+      if (!fancy) { ctx.beginPath(); upper(); clayFill(ctx,color,10,361,44,389); }
+    }));
+    // Patroon en stickers lopen over beide schoenen, net als bij de andere schoenen.
+    ctx.save(); ctx.beginPath(); [-1, 1].forEach(side => mirrored(side, upper)); ctx.clip();
+    if (fancy) {
+      ctx.save(); ctx.translate(150, 358); paintDesign(ctx, step.d, 100, 34, 150, 358); ctx.restore();
+      const sh = ctx.createLinearGradient(0, 360, 0, 392); sh.addColorStop(0, 'rgba(255,255,255,.3)'); sh.addColorStop(1, 'rgba(0,0,0,.28)');
+      ctx.fillStyle = sh; ctx.fillRect(150, 358, 100, 34);
+    }
+    paintStickers(ctx, step.d);
+    ctx.restore();
+    [-1, 1].forEach(side => mirrored(side, () => {
+      const edge = dark(base,.45);
+      ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(31,390);ctx.quadraticCurveTo(45,389,47,385);ctx.stroke();
+      ctx.strokeStyle=light(base,.5);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(28,377);ctx.quadraticCurveTo(35,378,40,382);ctx.stroke();
+      if (shape === 'strappy') { ctx.strokeStyle = accent; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(9, 366); ctx.quadraticCurveTo(17, 371, 25, 366); ctx.stroke(); blob(ctx, 25, 366, 2.4, 2.4, light(accent, .3)); }
+      if (shape === 'bowheels') { const bx = 33, by = 375; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx - 7, by - 5); ctx.lineTo(bx - 7, by + 5); ctx.closePath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 7, by - 5); ctx.lineTo(bx + 7, by + 5); ctx.closePath(); clayFill(ctx, accent, bx - 7, by - 5, bx + 7, by + 5); blob(ctx, bx, by, 2.2, 2.4, dark(accent, .15)); }
+    }));
   }
   function drawStep(ctx, step, skin) {
     if (step.custom) { ctx.save(); drawTailored(ctx, step, skin); ctx.restore(); return; }
@@ -319,11 +335,27 @@ const Avatar = (() => {
   /* ---------- accessoires ---------- */
   // Elke tekenfunctie krijgt (ctx, item, geo) en geeft het kader [x0, y0, x1, y1] terug.
   const c0 = it => it.c[0] || '#ff5da2', c1 = it => it.c[1] || dark(it.c[0] || '#ff5da2', .25);
+  // Eigen ontwerpen met een patroon: het pad wordt gevuld met de stof, met een zachte klei-schaduw erover.
+  const patterned = it => !!it?.custom && !!it.pattern && it.pattern !== 'plain';
+  function fab(ctx, it, x0, y0, x1, y1) {
+    if (!patterned(it)) { clayFill(ctx, c0(it), x0, y0, x1, y1); return; }
+    ctx.save(); ctx.clip();
+    ctx.save(); ctx.translate(x0, y0); paintDesign(ctx, designOf(it), x1 - x0, y1 - y0, x0, y0, (x1 - x0) * (y1 - y0) < 2500); ctx.restore();
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, 'rgba(255,255,255,.3)'); g.addColorStop(.55, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.25)');
+    ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); ctx.restore();
+  }
+  function blobFab(ctx, it, x, y, rx, ry, rot = 0) {
+    if (!patterned(it)) { blob(ctx, x, y, rx, ry, c0(it), rot); return; }
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ellipse(ctx, 0, 0, rx, ry); fab(ctx, it, -rx, -ry, rx, ry); ctx.restore();
+  }
   const E = (ch, x, y, size, o) => (ctx, it, g) => emoji(ctx, ch, typeof x === 'function' ? x(g) : x, typeof y === 'function' ? y(g) : y, size, Object.assign({}, o, o && o.tint != null ? { color: it.c[o.tint] } : {}));
 
-  function dome(ctx, g, c, lift = 0, w = 1) {                          // koepel op het hoofd (muts, helm)
+  function dome(ctx, g, c, lift = 0, w = 1, it = null) {               // koepel op het hoofd (muts, helm)
     const top = g.top - lift, cy = top + 46, rx = g.headW / 2 * w + 4;
-    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, F, cy); ctx.clip(); blob(ctx, g.cx, cy, rx, 52, c); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, F, cy); ctx.clip();
+    if (patterned(it)) { ellipse(ctx, g.cx, cy, rx, 52); fab(ctx, it, g.cx - rx, cy - 52, g.cx + rx, cy + 52); } else blob(ctx, g.cx, cy, rx, 52, c);
+    ctx.restore();
     return [g.cx - rx, top - 6, g.cx + rx, cy];
   }
   function cone(ctx, g, c, h, halfBase, tilt = 0, shade = true) {          // punthoed / feesthoed
@@ -344,24 +376,51 @@ const Avatar = (() => {
     sunhat: E('👒', g => g.cx, g => g.top + 4, 150),
     headphones: E('🎧', g => g.cx, g => g.eyeY - 40, 150, { tint: 0 }),
     santa: (ctx, it, g) => { const b = dome(ctx, g, c0(it), 6); ctx.save(); ctx.translate(g.cx + 60, g.top + 4); ctx.rotate(0.5); blob(ctx, 0, 0, 34, 16, c0(it)); ctx.restore(); blob(ctx, g.cx + 92, g.top + 26, 14, 14, '#ffffff'); rrect(ctx, g.cx - g.headW / 2 - 6, g.top + 30, g.headW + 12, 18, 9); clayFill(ctx, '#ffffff', 0, g.top + 30, 0, g.top + 48); return union([b, [g.cx + 70, g.top - 10, g.cx + 108, g.top + 42]]); },
-    beanie: (ctx, it, g) => { const b = dome(ctx, g, c0(it), 10); rrect(ctx, g.cx - g.headW / 2 - 6, g.top + 26, g.headW + 12, 20, 10); clayFill(ctx, c1(it), 0, g.top + 26, 0, g.top + 46); blob(ctx, g.cx, g.top - 10, 17, 17, c1(it)); return union([b, [g.cx - 20, g.top - 28, g.cx + 20, g.top]]); },
+    beanie: (ctx, it, g) => { const b = dome(ctx, g, c0(it), 10, 1, it); rrect(ctx, g.cx - g.headW / 2 - 6, g.top + 26, g.headW + 12, 20, 10); clayFill(ctx, c1(it), 0, g.top + 26, 0, g.top + 46); blob(ctx, g.cx, g.top - 10, 17, 17, c1(it)); return union([b, [g.cx - 20, g.top - 28, g.cx + 20, g.top]]); },
     helmet: (ctx, it, g) => { const b = dome(ctx, g, c0(it), 6, 1.05); rrect(ctx, g.cx - g.headW / 2 - 4, g.top + 34, g.headW + 8, 12, 6); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fill(); return b; },
     swimcap: (ctx, it, g) => { const cy = g.eyeY - 30; ctx.save(); ctx.beginPath(); ctx.rect(0, 0, F, cy + 4); ctx.clip(); blob(ctx, g.cx, cy, g.faceW / 2 + 22, cy - g.top + 40, c0(it)); ctx.restore(); emoji(ctx, '🌼', g.cx + 38, g.top + 40, 34, { shadow: false }); return [g.cx - g.faceW / 2 - 22, g.top - 6, g.cx + g.faceW / 2 + 22, cy + 4]; },
     rainhat: (ctx, it, g) => { const br = brim(ctx, g, c0(it), g.headW / 2 + 30, 20, 40); const d = dome(ctx, g, c0(it), 0, 0.85); return union([br, d]); },
     bucket: (ctx, it, g) => { const b = dome(ctx, g, c0(it), 0, 0.9); ctx.beginPath(); ctx.moveTo(g.cx - g.headW / 2 - 24, g.top + 48); ctx.lineTo(g.cx - g.headW / 2 + 4, g.top + 32); ctx.lineTo(g.cx + g.headW / 2 - 4, g.top + 32); ctx.lineTo(g.cx + g.headW / 2 + 24, g.top + 48); ctx.quadraticCurveTo(g.cx, g.top + 60, g.cx - g.headW / 2 - 24, g.top + 48); ctx.closePath(); clayFill(ctx, c1(it), g.cx - 60, g.top + 30, g.cx + 60, g.top + 60); return union([b, [g.cx - g.headW / 2 - 24, g.top + 30, g.cx + g.headW / 2 + 24, g.top + 60]]); },
-    beret: (ctx, it, g) => { blob(ctx, g.cx + 14, g.top + 14, 74, 26, c0(it), -0.14); blob(ctx, g.cx + 10, g.top - 8, 5, 6, dark(c0(it), .3)); return [g.cx - 62, g.top - 16, g.cx + 90, g.top + 42]; },
+    beret: (ctx, it, g) => { blobFab(ctx, it, g.cx + 14, g.top + 14, 74, 26, -0.14); blob(ctx, g.cx + 10, g.top - 8, 5, 6, dark(c0(it), .3)); return [g.cx - 62, g.top - 16, g.cx + 90, g.top + 42]; },
     witchhat: (ctx, it, g) => { const br = brim(ctx, g, c0(it), g.headW / 2 + 28, 16, 20); const co = cone(ctx, g, c0(it), 96, 46, -24); rrect(ctx, g.cx - 44, g.top - 4, 88, 16, 6); clayFill(ctx, c1(it), 0, g.top - 4, 0, g.top + 12); return union([br, co]); },
     partyhat: (ctx, it, g) => { const co = cone(ctx, g, c0(it), 84, 32, 0); ctx.save(); ctx.clip(); ctx.fillStyle = c1(it); for (let y = g.top - 90; y < g.top + 20; y += 22) { ctx.beginPath(); ctx.moveTo(g.cx - 50, y + 12); ctx.lineTo(g.cx + 50, y - 4); ctx.lineTo(g.cx + 50, y + 6); ctx.lineTo(g.cx - 50, y + 22); ctx.fill(); } ctx.restore(); blob(ctx, g.cx, g.top - 72, 11, 11, c1(it)); return union([co, [g.cx - 12, g.top - 84, g.cx + 12, g.top]]); },
     hennin: (ctx, it, g) => { ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = c1(it); ctx.beginPath(); ctx.moveTo(g.cx + 8, g.top - 88); ctx.quadraticCurveTo(g.cx + 90, g.top - 30, g.cx + 70, g.top + 120); ctx.quadraticCurveTo(g.cx + 40, g.top + 40, g.cx + 8, g.top - 88); ctx.fill(); ctx.restore(); const co = cone(ctx, g, c0(it), 100, 30, 8); return union([co, [g.cx, g.top - 90, g.cx + 92, g.top + 120]]); },
-    tiara: (ctx, it, g) => { const y = g.top + 22; ctx.beginPath(); ctx.moveTo(g.cx - 44, y + 8); for (let i = -2; i <= 2; i++) { ctx.lineTo(g.cx + i * 22 - 11, y + 8); ctx.lineTo(g.cx + i * 22, y - (i === 0 ? 26 : 16)); } ctx.lineTo(g.cx + 44, y + 8); ctx.lineTo(g.cx + 40, y + 14); ctx.lineTo(g.cx - 40, y + 14); ctx.closePath(); clayFill(ctx, c0(it), g.cx - 44, y - 26, g.cx + 44, y + 14); blob(ctx, g.cx, y - 14, 6, 6, c1(it)); blob(ctx, g.cx - 22, y - 6, 4, 4, c1(it)); blob(ctx, g.cx + 22, y - 6, 4, 4, c1(it)); return [g.cx - 46, y - 30, g.cx + 46, y + 16]; },
-    catears: (ctx, it, g) => { [-1, 1].forEach(s => { const x = g.cx + s * g.headW * 0.3, y = g.top + 16; ctx.beginPath(); ctx.moveTo(x - 22, y + 6); ctx.lineTo(x + s * 4, y - 40); ctx.lineTo(x + 22, y + 6); ctx.closePath(); clayFill(ctx, c0(it), x - 22, y - 40, x + 22, y + 6); ctx.beginPath(); ctx.moveTo(x - 11, y + 2); ctx.lineTo(x + s * 2, y - 24); ctx.lineTo(x + 11, y + 2); ctx.closePath(); ctx.fillStyle = c1(it); ctx.fill(); }); return [g.cx - g.headW * 0.3 - 24, g.top - 26, g.cx + g.headW * 0.3 + 24, g.top + 24]; },
-    bunnyears: (ctx, it, g) => { [-1, 1].forEach(s => { const x = g.cx + s * 34; blob(ctx, x, g.top - 24, 17, 52, c0(it), s * 0.14); blob(ctx, x, g.top - 22, 8, 38, c1(it), s * 0.14); }); return [g.cx - 60, g.top - 80, g.cx + 60, g.top + 30]; },
+    tiara: (ctx, it, g) => { const y = g.top + 22; ctx.beginPath(); ctx.moveTo(g.cx - 44, y + 8); for (let i = -2; i <= 2; i++) { ctx.lineTo(g.cx + i * 22 - 11, y + 8); ctx.lineTo(g.cx + i * 22, y - (i === 0 ? 26 : 16)); } ctx.lineTo(g.cx + 44, y + 8); ctx.lineTo(g.cx + 40, y + 14); ctx.lineTo(g.cx - 40, y + 14); ctx.closePath(); fab(ctx, it, g.cx - 44, y - 26, g.cx + 44, y + 14); blob(ctx, g.cx, y - 14, 6, 6, c1(it)); blob(ctx, g.cx - 22, y - 6, 4, 4, c1(it)); blob(ctx, g.cx + 22, y - 6, 4, 4, c1(it)); return [g.cx - 46, y - 30, g.cx + 46, y + 16]; },
+    catears: (ctx, it, g) => { [-1, 1].forEach(s => { const x = g.cx + s * g.headW * 0.3, y = g.top + 16; ctx.beginPath(); ctx.moveTo(x - 22, y + 6); ctx.lineTo(x + s * 4, y - 40); ctx.lineTo(x + 22, y + 6); ctx.closePath(); fab(ctx, it, x - 22, y - 40, x + 22, y + 6); ctx.beginPath(); ctx.moveTo(x - 11, y + 2); ctx.lineTo(x + s * 2, y - 24); ctx.lineTo(x + 11, y + 2); ctx.closePath(); ctx.fillStyle = c1(it); ctx.fill(); }); return [g.cx - g.headW * 0.3 - 24, g.top - 26, g.cx + g.headW * 0.3 + 24, g.top + 24]; },
+    bunnyears: (ctx, it, g) => { [-1, 1].forEach(s => { const x = g.cx + s * 34; blobFab(ctx, it, x, g.top - 24, 17, 52, s * 0.14); blob(ctx, x, g.top - 22, 8, 38, c1(it), s * 0.14); }); return [g.cx - 60, g.top - 80, g.cx + 60, g.top + 30]; },
     flowercrown: (ctx, it, g) => { const cols = ['🌸', '🌼', '🌺', '🌼', '🌸']; cols.forEach((f, i) => { const a = (i - 2) / 2; emoji(ctx, f, g.cx + a * g.headW * 0.42, g.top + 24 - Math.cos(a * 1.3) * 12, 32, { shadow: false }); }); return [g.cx - g.headW * 0.5, g.top - 6, g.cx + g.headW * 0.5, g.top + 44]; },
     unicorn: (ctx, it, g) => { const b = cone(ctx, g, c0(it), 72, 14, 0); ctx.strokeStyle = c1(it); ctx.lineWidth = 3; for (let i = 1; i < 5; i++) { const y = g.top + 14 - i * 13, w = 14 * (1 - i / 5.5); ctx.beginPath(); ctx.moveTo(g.cx - w, y + 3); ctx.lineTo(g.cx + w, y - 3); ctx.stroke(); } emoji(ctx, '🌸', g.cx - 26, g.top + 18, 26, { shadow: false }); emoji(ctx, '🌼', g.cx + 26, g.top + 18, 26, { shadow: false }); return union([b, [g.cx - 40, g.top - 80, g.cx + 40, g.top + 32]]); },
     spacehelmet: (ctx, it, g) => { const cy = (g.top + g.mouth[1]) / 2 + 6, r = Math.max(g.headW, g.mouth[1] - g.top) / 2 + 18; ctx.save(); ctx.globalAlpha = .28; blob(ctx, g.cx, cy, r, r, '#bfe3ff'); ctx.restore(); ctx.lineWidth = 8; ctx.strokeStyle = c0(it); ellipse(ctx, g.cx, cy, r, r); ctx.stroke(); ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = '#fff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(g.cx - r * 0.3, cy - r * 0.3, r * 0.55, Math.PI * 1.1, Math.PI * 1.6); ctx.stroke(); ctx.restore(); return [g.cx - r - 6, cy - r - 6, g.cx + r + 6, cy + r + 6]; },
     bandana: (ctx, it, g) => { const y = g.top + 10; ctx.beginPath(); ctx.moveTo(g.cx - g.headW / 2 - 6, y + 30); ctx.quadraticCurveTo(g.cx, y - 22, g.cx + g.headW / 2 + 6, y + 30); ctx.quadraticCurveTo(g.cx, y + 44, g.cx - g.headW / 2 - 6, y + 30); ctx.closePath(); clayFill(ctx, c0(it), g.cx - 60, y - 20, g.cx + 60, y + 40); ctx.save(); ctx.clip(); ctx.fillStyle = c1(it); for (let yy = y - 20; yy < y + 44; yy += 12) for (let x = g.cx - 90; x < g.cx + 90; x += 12) { ctx.beginPath(); ctx.arc(x + (yy % 24 ? 6 : 0), yy, 2.4, 0, 7); ctx.fill(); } ctx.restore(); blob(ctx, g.cx + g.headW / 2 + 12, y + 34, 12, 8, c0(it), 0.5); return [g.cx - g.headW / 2 - 8, y - 22, g.cx + g.headW / 2 + 26, y + 46]; },
     sweatband: (ctx, it, g) => { const y = g.eyeY - 40; rrect(ctx, g.cx - g.faceW / 2 - 4, y - 9, g.faceW + 8, 18, 9); clayFill(ctx, c0(it), 0, y - 9, 0, y + 9); return [g.cx - g.faceW / 2 - 4, y - 10, g.cx + g.faceW / 2 + 4, y + 10]; },
     piratehat: (ctx, it, g) => { const y = g.top + 20; ctx.beginPath(); ctx.moveTo(g.cx - g.headW / 2 - 30, y + 12); ctx.quadraticCurveTo(g.cx - 40, y - 60, g.cx, y - 36); ctx.quadraticCurveTo(g.cx + 40, y - 60, g.cx + g.headW / 2 + 30, y + 12); ctx.quadraticCurveTo(g.cx, y + 30, g.cx - g.headW / 2 - 30, y + 12); ctx.closePath(); clayFill(ctx, c0(it), g.cx - 60, y - 60, g.cx + 60, y + 30); emoji(ctx, '☠️', g.cx, y - 12, 30, { shadow: false }); return [g.cx - g.headW / 2 - 32, y - 62, g.cx + g.headW / 2 + 32, y + 32]; },
+    hairband: (ctx, it, g) => {
+      const L = g.cx - g.headW / 2 + 4, R = g.cx + g.headW / 2 - 4, y = g.top + 46;
+      ctx.beginPath(); ctx.moveTo(L, y); ctx.quadraticCurveTo(g.cx, g.top - 34, R, y); ctx.lineTo(R - 4, y + 10); ctx.quadraticCurveTo(g.cx, g.top - 18, L + 4, y + 10); ctx.closePath();
+      fab(ctx, it, L, g.top - 2, R, y + 10);
+      [.3, .5, .7].forEach(t => { const u = 1 - t; blob(ctx, u * u * (L + 2) + 2 * u * t * g.cx + t * t * (R - 2), u * u * (y + 5) + 2 * u * t * (g.top - 26) + t * t * (y + 5), 4, 4, c1(it)); });
+      return [L - 2, g.top - 2, R + 2, y + 12];
+    },
+    bigbow: (ctx, it, g) => {
+      const x = g.cx + g.headW * 0.26, y = g.top + 20;
+      ctx.translate(x, y); ctx.rotate(.25);
+      [-1, 1].forEach(s => { ctx.beginPath(); ctx.moveTo(s * -4, 4); ctx.lineTo(s * 20, 36); ctx.lineTo(s * 10, 33); ctx.lineTo(s * 6, 40); ctx.lineTo(s * -6, 8); ctx.closePath(); fab(ctx, it, -24, 0, 24, 40); });
+      ctx.beginPath();
+      [-1, 1].forEach(s => { ctx.moveTo(0, 0); ctx.bezierCurveTo(s * 18, -30, s * 52, -22, s * 46, 2); ctx.bezierCurveTo(s * 42, 22, s * 16, 18, 0, 0); });
+      fab(ctx, it, -48, -26, 48, 22);
+      blob(ctx, 0, 0, 9, 10, c1(it));
+      return [x - 56, y - 34, x + 56, y + 48];
+    },
+    royal: (ctx, it, g) => {
+      const y = g.top + 26, w = Math.min(52, g.headW * 0.36);
+      ctx.beginPath(); ctx.moveTo(g.cx - w, y); ctx.lineTo(g.cx - w - 4, y - 44); ctx.lineTo(g.cx - w / 2, y - 22); ctx.lineTo(g.cx, y - 52);
+      ctx.lineTo(g.cx + w / 2, y - 22); ctx.lineTo(g.cx + w + 4, y - 44); ctx.lineTo(g.cx + w, y); ctx.closePath();
+      fab(ctx, it, g.cx - w - 4, y - 52, g.cx + w + 4, y);
+      rrect(ctx, g.cx - w - 2, y - 12, 2 * w + 4, 14, 5); fab(ctx, it, g.cx - w, y - 12, g.cx + w, y + 2);
+      [[g.cx - w - 4, y - 48], [g.cx, y - 56], [g.cx + w + 4, y - 48]].forEach(([px, py]) => blob(ctx, px, py, 6, 6, c1(it)));
+      [-w * 0.6, 0, w * 0.6].forEach(dx => blob(ctx, g.cx + dx, y - 5, 5, 4.5, c1(it)));
+      return [g.cx - w - 12, y - 64, g.cx + w + 12, y + 4];
+    },
     veil: (ctx, it, g) => { ctx.save(); ctx.globalAlpha = .45; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(g.cx - g.headW / 2 - 10, g.top + 20); ctx.quadraticCurveTo(g.cx - g.headW / 2 - 60, 250, g.cx - g.headW / 2 - 20, 350); ctx.lineTo(g.cx + g.headW / 2 + 20, 350); ctx.quadraticCurveTo(g.cx + g.headW / 2 + 60, 250, g.cx + g.headW / 2 + 10, g.top + 20); ctx.quadraticCurveTo(g.cx, g.top - 10, g.cx - g.headW / 2 - 10, g.top + 20); ctx.fill(); ctx.restore(); HATS.tiara(ctx, { c: [c1(it), '#ffffff'] }, g); return [g.cx - g.headW / 2 - 60, g.top - 30, g.cx + g.headW / 2 + 60, 350]; },
   };
 
@@ -375,6 +434,28 @@ const Avatar = (() => {
     eyepatch: (ctx, it, g) => { const [x, y] = g.eyes[1], r = g.iris + 8; ctx.lineWidth = 4; ctx.strokeStyle = c0(it); ctx.beginPath(); ctx.moveTo(g.cx - g.headW / 2 + 4, g.eyeY - 30); ctx.lineTo(x, y - r); ctx.lineTo(g.cx + g.headW / 2 - 4, y - 22); ctx.stroke(); blob(ctx, x, y, r, r * 0.9, c0(it)); return [g.cx - g.headW / 2, g.eyeY - 32, g.cx + g.headW / 2, y + r]; },
     skigoggles: (ctx, it, g) => GLASSES.goggles(ctx, it, g),
   };
+
+  // Eén oorbel met het gaatje op (x, y); s schaalt hem voor de miniatuur. Geeft het kader terug.
+  function earring(ctx, it, x, y, s = 1) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    const hook = () => { blob(ctx, 0, 0, 2.6, 2.6, c1(it)); ctx.strokeStyle = c1(it); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 5); ctx.stroke(); };
+    switch (it.shape) {
+      case 'hoops': ctx.beginPath(); ctx.arc(0, 10, 10, 0, Math.PI * 2); ctx.arc(0, 10, 7, 0, Math.PI * 2, true); fab(ctx, it, -10, 0, 10, 20); break;
+      case 'hearts': hook(); heartPath(ctx, 0, 12, 7); fab(ctx, it, -10, 4, 10, 19); break;
+      case 'stars': hook(); starPath(ctx, 0, 12, 9); fab(ctx, it, -9, 3, 9, 21); break;
+      case 'flowers': ctx.beginPath(); for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 - Math.PI / 2, px = Math.cos(a) * 4.5, py = 3 + Math.sin(a) * 4.5; ctx.moveTo(px + 3.6, py); ctx.arc(px, py, 3.6, 0, Math.PI * 2); }
+        fab(ctx, it, -8, -5, 8, 11); blob(ctx, 0, 3, 2.6, 2.6, c1(it)); break;
+      case 'pearls': blob(ctx, 0, 0, 3, 3, c1(it)); if (patterned(it)) { ellipse(ctx, 0, 9, 6.5, 6.5); fab(ctx, it, -6.5, 2.5, 6.5, 15.5); } else blob(ctx, 0, 9, 6.5, 6.5, c0(it)); sparkle(ctx, -2, 7, 1.6); break;
+      case 'drops': hook(); ctx.beginPath(); ctx.moveTo(0, 6); ctx.bezierCurveTo(9, 16, 8, 28, 0, 28); ctx.bezierCurveTo(-8, 28, -9, 16, 0, 6); ctx.closePath(); fab(ctx, it, -8, 6, 8, 28); sparkle(ctx, -2, 20, 2); break;
+      default: ellipse(ctx, 0, 0, 5.5, 5.5); fab(ctx, it, -5.5, -5.5, 5.5, 5.5); sparkle(ctx, -1.5, -1.5, 2.2);
+    }
+    ctx.restore();
+    return [x - 12 * s, y - 7 * s, x + 12 * s, y + 30 * s];
+  }
+  // De oorlelletjes liggen naast de ogen, iets boven de mond.
+  const lobes = g => { const half = (g.eyes[1][0] - g.eyes[0][0]) / 2 + 28, y = g.eyeY + (g.mouth[1] - g.eyeY) * 0.62; return [[g.cx - half, y], [g.cx + half, y]]; };
+  const EARS = Object.fromEntries(['studs', 'hoops', 'hearts', 'stars', 'flowers', 'pearls', 'drops'].map(shape =>
+    [shape, (ctx, it, g) => union(lobes(g).map(([x, y]) => earring(ctx, it, x, y)))]));
 
   const NY = 204;   // hoogte van de halslijn
   const NECKS = {
@@ -506,7 +587,7 @@ const Avatar = (() => {
     beard: (ctx, it, g) => { const [mx, my] = g.mouth; blob(ctx, mx, my + 16, 30, 16, c0(it)); blob(ctx, mx - 12, my - 5, 12, 4, c0(it), 0.25); blob(ctx, mx + 12, my - 5, 12, 4, c0(it), -0.25); ctx.save(); ctx.globalAlpha = .85; ctx.fillStyle = '#ff9a9a'; ellipse(ctx, mx, my, 7, 3); ctx.fill(); ctx.restore(); return [mx - 32, my - 12, mx + 32, my + 34]; },
   };
 
-  const ACC = { back: BACK, hat: HATS, glasses: GLASSES, neck: NECKS, hand: HAND, pet: PETS, mk_eyes: MAKEUP, mk_lips: MAKEUP, mk_blush: MAKEUP, mk_face: MAKEUP };
+  const ACC = { back: BACK, hat: HATS, glasses: GLASSES, ears: EARS, neck: NECKS, hand: HAND, pet: PETS, mk_eyes: MAKEUP, mk_lips: MAKEUP, mk_blush: MAKEUP, mk_face: MAKEUP };
   function drawAcc(ctx, it, geo) {
     if (!it) return null;
     const fn = ACC[it.cat] && ACC[it.cat][it.shape];
@@ -569,6 +650,7 @@ const Avatar = (() => {
     drawAcc(ctx, get('hand'), geo);
     // 6. make-up, bril, hoedje, huisdier
     ['mk_blush', 'mk_eyes', 'mk_lips', 'mk_face'].forEach(s => drawAcc(ctx, get(s), geo));
+    drawAcc(ctx, get('ears'), geo);
     drawAcc(ctx, get('glasses'), geo);
     drawAcc(ctx, get('hat'), geo);
     drawAcc(ctx, get('pet'), geo);
@@ -602,6 +684,7 @@ const Avatar = (() => {
     } else {
       const geo = headGeo(headIndex(hairIt));
       if (item.cat === 'back') { box = drawAcc(ctx, item, geo); if (BACK_FRONT[item.shape]) BACK_FRONT[item.shape](ctx, item, geo); }
+      else if (item.cat === 'ears') box = earring(ctx, item, 200, 180, 3.4);
       else if (item.cat === 'bag') { const B = BAGS[item.shape]; const bs = []; if (B && B.back) bs.push(B.back(ctx, item, geo)); if (B && B.front) bs.push(B.front(ctx, item, geo)); box = union(bs); }
       else box = drawAcc(ctx, item, geo);
     }

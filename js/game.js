@@ -188,7 +188,7 @@
           return { error: 'Opslaan is niet gelukt. Je ontwerp staat nog hier. Maak ruimte in je browser en probeer opnieuw.' };
         }
         ClothingDesigns.register(it);
-        ui.tab = it.cat;
+        ui.tab = CATEGORIES.find(c => (c.slots || [c.id]).includes(it.cat))?.id || it.cat;
         return { item: it };
       },
     }, ClothingDesigns.TYPES.some(t => t.id === cat) ? cat : 'top');
@@ -438,12 +438,14 @@
       return;
     }
     const slots = cat.slots || [cat.id];
-    if (ClothingDesigns.TYPES.some(t => t.id === cat.id)) {
-      const create = h('button', { class: 'design-closet-link', type: 'button' }, '✂️ Maak je eigen ' + ({ top: 'top', bottom: 'broek of rok', dress: 'jurk', shoes: 'schoenen' }[cat.id]) + ' <span>＋</span>');
-      create.onclick = () => openDesigner(cat.id); grid.appendChild(create);
-    }
+    const designLink = slot => {
+      if (!ClothingDesigns.TYPES.some(t => t.id === slot)) return;
+      const create = h('button', { class: 'design-closet-link', type: 'button' }, '✂️ Maak je eigen ' + ({ top: 'top', bottom: 'broek of rok', dress: 'jurk', shoes: 'schoenen of hakjes', hat: 'haarband, kroon of muts', ears: 'oorbellen' }[slot]) + ' <span>＋</span>');
+      create.onclick = () => openDesigner(slot); grid.appendChild(create);
+    };
     slots.forEach(slot => {
       if (slots.length > 1) grid.appendChild(section(SLOT_NAMES[slot]));
+      designLink(slot);
       grid.appendChild(noneCard(slot));
       itemsOf(slot).forEach(it => grid.appendChild(itemCard(it)));
       grid.appendChild(moreCard(slot));
@@ -489,7 +491,7 @@
     const pick = (slot, prob = 1) => { const opts = itemsOf(slot); if (opts.length && Math.random() < prob) P.outfit[slot] = rand(opts).id; else delete P.outfit[slot]; };
     if (Math.random() < 0.45 && itemsOf('dress').length) { pick('dress'); delete P.outfit.top; delete P.outfit.bottom; }
     else { delete P.outfit.dress; pick('top'); pick('bottom'); }
-    pick('shoes'); pick('hat', .5); pick('glasses', .3); pick('neck', .45); pick('bag', .3); pick('hand', .35); pick('back', .25); pick('pet', .3);
+    pick('shoes'); pick('hat', .5); pick('glasses', .3); pick('ears', .3); pick('neck', .45); pick('bag', .3); pick('hand', .35); pick('back', .25); pick('pet', .3);
     pick('mk_eyes', .4); pick('mk_lips', .4); pick('mk_blush', .5); pick('mk_face', .25); pick('hair');
     save(); renderStage(); renderGrid(); refreshLearningChecks();
   }

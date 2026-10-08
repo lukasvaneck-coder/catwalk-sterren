@@ -7,7 +7,7 @@ const Parkour = (() => {
   const keys=new Set();let controls=null, canvasObserver=null;
   let view={width:960,height:540};
   const dadLook={skin:'s3',eyes:'e1',hairColor:'donker',build:65};
-  const slots=[['top','Bovenkleding'],['bottom','Onderkleding'],['dress','Jurk / pak'],['shoes','Schoenen'],['hat','Hoedje'],['neck','Sieraad'],['bag','Tas'],['hand','In de hand'],['back','Op de rug'],['glasses','Bril'],['pet','Huisdier']];
+  const slots=[['top','Bovenkleding'],['bottom','Onderkleding'],['dress','Jurk / pak'],['shoes','Schoenen'],['hat','Hoedje'],['neck','Sieraad'],['bag','Tas'],['hand','In de hand'],['back','Op de rug'],['glasses','Bril'],['ears','Oorbellen'],['pet','Huisdier']];
   function show(p, cb) {
     hide();profile=p;callbacks=cb;active=true;
     profile.parkour=profile.parkour||{records:{}};profile.parkour.records=profile.parkour.records||{};

@@ -1,6 +1,6 @@
 const ColorChallenges = (() => {
   const wheel=['rood','oranje','geel','groen','blauw','paars'];
-  const slots=['top','bottom','dress','shoes','hat','glasses','neck','bag','hand','back'];
+  const slots=['top','bottom','dress','shoes','hat','glasses','ears','neck','bag','hand','back'];
   function palettes(rule, owned, catalog) {
     const items=owned.map(id=>catalog[id]).filter(Boolean);
     const options=rule==='mono'? [...wheel,'roze'].map(c=>[c]):wheel.map((c,i)=>[c,wheel[(i+(rule==='tegenover'?3:1))%6]]);

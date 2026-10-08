@@ -25,21 +25,22 @@ De voortgang wordt per speler in de browser bewaard (localStorage), dus meerdere
 - **Kleurenlesje**: elke opdracht heeft een kort lesje. Bij kleuropdrachten staat het meteen open; na de jury volgt uitleg over jouw outfit en welke kledingstukken je kunt aanpassen.
 - **Vrij spelen**: aankleden zonder jury, met een modeshow als finale.
 
-## Nieuwe vriendjes en zelf kleding maken
+## Nieuwe vriendjes en zelf kleding en sieraden maken
 
 Bij **Extra → In je hand** vind je **Coco**, een beige knuffelkonijn met lange oren, en de nieuwe knuffels Bibi (beer, level 2), Lila (axolotl, level 3) en Bamboe (panda, level 5). Bij **Extra → Huisdier** komen Pip (hamster), Moos (schildpad, level 2), Ollie (otter, level 4) en Prik (egeltje, level 6). Coco en Pip zijn gratis beschikbaar voor nieuwe én bestaande spelers; de overige vriendjes gebruiken de bestaande cadeaus en winkel. Je kunt tegelijk een knuffel vasthouden en een huisdier meenemen.
 
-Open **✂️ Kleding maken** via het dorpsmenu, het kleedkamermenu of bovenaan een kledingcategorie. Het naaiatelier is gratis vanaf level 1:
+Open **✂️ Zelf maken** via het dorpsmenu, het kleedkamermenu of bovenaan een kledingcategorie. Het naaiatelier is gratis vanaf level 1:
 
-- Kies een top, broek of rok, jurk of schoenen, met in totaal 16 vormen.
+- Kies een top, broek of rok, jurk, schoenen of hakjes, iets op je hoofd of oorbellen, met in totaal 34 vormen. Op je hoofd: haarband, grote strik, tiara, kroon, muts, baret, katten- en konijnenoortjes. Oorbellen: knopjes, ringen, hartjes, sterretjes, bloemetjes, parels en hangers.
 - Kies een hoofdkleur en patroonkleur, uit de kleurvakjes of met de vrije kleurkiezer. Er zijn tien stofkeuzes, waaronder effen, strepen, bloemen, glitter en regenboog.
+- Bij hoofdjes en oorbellen kleurt de tweede kleur de steentjes en versiering. Oorbellen kunnen effen, glitter of regenboog zijn; stickers zijn er alleen voor kleding en schoenen. In de kast staan oorbellen bij **Sieraden → Oorbellen**; Parelknopjes heb je meteen, vier andere komen in de winkel vanaf level 2.
 - Voeg maximaal vijf stickers toe. Kies een geplakte sticker om de plaats, grootte en draaiing met schuifjes aan te passen. De stickers blijven op de stof; bij schoenen komen ze op beide schoenen.
 - Geef je kleding een naam en kies **Opslaan & aantrekken**. Het ontwerp staat daarna ook in de gewone kledingkast en werkt bij de jury, foto’s, duels en races.
 - Bij **Mijn ontwerpen** kun je een ontwerp opnieuw openen en aanpassen, of **Bewaar als nieuw** kiezen voor een variant. Iedere speler heeft een eigen collectie van maximaal 60 ontwerpen. Een onafgemaakt ontwerp blijft als werkversie bewaard bij teruggaan en herladen, zolang browseropslag beschikbaar is.
 
 Op telefoons blijven het voorbeeld en de bewaarknop zichtbaar terwijl je door de werktafel scrolt. Ontwerpen veranderen je gedragen outfit pas na opslaan. Een mislukte opslag toont een melding en behoudt je eerdere ontwerp.
 
-De ontwerpregels staan in `js/clothing-designs.js`, het atelier in `js/designer.js` en `css/designer.css`. Controleer regels en migratie met `node tools/test-designs.js`. Met een lokale server: `playwright-cli -s=atelier open http://127.0.0.1:4173 --browser=chrome`, daarna `playwright-cli -s=atelier run-code --filename=tools/test-designer-browser.js`. Deze test gebruikt een afzonderlijke browsercontext. `tools/preview-designs.html` toont alle nieuwe vriendjes en kledingvormen voor visuele controle.
+De ontwerpregels staan in `js/clothing-designs.js`, het atelier in `js/designer.js` en `css/designer.css`. Controleer regels en migratie met `node tools/test-designs.js`. Met een lokale server: `playwright-cli -s=atelier open http://127.0.0.1:4173 --browser=chrome`, daarna `playwright-cli -s=atelier run-code --filename=tools/test-designer-browser.js`. Deze test gebruikt een afzonderlijke browsercontext. `tools/preview-designs.html` toont alle nieuwe vriendjes en kledingvormen voor visuele controle; `tools/preview-accessories.html` toont de hoofdjes, oorbellen en hakjes op verschillende kapsels.
 
 ## Een gezellig dorp om te ontdekken
 
@@ -48,7 +49,7 @@ De grotere wereld is 2480 × 1760 wereldpixels. De camera volgt je model; huizen
 | Gebouw | Wat je er doet |
 | --- | --- |
 | Modehuis | Aankleden, modeopdrachten, jury en vrij spelen |
-| Naaiatelier | Eigen kleding ontwerpen, dragen en aanpassen |
+| Naaiatelier | Eigen kleding, hakjes, hoofdjes en oorbellen ontwerpen, dragen en aanpassen |
 | Sterrenwinkel | Spullen kopen met een rekenvraag |
 | Kleurenhuis | Kleurcombinaties oefenen met de jury |
 | Spiegelsalon | Je model, kapsel en uiterlijk aanpassen |

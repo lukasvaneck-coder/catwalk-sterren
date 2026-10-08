@@ -1,0 +1,19 @@
+<!doctype html><html lang="nl"><meta charset="utf-8"><title>Zelfgemaakte hoofdjes, oorbellen en hakjes</title><base href="../"><link rel="icon" href="assets/favicon-32.png">
+<style>body{font:15px 'Trebuchet MS',sans-serif;background:#faf5ef;color:#493854;padding:20px}main{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}section{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}article{background:white;border:1px solid #e4d9cb;border-radius:18px;text-align:center;padding:8px}canvas{width:100%;height:auto}h1{font-size:24px}small{display:block}</style>
+<h1>Zelfgemaakte hoofdjes, oorbellen en hakjes</h1><p id="status">Laden…</p><main></main><section id="models"></section>
+<script src="assets/doll-manifest.js"></script><script src="js/data.js"></script><script src="js/clothing-designs.js"></script><script src="js/avatar.js"></script>
+<script>
+const look={skin:'s2',eyes:'e3',hairColor:'bruin',build:40};
+const D=ClothingDesigns, patterns=['plain','dots','glitter','rainbow'], colors=[['#dd5484','#fff1c9'],['#6eb6db','#f5d568'],['#a68bd5','#ffffff'],['#f5d568','#e34f52']];
+const made=[];
+['hat','ears'].forEach(cat=>D.TYPES.find(t=>t.id===cat).shapes.forEach(([shape],i)=>made.push(D.item({cat,shape,c:colors[i%4],pattern:patterns[i%4]},`prev_${cat}_${shape}`,'preview'))));
+['pumps','strappy','bowheels'].forEach((shape,i)=>made.push(D.item({cat:'shoes',shape,c:colors[i],pattern:patterns[i+1],stickers:i===2?[{kind:'heart',x:50,y:50,size:24,rotation:0}]:[]},`prev_shoes_${shape}`,'preview')));
+made.forEach(D.register);
+document.querySelector('main').innerHTML=made.map(it=>`<article>${Avatar.thumb(it,look)}<b>${it.name}</b><small>${it.pattern}</small></article>`).join('');
+const hats=made.filter(i=>i.cat==='hat'), ears=made.filter(i=>i.cat==='ears'), heels=made.filter(i=>i.cat==='shoes');
+const hairs=['hair_lang','hair_knot','hair_bob','hair_staartjes','hair_afro','hair_kort','hair_vlechten','hair_golvend'].filter(id=>ITEM_BY_ID[id]);
+document.querySelector('#models').innerHTML=hats.map((h,i)=>`<article>${Avatar.render(look,{hair:hairs[i%hairs.length],dress:'dr_roze',hat:h.id,ears:ears[i%ears.length].id,shoes:heels[i%3].id},{bg:false})}<b>${h.name} + ${ears[i%ears.length].name}</b></article>`).join('')
+  +ears.map((e,i)=>`<article>${Avatar.render(look,{hair:hairs[(i+3)%hairs.length],top:'top_tshirt_blauw',bottom:'bot_jeans',ears:e.id},{head:true})}<b>${e.name}</b></article>`).join('');
+let errors=[];window.addEventListener('error',e=>errors.push(e.message));
+const timer=setInterval(()=>{if(!Avatar.isReady())return;Avatar.mountAll();document.querySelector('#status').textContent=`${document.querySelectorAll('canvas[data-ok]').length} voorbeelden · ${errors.length} fouten`;clearInterval(timer)},100);
+</script></html>

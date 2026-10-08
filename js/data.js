@@ -445,6 +445,15 @@ add('hat', [
   { id: 'hat_sluier',       shape: 'veil',      name: 'Bruidssluier',        c: ['#ffffff', '#f1c232'], tags: ['bruiloft', 'chic'], glam: 3, hue: 'wit', lvl: 18 },
 ]);
 
+/* ---------- Oorbellen ---------- */
+add('ears', [
+  { id: 'ear_parels',       shape: 'pearls',    name: 'Parelknopjes',        c: ['#fbf6ee', '#f1c232'], tags: ['chic', 'bruiloft', 'prinses'], glam: 2, hue: 'wit', lvl: 1 },
+  { id: 'ear_hartjes',      shape: 'hearts',    name: 'Roze Hartjes',        c: ['#ff5da2', '#f1c232'], tags: ['feest', 'casual'], glam: 1, hue: 'roze', lvl: 2 },
+  { id: 'ear_ringen',       shape: 'hoops',     name: 'Gouden Ringen',       c: ['#f1c232', '#ffffff'], tags: ['casual', 'disco', 'dans'], glam: 1, hue: 'goud', lvl: 3 },
+  { id: 'ear_sterren',      shape: 'stars',     name: 'Zilveren Sterretjes', c: ['#d9dee8', '#5aa9e6'], tags: ['feest', 'ruimte'], glam: 1, hue: 'zilver', lvl: 5 },
+  { id: 'ear_hangers',      shape: 'drops',     name: 'Blauwe Hangers',      c: ['#5aa9e6', '#d9dee8'], tags: ['chic', 'feest'], glam: 2, hue: 'blauw', lvl: 8 },
+]);
+
 /* ---------- Brillen & maskers ---------- */
 add('glasses', [
   { id: 'gl_rond',          shape: 'round',     name: 'Rond Brilletje',      c: ['#8b5a2b'], tags: ['school', 'chic'], hue: 'bruin', lvl: 1 },
@@ -722,20 +731,20 @@ const CATEGORIES = [
   { id: 'bottom',  name: 'Broeken',     emoji: '👖' },
   { id: 'shoes',   name: 'Schoenen',    emoji: '👟' },
   { id: 'hat',     name: 'Hoedjes',     emoji: '👒' },
-  { id: 'acc',     name: 'Sieraden',    emoji: '💍', slots: ['glasses', 'neck', 'bag'] },
+  { id: 'acc',     name: 'Sieraden',    emoji: '💍', slots: ['ears', 'neck', 'glasses', 'bag'] },
   { id: 'extra',   name: 'Extra',       emoji: '✨', slots: ['hand', 'back', 'pet'] },
   { id: 'bg',      name: 'Setting',     emoji: '🏝️', freeOnly: true },
 ];
 const SLOT_NAMES = {
   hair: 'Haar', top: 'Top', bottom: 'Broek of rok', dress: 'Jurk of pakje', shoes: 'Schoenen', hat: 'Hoedje',
-  glasses: 'Bril', neck: 'Om de nek', bag: 'Tas', hand: 'In je hand', back: 'Op je rug', pet: 'Huisdier',
+  glasses: 'Bril', ears: 'Oorbellen', neck: 'Om de nek', bag: 'Tas', hand: 'In je hand', back: 'Op je rug', pet: 'Huisdier',
   mk_eyes: 'Oogschaduw', mk_lips: 'Lippen', mk_blush: 'Blush', mk_face: 'Gezichtsversiering', bg: 'Setting',
 };
-const CAT_EMOJI = { hair: '💇', top: '👕', bottom: '👖', dress: '👗', shoes: '👟', hat: '👒', glasses: '🕶️', neck: '📿', bag: '👜', hand: '🎈', back: '🦋', pet: '🐶', mk_eyes: '💄', mk_lips: '💄', mk_blush: '💄', mk_face: '💄' };
+const CAT_EMOJI = { hair: '💇', top: '👕', bottom: '👖', dress: '👗', shoes: '👟', hat: '👒', glasses: '🕶️', ears: '💎', neck: '📿', bag: '👜', hand: '🎈', back: '🦋', pet: '🐶', mk_eyes: '💄', mk_lips: '💄', mk_blush: '💄', mk_face: '💄' };
 // Slots die meetellen als 'kledingstuk' voor thema en kleur
-const OUTFIT_SLOTS = ['top', 'bottom', 'dress', 'shoes', 'hat', 'glasses', 'neck', 'bag', 'hand', 'back'];
-const ACC_SLOTS = ['hat', 'glasses', 'neck', 'bag', 'hand', 'back', 'pet', 'mk_eyes', 'mk_lips', 'mk_face'];
-const ALL_SLOTS = ['hair', 'top', 'bottom', 'dress', 'shoes', 'hat', 'glasses', 'neck', 'bag', 'hand', 'back', 'pet', 'mk_eyes', 'mk_lips', 'mk_blush', 'mk_face'];
+const OUTFIT_SLOTS = ['top', 'bottom', 'dress', 'shoes', 'hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back'];
+const ACC_SLOTS = ['hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back', 'pet', 'mk_eyes', 'mk_lips', 'mk_face'];
+const ALL_SLOTS = ['hair', 'top', 'bottom', 'dress', 'shoes', 'hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back', 'pet', 'mk_eyes', 'mk_lips', 'mk_blush', 'mk_face'];
 
 /* ---------- Opdrachten (thema's) — elke opdracht heeft zijn eigen setting ---------- */
 const THEMES = [

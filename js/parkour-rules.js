@@ -49,7 +49,7 @@ const ParkourRules = (() => {
   }
   function outfitScore(outfit, course, catalog) {
     const get = slot => catalog[outfit[slot]];
-    const accessories = ['hat','glasses','neck','bag','hand','back','pet'].map(get).filter(Boolean);
+    const accessories = ['hat','glasses','ears','neck','bag','hand','back','pet'].map(get).filter(Boolean);
     const scores = {
       top: itemScore(get('dress') || get('top'), course, 'top'),
       bottom: itemScore(get('dress') || get('bottom'), course, 'bottom'),

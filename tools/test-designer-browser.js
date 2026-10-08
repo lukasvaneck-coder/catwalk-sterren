@@ -40,16 +40,18 @@ async page => {
     checks.push('Coco + Pip, live preview, patterned fabric, positioned stickers, free save and equip');
 
     // A decal must show up on every silhouette, including the shirt under an open hoodie.
+    // Head pieces and earrings have no stickers; their pattern must show instead.
     const renderChecks = await p.evaluate(async () => {
       const box = document.createElement('div'); box.hidden = true; document.body.appendChild(box);
       const look = { skin: 's2', eyes: 'e1', hairColor: 'bruin', build: 40 };
-      const cases = ClothingDesigns.TYPES.flatMap(t => t.shapes.map(s => ({ cat: t.id, shape: s[0] })));
+      const cases = ClothingDesigns.TYPES.flatMap(t => t.shapes.map(s => ({ cat: t.id, shape: s[0], decal: t.stickers !== false })));
       for (const spec of cases) {
-        const plain = ClothingDesigns.item({ ...spec, c: ['#a68bd5', '#fff1c9'] }, 'plain', 'test');
-        const sticker = { ...plain, stickers: [{ kind: 'star', x: 35, y: 40, size: 28, rotation: 0 }] };
+        const plain = ClothingDesigns.item({ cat: spec.cat, shape: spec.shape, c: ['#a68bd5', '#fff1c9'] }, 'plain', 'test');
+        const sticker = spec.decal ? { ...plain, stickers: [{ kind: 'star', x: 35, y: 40, size: 28, rotation: 0 }] }
+          : ClothingDesigns.item({ cat: spec.cat, shape: spec.shape, c: ['#a68bd5', '#fff1c9'], pattern: 'rainbow' }, 'plain', 'test');
         box.innerHTML = Avatar.thumb(plain, look) + Avatar.thumb(sticker, look); Avatar.mountAll();
         const cvs = box.querySelectorAll('canvas');
-        if (cvs[0].toDataURL() === cvs[1].toDataURL()) throw new Error('Invisible sticker on ' + spec.shape);
+        if (cvs[0].toDataURL() === cvs[1].toDataURL()) throw new Error((spec.decal ? 'Invisible sticker on ' : 'Invisible pattern on ') + spec.cat + '/' + spec.shape);
         for (const build of [0, 50, 100]) {
           const it = { ...sticker, id: 'render_test' };
           Avatar.compose({ ...look, build }, { hair: 'hair_knot', [it.cat]: it.id }, { items: { [it.id]: it } });
@@ -57,8 +59,8 @@ async page => {
       }
       box.remove(); return cases.length;
     });
-    assert(renderChecks === 16, 'Missing clothing silhouette');
-    checks.push('All 16 silhouettes render stickers at three body sizes');
+    assert(renderChecks === 34, 'Missing design shape');
+    checks.push('All 34 shapes (incl. heels, head pieces, earrings) render stickers or patterns at three body sizes');
 
     // Quota/storage failure must not claim success or overwrite the saved design.
     await p.locator('#design-name').fill('Opslagfout-test');
@@ -97,6 +99,24 @@ async page => {
     await p.locator('#design-name').fill('<b>Eigen label</b>'); await p.locator('#design-save').click();
     assert(await p.locator('#design-preview-name b').count() === 0, 'Custom name interpreted as HTML');
     checks.push('Top, dress, wide trousers, shoes, slot cleanup and safe label text');
+
+    // Heels, head pieces and earrings each land in their own slot and keep the rest of the outfit.
+    const labelId = (await saved()).outfit.top;
+    const worn = async slot => { const pr = await saved(); return pr.customDesigns.find(d => d.id === pr.outfit[slot]); };
+    await p.locator('[data-design-type="shoes"]').click(); await p.locator('#design-shape').selectOption('bowheels'); await p.locator('#design-copy').click();
+    assert((await worn('shoes'))?.shape === 'bowheels', 'Heels were not saved and worn');
+    await p.locator('[data-design-type="hat"]').click();
+    assert(!await p.locator('[data-add-sticker="star"]').isVisible(), 'Head pieces should not offer stickers');
+    await p.locator('#design-shape').selectOption('royal'); await p.locator('[data-pattern="glitter"]').click(); await p.locator('#design-copy').click();
+    assert((await worn('hat'))?.shape === 'royal' && (await worn('hat')).pattern === 'glitter', 'Crown was not saved and worn');
+    await p.locator('[data-design-type="ears"]').click();
+    assert(await p.locator('[data-pattern="stars"]').count() === 0 && await p.locator('[data-pattern="glitter"]').count() === 1, 'Earrings offer unsuitable patterns');
+    await p.locator('#design-shape').selectOption('hearts'); await p.locator('[data-design-color="1"][data-color="#f5d568"]').click(); await p.locator('#design-copy').click();
+    profile = await saved();
+    assert((await worn('ears'))?.shape === 'hearts' && profile.outfit.hat && profile.outfit.shoes && profile.outfit.top === labelId, 'Earrings replaced other slots');
+    await p.locator(`[data-edit-design="${labelId}"]`).click();
+    assert(await p.locator('[data-sticker-index]').count() === 2, 'Returning to a top lost its stickers');
+    checks.push('Heels, crown and earrings: own slots, sticker and pattern limits');
 
     for (let i = 0; i < 3; i++) await p.locator('[data-add-sticker="star"]').click();
     assert(await p.locator('[data-add-sticker="star"]').isDisabled(), 'Sticker limit is not enforced');

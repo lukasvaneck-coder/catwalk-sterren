@@ -22,7 +22,7 @@ body[data-screen="screen-designer"] #app { height: 100dvh; min-height: 0; paddin
 .design-panel { padding: 18px; margin-bottom: 14px; border-radius: 20px; box-shadow: 0 3px 0 var(--line); }
 .design-panel h2 { font-size: 16px; margin: 0 0 14px; line-height: 1.4; }
 .design-panel h2 small { font-size: 12px; font-weight: normal; color: var(--muted); white-space: nowrap; }
-.design-types, .design-patterns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.design-types, .design-patterns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
 .design-patterns { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 16px; }
 .design-choice { background: var(--surface2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; min-height: 44px; font: bold 12px/1.2 var(--font); }
 .design-choice[aria-pressed="true"] { background: var(--lilac); border: 2px solid var(--primary); padding: 9px 5px; color: var(--primary-d); }
