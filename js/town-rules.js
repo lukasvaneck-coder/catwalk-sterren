@@ -5,7 +5,7 @@ const TownRules = (() => {
     { id:'kleedkamer', x:400, y:470, w:250, h:220, icon:'👗', name:'Modehuis', sub:'Aankleden & de jury', color:'#d986b0', zone:'Modeplein' },
     { id:'atelier', x:810, y:450, w:230, h:210, icon:'✂️', name:'Naaiatelier', sub:'Je eigen kleding maken', color:'#ca9976', zone:'Modeplein' },
     { id:'winkel', x:1210, y:450, w:230, h:210, icon:'🛍️', name:'Sterrenwinkel', sub:'Nieuwe spullen uitzoeken', color:'#d8ae60', zone:'Modeplein' },
-    { id:'leshuis', x:1610, y:450, w:220, h:210, icon:'🌦️', name:'Wijzerhuis', sub:'Weer & budgetopdrachten', color:'#74a5ba', zone:'Speelbuurt' },
+    { id:'leshuis', x:1610, y:450, w:220, h:210, icon:'🌦️', name:'Weer & Winkelhuis', sub:'Wat trek je aan? Wat koop je?', color:'#74a5ba', zone:'Speelbuurt' },
     { id:'race', x:2120, y:520, w:290, h:235, icon:'🏁', name:'Raceclub', sub:'Vijf raceparcoursen', color:'#ce795c', zone:'Speelbuurt' },
     { id:'salon', x:320, y:1000, w:220, h:210, icon:'🪞', name:'Spiegelsalon', sub:'Je uiterlijk aanpassen', color:'#bda1ce', zone:'Modeplein' },
     { id:'puzzel', x:750, y:990, w:240, h:220, icon:'🎨', name:'Kleurenhuis', sub:'Kleuren combineren', color:'#73a68d', zone:'Modeplein' },
