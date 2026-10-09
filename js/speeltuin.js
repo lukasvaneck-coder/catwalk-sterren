@@ -1,8 +1,12 @@
 /* Binnenspeeltuin: lobby, canvas en bediening voor de Springbaan en de Trampoline.
    Regels in speeltuin-rules.js; beloning en opslaan gaan via game.js (callbacks).
+   Het Klimrek-doolhof en Ballenbak-mikken staan in speeltuin-extra.js; die spellen tekenen en
+   besturen zichzelf, en gebruiken hier de lobby, pauze, beloning en de tekenhulpjes ('kit').
    Plaatjes komen uit Blender (tools/blender/speeltuin-*.py) en staan in assets/speeltuin/. */
 const Speeltuin = (() => {
   const R = SpeeltuinRules, $ = s => document.querySelector(s);
+  const X = typeof SpeeltuinExtra !== 'undefined' ? SpeeltuinExtra : { games: [], adapters: {} };
+  const allGames = () => [...R.games, ...X.games];
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const IMG = {};
@@ -18,9 +22,10 @@ const Speeltuin = (() => {
   const TRAMP_DOLL = 1.3;                            // op de trampoline alleen het poppetje groter (hoogtes blijven in beeld)
   const WALL = '#ecfefe';                            // muurkleur bovenin de hal (uit hal.jpg)
   const MAT_COLORS = ['#ff6fae', '#ffc531', '#3ddcb0', '#5aaeff', '#a36bff', '#ff8c42'];
-  let profile, cb = {}, game = 'springbaan', state = null, frame = 0, last = 0, paused = false, active = false;
+  let profile, cb = {}, game = 'springbaan', options = {}, state = null, frame = 0, last = 0, paused = false, active = false;
   let doll = null, listeners = null, observer = null, popups = [], seen = 0, view = { width: 960, height: 540 };
   const keys = new Set();
+  const extra = () => X.adapters[game];
 
   function show(p, callbacks) {
     hide(); profile = p; cb = callbacks || {}; active = true;
@@ -41,7 +46,7 @@ const Speeltuin = (() => {
   function recordText(g) {
     const rec = profile.speeltuin.records[g.id];
     if (!rec) return 'Nog niet gespeeld';
-    return `${'⭐'.repeat(rec.stars) || 'Nog geen ster'} · record ${rec.best} ${rec.best === 1 ? 'ster' : 'sterren'} gevangen`;
+    return `${'⭐'.repeat(rec.stars) || 'Nog geen ster'} · record ${rec.best} ${g.unit || (rec.best === 1 ? 'ster' : 'sterren') + ' gevangen'}`;
   }
   function lobby() {
     document.body.classList.remove('in-speeltuin'); observer?.disconnect(); listeners?.abort();
@@ -50,7 +55,7 @@ const Speeltuin = (() => {
     $('#speeltuin').innerHTML = `
       <div class="pk-heading"><div><p class="eyebrow">CATWALK STERREN · BINNENSPEELTUIN</p><h1>🛝 Springen, stuiteren, sterren vangen!</h1><p>Kies een spelletje. De sterren die je verdient tellen mee voor je level.</p></div><button class="btn ghost" id="st-exit" type="button">🏡 Dorp</button></div>
       <div class="st-hero" role="img" aria-label="De speelhal met een ballenbak, regenboog, klimmuur en een klimrek met glijbaan"></div>
-      <div class="st-games">${R.games.map(g => `
+      <div class="st-games">${allGames().map(g => `
         <section class="card st-game">
           <img src="assets/speeltuin/${g.sprite}.png" alt="" width="128" height="${g.sprite === 'trampoline' ? 64 : 128}">
           <div>
@@ -58,41 +63,52 @@ const Speeltuin = (() => {
             <p>${g.desc}</p>
             <div class="pk-times">${g.rules.map(r => `<span>${r}</span>`).join('')}</div>
             <p class="pk-note">${recordText(g)}</p>
-            <p class="pk-note">${g.id === 'springbaan' ? 'Spatie, pijltje omhoog, tik op het speelveld of de Spring-knop = springen. In de lucht nog een keer = dubbele sprong.' : 'Pijltjes of A/D = naar links en rechts. Spatie of Spring precies als je de mat raakt = hoger. P = pauze.'}</p>
-            <button class="btn big" data-play="${g.id}" type="button">▶ Spelen</button>
+            <p class="pk-note">${g.help || (g.id === 'springbaan' ? 'Spatie, pijltje omhoog, tik op het speelveld of de Spring-knop = springen. In de lucht nog een keer = dubbele sprong.' : 'Pijltjes of A/D = naar links en rechts. Spatie of Spring precies als je de mat raakt = hoger. P = pauze.')}</p>
+            ${g.parents ? `<div class="st-choice" role="group" aria-label="Op wie mik je?">${g.parents.map(([id, label]) => `<button class="btn ghost sm" type="button" data-parent="${id}" aria-pressed="${(profile.speeltuin.parent || 'papa') === id}">${label}</button>`).join('')}</div>` : ''}
+            ${g.modes ? `<div class="st-modes">${g.modes.map(([mode, label, sub]) => `<button class="btn big" data-play="${g.id}" data-mode="${mode}" type="button">${label}<small>${sub}</small></button>`).join('')}</div>`
+              : `<button class="btn big" data-play="${g.id}" type="button">▶ Spelen</button>`}
           </div>
         </section>`).join('')}</div>`;
     $('#st-exit').onclick = () => { hide(); cb.exit?.(); };
-    document.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { game = b.dataset.play; start(); });
+    document.querySelectorAll('[data-parent]').forEach(b => b.onclick = () => {
+      profile.speeltuin.parent = b.dataset.parent; cb.save?.();
+      document.querySelectorAll('[data-parent]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    });
+    document.querySelectorAll('[data-play]').forEach(b => b.onclick = () => {
+      game = b.dataset.play; options = { mode: b.dataset.mode, parent: profile.speeltuin.parent || 'papa' }; start();
+    });
   }
 
   /* ---------------------------------------------------------------- spelen */
   function start() {
     if (!Avatar.isReady()) { const b = $(`[data-play="${game}"]`); if (b) b.textContent = 'Het poppetje laadt nog… probeer zo opnieuw'; return; }
-    state = R.create(game, (Date.now() % 100000) + 1); paused = false; keys.clear(); popups = []; seen = 0;
+    const A = extra(), seed = (Date.now() % 100000) + 1;
+    state = A ? A.create(seed, options, profile) : R.create(game, seed); paused = false; keys.clear(); popups = []; seen = 0;
     doll = Avatar.compose(profile.look, profile.outfit);
-    const g = R.games.find(x => x.id === game), tramp = game === 'trampoline';
+    const g = allGames().find(x => x.id === game), tramp = game === 'trampoline';
     document.body.classList.add('in-speeltuin');
     $('#speeltuin').innerHTML = `
       <div class="pk-race-head"><button class="btn ghost sm" id="st-back" type="button">← Spelletjes</button><b>${g.icon} ${g.name}</b><button class="btn ghost sm" id="st-pause" type="button">⏸ Pauze</button></div>
       <div class="pk-live"><strong id="st-main" aria-label="${tramp ? 'Tijd' : 'Hartjes'}"></strong><span id="st-stars"></span><span id="st-progress"></span></div>
-      <div class="pk-canvas-wrap"><canvas id="st-canvas" class="${tramp ? 'tramp' : 'run'}" width="960" height="540" tabindex="0" aria-label="${tramp ? 'Trampoline. Stuur met de pijltjes en druk op Spring als je de mat raakt.' : 'Springbaan. Druk op Spring of tik op het speelveld om over de hindernissen te springen.'}"></canvas>
+      <div class="pk-canvas-wrap"><canvas id="st-canvas" class="${A ? A.canvasClass : tramp ? 'tramp' : 'run'}" width="960" height="540" tabindex="0" aria-label="${A ? A.label : tramp ? 'Trampoline. Stuur met de pijltjes en druk op Spring als je de mat raakt.' : 'Springbaan. Druk op Spring of tik op het speelveld om over de hindernissen te springen.'}"></canvas>
+        <div id="st-panel" class="card st-panel" role="dialog" aria-live="polite" hidden></div>
         <div id="st-pause-panel" hidden><h2>Even pauze</h2><p>Het spel staat stil.</p><button class="btn" id="st-resume" type="button">Verder spelen</button></div></div>
       <p id="st-message" class="pk-message" role="status"></p>
       <div class="pk-controls st-controls">
-        ${tramp ? '<div class="pk-arrows"><button data-move="left" aria-label="Links" type="button">←</button><button data-move="right" aria-label="Rechts" type="button">→</button></div>' : ''}
-        <button class="btn mint" id="st-jump" type="button">Spring ⤴ <small>spatie</small></button>
+        ${A ? A.controls(state) : `${tramp ? '<div class="pk-arrows"><button data-move="left" aria-label="Links" type="button">←</button><button data-move="right" aria-label="Rechts" type="button">→</button></div>' : ''}
+        <button class="btn mint" id="st-jump" type="button">Spring ⤴ <small>spatie</small></button>`}
       </div>
       <div id="st-result" role="status"></div>`;
     $('#st-back').onclick = lobby; $('#st-pause').onclick = () => setPaused(!paused); $('#st-resume').onclick = () => setPaused(false);
     listeners = new AbortController(); const signal = listeners.signal;
-    const press = e => { e?.preventDefault(); if (!paused && R.press(state) && game === 'springbaan') Sound.play('klik'); };
+    const press = e => { e?.preventDefault(); if (paused) return; if (A) A.press(state); else if (R.press(state) && game === 'springbaan') Sound.play('klik'); };
     // pointerdown (niet click): een tweede vinger werkt terwijl de andere een pijl vasthoudt
     $('#st-jump').addEventListener('pointerdown', press, { signal });
     $('#st-jump').addEventListener('click', e => { if (e.detail === 0) press(e); }, { signal });   // toetsenbord op de knop
-    if (!tramp) $('#st-canvas').addEventListener('pointerdown', press, { signal });
+    if (A) A.bind($('#st-canvas'), signal, kit);
+    else if (!tramp) $('#st-canvas').addEventListener('pointerdown', press, { signal });
     document.querySelectorAll('.st-controls [data-move]').forEach(b => {
-      b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); keys.add(b.dataset.move); }, { signal });
+      b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); keys.add(b.dataset.move); if (!paused) A?.nudge?.(state, b.dataset.move); }, { signal });
       for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(type, () => keys.delete(b.dataset.move), { signal });
     });
     observer?.disconnect();
@@ -111,21 +127,27 @@ const Speeltuin = (() => {
   const moveKeys = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right' };
   function keyDown(e) {
     if (!active || !state || state.finished) return;
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key, A = extra(), map = A?.moveKeys || moveKeys;
     const button = e.target.closest?.('button');
     if (button && ['Enter', ' '].includes(key)) return;                 // knoppen doen het zelf
-    if (moveKeys[key] || [' ', 'ArrowUp', 'w', 'Escape', 'p'].includes(key)) e.preventDefault();
+    if (map[key] || [' ', 'ArrowUp', 'w', 'Escape', 'p'].includes(key)) e.preventDefault();
     if ((key === 'Escape' || key === 'p') && !e.repeat) { setPaused(!paused); return; }
     if (paused) return;
-    if (moveKeys[key]) keys.add(moveKeys[key]);
+    if (map[key]) keys.add(map[key]);
+    if (A) { if (A.keyDown?.(state, key, e.repeat)) e.preventDefault(); return; }
     if ([' ', 'ArrowUp', 'w'].includes(key) && !e.repeat && R.press(state) && game === 'springbaan') Sound.play('klik');
   }
-  function keyUp(e) { keys.delete(moveKeys[e.key.length === 1 ? e.key.toLowerCase() : e.key]); }
+  function keyUp(e) { keys.delete((extra()?.moveKeys || moveKeys)[e.key.length === 1 ? e.key.toLowerCase() : e.key]); }
 
   function tick(now) {
     if (!active || !state) return;
     let dt = Math.min((now - last) / 1000, .25); last = now;
-    if (!paused) {
+    const A = extra();
+    if (!paused && A) {
+      const input = A.input(keys);
+      while (dt > 0 && !state.finished) { const part = Math.min(dt, 1 / 120); A.step(state, part, input); dt -= part; }
+      state.events.splice(0).forEach(e => { const sound = A.sound(e); if (sound) Sound.play(sound); });
+    } else if (!paused) {
       const before = { hits: state.hits, level: state.level, superBounces: state.superBounces };
       const input = { left: keys.has('left'), right: keys.has('right') };
       while (dt > 0 && !state.finished) { const part = Math.min(dt, 1 / 120); R.step(state, part, input); dt -= part; }
@@ -134,12 +156,21 @@ const Speeltuin = (() => {
       if (state.collected > seen) { for (let i = seen; i < state.collected; i++) popups.push({ t: 0, ...playerScreen() }); seen = state.collected; Sound.play('ster'); }
       popups.forEach(p => { p.t += 1 / 60; }); popups = popups.filter(p => p.t < .8);
     }
-    draw(); hud();
+    draw(); hud(); A?.ui(state, kit);
     if (state.finished) { finish(); return; }
     frame = requestAnimationFrame(tick);
   }
   function hud() {
-    const s = state, tramp = game === 'trampoline';
+    const s = state, tramp = game === 'trampoline', A = extra();
+    if (A) {
+      const h = A.hud(s);
+      $('#st-main').textContent = h.main; $('#st-main').setAttribute('aria-label', h.mainLabel);
+      $('#st-stars').textContent = h.stars; $('#st-progress').textContent = h.progress;
+      if ($('#st-message').textContent !== h.message) $('#st-message').textContent = h.message;
+      $('#st-jump').hidden = !h.jump; $('#st-jump').disabled = paused || s.countdown > 0 || !!h.jumpDisabled;
+      if ($('.st-pad')) $('.st-pad').hidden = !h.pad;
+      return;
+    }
     $('#st-main').textContent = tramp ? `${Math.max(0, Math.ceil(R.TRAMP.duration - s.time))} s` : '❤️'.repeat(s.hearts) + '🤍'.repeat(3 - s.hearts);
     $('#st-stars').textContent = tramp ? `⭐ ${s.collected}` : `⭐ ${s.collected}/${s.total}`;
     $('#st-progress').textContent = tramp ? `Niveau ${s.level}/5` : `${Math.min(100, Math.round(s.player.x / s.length * 100))}%`;
@@ -156,20 +187,22 @@ const Speeltuin = (() => {
   function finish() {
     document.body.classList.remove('in-speeltuin');
     keys.clear(); listeners?.abort(); $('#st-pause').disabled = true; $('#st-jump').disabled = true;
-    const stars = R.starsFor(state), id = game;
+    const A = extra(), done = A?.result(state), stars = done ? done.stars : R.starsFor(state), id = game;
+    if ($('#st-panel')) $('#st-panel').hidden = true;
     // een record telt alleen als de ronde af is (springbaan: finish gehaald)
-    const counts = id === 'trampoline' || state.success;
-    const rec = profile.speeltuin.records[id], record = counts && state.collected > (rec?.best || 0);
-    if (counts) profile.speeltuin.records[id] = { stars: Math.max(rec?.stars || 0, stars), best: Math.max(rec?.best || 0, state.collected) };
+    const counts = done ? done.counts : id === 'trampoline' || state.success, best = done ? done.best : state.collected;
+    const rec = profile.speeltuin.records[id], record = counts && best > (rec?.best || 0);
+    if (counts) profile.speeltuin.records[id] = { stars: Math.max(rec?.stars || 0, stars), best: Math.max(rec?.best || 0, best) };
     const reward = stars ? cb.reward?.(stars, id) : null;
     cb.save?.();
     Sound.play(stars ? 'tada' : 'fout');
-    const detail = id === 'springbaan'
+    const detail = done ? done.detail : id === 'springbaan'
       ? `${state.collected} van de ${state.total} sterren · ${state.hits === 0 ? 'niets geraakt' : state.hits + ' keer geraakt'}`
       : `${state.collected} sterren gevangen · hoogste niveau ${state.best}`;
-    const title = stars ? ['', 'Goed gedaan!', 'Heel goed!', 'Super gesprongen!'][stars]
+    let title = stars ? ['', 'Goed gedaan!', 'Heel goed!', 'Super gesprongen!'][stars]
       : id === 'springbaan' ? (state.success ? 'Gehaald!' : 'Oei, je hartjes zijn op') : 'Nog een keer proberen?';
-    const tip = id === 'springbaan' ? 'Tip: spring als de hindernis bijna bij je is. Bij een hoge toren spring je in de lucht nog een keer.'
+    if (done && stars) title = ['', 'Goed gedaan!', 'Heel goed!', id === 'ballenbak' ? 'Wat een mikker!' : 'Super geklommen!'][stars];
+    const tip = done ? done.tip : id === 'springbaan' ? 'Tip: spring als de hindernis bijna bij je is. Bij een hoge toren spring je in de lucht nog een keer.'
       : 'Tip: wacht tot je voeten de mat raken en druk dan pas. De knop licht op als het moment er is.';
     $('#st-result').innerHTML = `<div class="card pk-finish"><h2>${stars ? '⭐'.repeat(stars) : '🛝'}</h2><h3>${title}</h3><p>${detail}</p>${record ? '<b>🎉 Nieuw record!</b>' : ''}
       ${reward ? `<p>+${reward.xp} XP · +${reward.coins} munten · +${stars} ${stars === 1 ? 'ster' : 'sterren'}</p>${reward.extra || ''}` : `<p>${tip}</p>`}
@@ -182,7 +215,7 @@ const Speeltuin = (() => {
   function resize() {
     const canvas = $('#st-canvas'), w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
-    const ratio = w / h, minW = game === 'trampoline' ? 720 : 640;
+    const ratio = w / h, minW = extra()?.minWidth || (game === 'trampoline' ? 720 : 640);
     view = { width: Math.max(minW, 540 * ratio), portrait: matchMedia('(max-width: 760px) and (orientation: portrait)').matches };
     view.height = view.width / ratio;
     const dpr = Math.min(devicePixelRatio || 1, 2), pw = Math.round(w * dpr), ph = Math.round(h * dpr);
@@ -327,8 +360,14 @@ const Speeltuin = (() => {
     const g = canvas.getContext('2d');
     g.setTransform(canvas.width / view.width, 0, 0, canvas.height / view.height, 0, 0);
     g.clearRect(0, 0, view.width, view.height);
-    if (game === 'springbaan') drawRun(g); else drawTramp(g);
+    if (extra()) extra().draw(g, state, kit); else if (game === 'springbaan') drawRun(g); else drawTramp(g);
   }
+  // tekenhulpjes voor de spellen uit speeltuin-extra.js
+  const kit = {
+    view: () => view, state: () => state, paused: () => paused, reduced, img, sprite, hall, mat, drawDoll, countdown, DOLL_H,
+    panel: () => $('#st-panel'), refresh: () => { last = performance.now(); },
+    point(e) { const c = $('#st-canvas').getBoundingClientRect(); return { x: (e.clientX - c.left) / c.width * view.width, y: (e.clientY - c.top) / c.height * view.height }; },
+  };
 
   // _state is een testhaakje (zoals World._tick): een browsertest kan zo de baan 'zien' en goed spelen
   return { show, hide, _state: () => state };

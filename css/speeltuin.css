@@ -12,8 +12,25 @@
 #st-jump{min-width:190px;min-height:64px;font-size:20px;transition:transform .1s,box-shadow .1s}
 #st-jump.now{background:#ffc531;color:#4a3410;box-shadow:0 0 0 6px #ffc53166;transform:scale(1.05)}
 .st-controls button{touch-action:none;user-select:none}
+/* Klimrek-doolhof en Ballenbak-mikken */
+.st-modes{display:flex;gap:10px;flex-wrap:wrap}.st-modes .btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}
+.st-modes small{font-size:12px;font-weight:600;opacity:.85}
+.st-choice{display:flex;gap:8px;margin:4px 0 12px}.st-choice [aria-pressed="true"]{background:#efe6ff;border:2px solid #815dc6;color:#4b3473}
+.st-pad{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,52px);gap:6px}
+.st-pad button{width:56px;min-height:52px;font-size:22px}
+.st-pad [data-move="up"]{grid-column:2}.st-pad [data-move="left"]{grid-column:1;grid-row:2}.st-pad [data-move="down"]{grid-column:2;grid-row:2}.st-pad [data-move="right"]{grid-column:3;grid-row:2}
+.st-panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92%);max-height:92%;overflow:auto;text-align:center;padding:20px;z-index:2;box-shadow:0 12px 40px #3c285a44}
+.st-panel[hidden]{display:none}.st-panel h2{margin:0 0 6px}.st-panel p{margin:6px 0 12px;line-height:1.5}.st-panel .row{justify-content:center}
+.st-word{display:flex;justify-content:center;gap:8px;margin:10px 0}
+.st-word span{width:48px;height:56px;border-radius:12px;background:#ece6f5;display:grid;place-items:center;font:900 28px system-ui;color:#4b3473}
+.st-word.wrong span{background:#ffd9e6;animation:st-shake .4s}
+.st-tiles{display:flex;justify-content:center;gap:10px;margin:12px 0;flex-wrap:wrap}
+.st-tile{width:58px;height:58px;border-radius:14px;border:0;background:#ff6fae;color:#fff;font:900 30px system-ui;box-shadow:0 4px 0 #c94d86;cursor:pointer}
+.st-tile:nth-child(2n){background:#5aaeff;box-shadow:0 4px 0 #3a7fc0}.st-tile:nth-child(3n){background:#3ddcb0;box-shadow:0 4px 0 #26a383}
+.st-tile:disabled{opacity:.3;cursor:default}.st-tile:focus-visible{outline:4px solid #815dc6;outline-offset:3px}
+@keyframes st-shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 @media(max-width:760px){#speeltuin{padding:12px}.st-games{grid-template-columns:1fr;gap:14px}.st-game{grid-template-columns:72px 1fr;gap:12px;padding:16px}.st-game img{width:72px}}
-@media(prefers-reduced-motion:reduce){#st-jump{transition:none}#st-jump.now{transform:none}}
+@media(prefers-reduced-motion:reduce){#st-jump{transition:none}#st-jump.now{transform:none}.st-word.wrong span{animation:none}}
 
 /* Portret op de telefoon: speelveld en knoppen delen het scherm zonder scrollen. */
 @media(max-width:760px) and (orientation:portrait){
@@ -33,4 +50,6 @@
   .in-speeltuin .st-controls small{display:none}
   .in-speeltuin #st-jump{flex:1;max-width:260px;min-height:64px}
   .in-speeltuin #st-result:empty{display:none}
+  .in-speeltuin .st-pad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,44px);gap:4px}
+  .in-speeltuin .st-pad button{width:52px;min-height:44px}
 }
