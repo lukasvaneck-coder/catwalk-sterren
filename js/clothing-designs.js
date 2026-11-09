@@ -1,6 +1,6 @@
 /* Eigen kleding: begrensde ontwerpdata en dezelfde catalogus voor kast, jury en races. */
 const ClothingDesigns = (() => {
-  const LIMIT = 60, STICKER_LIMIT = 5;
+  const LIMIT = 200, STICKER_LIMIT = 5;
   const TYPES = [
     { id: 'top', name: 'Top', emoji: '👕', shapes: [
       ['tshirt', 'T-shirt', ['casual', 'school'], 0], ['sweater', 'Trui', ['casual', 'school', 'winter'], 0],
@@ -97,11 +97,37 @@ const ClothingDesigns = (() => {
     }).slice(0, LIMIT).map(d => item(d, d.id, profile.id));
     profile.customDesigns.forEach(register);
   }
+  function unregister(id) {
+    const index = ITEMS.findIndex(i => i.id === id);
+    if (index >= 0) ITEMS.splice(index, 1);
+    delete ITEM_BY_ID[id];
+  }
+  // Een volle kast ruimt zichzelf op: het ontwerp dat het langst niet gedragen is, maakt plaats.
+  const wornIds = profile => new Set([...Object.values(profile.outfit || {}), ...Object.values(profile.parkour?.dadOutfit || {})]);
+  function createdAt(d, profileId) {
+    const start = `custom_${profileId}_`.length, t = parseInt(String(d.id).slice(start, start + 8), 36);
+    return t > 1.5e12 && t < Date.now() + 864e5 ? t : 0;
+  }
+  const lastUsed = (profile, d) => Math.max(profile.designUsed?.[d.id] || 0, createdAt(d, profile.id));
+  function touch(profile, now = Date.now()) {
+    const worn = wornIds(profile), used = {};
+    for (const d of profile.customDesigns || []) {
+      const t = worn.has(d.id) ? now : profile.designUsed?.[d.id];
+      if (t) used[d.id] = t;
+    }
+    profile.designUsed = used;
+  }
+  function makeRoom(profile, keep = []) {
+    if (profile.customDesigns.length < LIMIT) return null;
+    const worn = wornIds(profile);
+    const spare = profile.customDesigns.filter(d => !worn.has(d.id) && !keep.includes(d.id));
+    return spare.reduce((old, d) => !old || lastUsed(profile, d) < lastUsed(profile, old) ? d : old, null);
+  }
   function outfitWith(outfit, it) {
     const next = { ...outfit, [it.cat]: it.id };
     if (it.cat === 'dress') { delete next.top; delete next.bottom; }
     if (it.cat === 'top' || it.cat === 'bottom') delete next.dress;
     return next;
   }
-  return { LIMIT, STICKER_LIMIT, TYPES, PATTERNS, STICKERS, PALETTE, normalize, hueOf, item, register, restore, outfitWith };
+  return { LIMIT, STICKER_LIMIT, TYPES, PATTERNS, STICKERS, PALETTE, normalize, hueOf, item, register, unregister, restore, touch, lastUsed, makeRoom, outfitWith };
 })();
