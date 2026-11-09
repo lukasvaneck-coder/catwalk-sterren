@@ -72,7 +72,7 @@
     }
     p.duels = p.duels || { played: 0, won: 0 };
   }
-  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(DB)); return true; } catch (e) { return false; } }
+  function save() { if (P) ClothingDesigns.touch(P); try { localStorage.setItem(SAVE_KEY, JSON.stringify(DB)); return true; } catch (e) { return false; } }
 
   function levelFromXp(xp) { let l = 1; while (l < MAX_LEVEL && xp >= xpForLevel(l + 1)) l++; return l; }
   const owned = it => (!it.custom || it.ownerId === P.id) && P.owned.includes(it.id);
@@ -170,15 +170,17 @@
         if (from === 'screen-world') enterWorld(P);
         else { renderAll(); renderTabs(); showScreen('screen-game'); }
       },
-      commit: (draft, editingId) => {
+      commit: (draft, editingId, keepId) => {
         const existing = P.customDesigns.find(it => it.id === editingId);
-        if (!existing && P.customDesigns.length >= ClothingDesigns.LIMIT) return { error: 'Je kast heeft al 60 eigen ontwerpen. Pas een bestaand ontwerp aan.' };
+        // Kast vol? Dan maakt het ontwerp dat het langst niet gedragen is plaats.
+        const removed = existing ? null : ClothingDesigns.makeRoom(P, [keepId]);
+        if (!existing && !removed && P.customDesigns.length >= ClothingDesigns.LIMIT) return { error: `Je kast heeft al ${ClothingDesigns.LIMIT} eigen ontwerpen. Pas een bestaand ontwerp aan.` };
         const id = existing?.id || `custom_${P.id}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`;
         const it = ClothingDesigns.item(draft, id, P.id);
-        const previous = { customDesigns: P.customDesigns, owned: P.owned, outfit: P.outfit, designDraft: P.designDraft };
+        const previous = { customDesigns: P.customDesigns, owned: P.owned, outfit: P.outfit, designDraft: P.designDraft, designUsed: P.designUsed };
         const dadOutfit = P.parkour?.dadOutfit;
-        P.customDesigns = existing ? P.customDesigns.map(d => d.id === id ? it : d) : [...P.customDesigns, it];
-        P.owned = [...new Set([...P.owned, id])];
+        P.customDesigns = existing ? P.customDesigns.map(d => d.id === id ? it : d) : [...P.customDesigns.filter(d => d !== removed), it];
+        P.owned = [...new Set([...P.owned.filter(i => i !== removed?.id), id])];
         const clean = outfit => Object.fromEntries(Object.entries(outfit).filter(([slot, itemId]) => itemId !== id || slot === it.cat));
         P.outfit = ClothingDesigns.outfitWith(clean(P.outfit), it);
         if (dadOutfit) P.parkour.dadOutfit = clean(dadOutfit);
@@ -188,8 +190,9 @@
           return { error: 'Opslaan is niet gelukt. Je ontwerp staat nog hier. Maak ruimte in je browser en probeer opnieuw.' };
         }
         ClothingDesigns.register(it);
+        if (removed) ClothingDesigns.unregister(removed.id);
         ui.tab = CATEGORIES.find(c => (c.slots || [c.id]).includes(it.cat))?.id || it.cat;
-        return { item: it };
+        return { item: it, removed };
       },
     }, ClothingDesigns.TYPES.some(t => t.id === cat) ? cat : 'top');
   }

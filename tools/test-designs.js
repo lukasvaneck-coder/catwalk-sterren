@@ -46,4 +46,18 @@ const neutralBottom = items.find(i => i.cat === 'bottom' && i.hue === 'zwart');
 const neutralShoes = items.find(i => i.cat === 'shoes' && i.hue === 'wit');
 assert.equal(C.assess({ top: shirt.id, bottom: neutralBottom.id, shoes: neutralShoes.id }, mono, catalog).score, 1);
 assert(Number.isFinite(R.outfitScore(a.outfit, 'school', catalog).speed));
+// Volle kast: het langst niet gedragen ontwerp maakt plaats, gedragen ontwerpen blijven.
+const full = ctx.api.newProfile('Vol', {}, 'hair_lang'), t0 = Date.UTC(2026, 0, 1);
+full.customDesigns = Array.from({ length: D.LIMIT }, (_, i) => D.item({ cat: 'top' }, `custom_${full.id}_${(t0 + i * 1000).toString(36)}abcdefg`, full.id));
+assert.equal(D.LIMIT, 200);
+assert.equal(D.makeRoom(full).id, full.customDesigns[0].id, 'Oldest design should make room first');
+full.outfit.top = full.customDesigns[0].id; D.touch(full, t0 + 9e9);
+assert.equal(full.designUsed[full.customDesigns[0].id], t0 + 9e9);
+full.outfit.top = 'top_tshirt_blauw';
+assert.equal(D.makeRoom(full).id, full.customDesigns[1].id, 'Recently worn design must not be cleaned up');
+full.parkour = { dadOutfit: { top: full.customDesigns[1].id } };
+assert.equal(D.makeRoom(full, [full.customDesigns[2].id]).id, full.customDesigns[3].id, 'Worn by dad or kept designs must stay');
+D.touch(full, t0 + 9e9 + 1); assert(full.designUsed[full.customDesigns[0].id], 'Old use time is remembered');
+full.customDesigns.pop(); assert.equal(D.makeRoom(full), null, 'No cleanup below the limit');
+console.log('Ontwerpen OK: volle kast ruimt het langst niet gedragen ontwerp op.');
 console.log('Ontwerpen OK: migratie, opslag, spelerisolatie, catalogus, begrenzing, jurkwissel, kleurjury en racekleding.');

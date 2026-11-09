@@ -50,7 +50,7 @@ const Designer = (() => {
             <div id="design-sticker-editor"></div>
           </section>
           <section class="design-panel card"><h2>${type.stickers === false ? 3 : 4}. Geef je ontwerp een naam</h2><label class="design-field" for="design-name">Naam op het label<input id="design-name" maxlength="32" value="${esc(draft.name)}" autocomplete="off"></label><p class="design-hint">Je ontwerp komt in je eigen kledingkast. Je kunt het dragen bij de jury en op het raceparkours.</p></section>
-          <section class="design-panel card"><div class="design-library-heading"><h2>Mijn ontwerpen <small>${profile.customDesigns.length}/${D.LIMIT}</small></h2><button class="btn ghost sm" type="button" id="design-new">＋ Nieuw</button></div><div class="design-library">${profile.customDesigns.length ? profile.customDesigns.map(it => `<button class="design-saved${it.id === editingId ? ' selected' : ''}" type="button" data-edit-design="${it.id}" aria-label="${esc(it.name)} aanpassen">${Avatar.thumb(it, profile.look)}<span>${esc(it.name)}</span><small>✎ Aanpassen</small></button>`).join('') : '<p class="design-hint">Hier komen jouw zelfgemaakte kledingstukken te hangen.</p>'}</div></section>
+          <section class="design-panel card"><div class="design-library-heading"><h2>Mijn ontwerpen <small>${profile.customDesigns.length}/${D.LIMIT}</small></h2><button class="btn ghost sm" type="button" id="design-new">＋ Nieuw</button></div>${profile.customDesigns.length >= D.LIMIT ? '<p class="design-hint" id="design-full">Je kast is vol! Maak je iets nieuws, dan ruimen we het ontwerp op dat je het langst niet hebt gedragen.</p>' : ''}<div class="design-library">${profile.customDesigns.length ? [...profile.customDesigns].reverse().map(it => `<button class="design-saved${it.id === editingId ? ' selected' : ''}" type="button" data-edit-design="${it.id}" aria-label="${esc(it.name)} aanpassen">${Avatar.thumb(it, profile.look)}<span>${esc(it.name)}</span><small>✎ Aanpassen</small></button>`).join('') : '<p class="design-hint">Hier komen jouw zelfgemaakte kledingstukken te hangen.</p>'}</div></section>
         </div>
       </div>
       <footer class="design-footer"><p id="design-status" role="status">${editingId ? 'Pas je ontwerp aan, of bewaar een nieuwe versie.' : 'Kies, kleur en versier. Je paspop verandert meteen mee!'}</p><div class="row"><button class="btn ghost sm" id="design-copy" type="button" ${editingId ? '' : 'hidden'}>Bewaar als nieuw</button><button class="btn" id="design-save" type="button">Opslaan & aantrekken ✨</button></div></footer>`;
@@ -118,10 +118,11 @@ const Designer = (() => {
   }
   function commit(copy) {
     draft = D.normalize(draft);
-    const result = callbacks.commit(draft, copy ? null : editingId);
+    const result = callbacks.commit(draft, copy ? null : editingId, editingId);
     if (result.error) { $('#design-status').textContent = result.error; return; }
     editingId = result.item.id; dirty = false; render();
-    $('#design-status').textContent = 'Opgeslagen! Je draagt jouw ontwerp. Je vindt het ook in je kledingkast.';
+    $('#design-status').textContent = 'Opgeslagen! Je draagt jouw ontwerp. Je vindt het ook in je kledingkast.'
+      + (result.removed ? ` Je kast was vol, dus „${result.removed.name}” is opgeruimd.` : '');
     $('#design-save').focus(); Sound.play('pop');
   }
   return { show };
