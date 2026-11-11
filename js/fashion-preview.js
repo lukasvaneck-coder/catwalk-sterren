@@ -13,7 +13,16 @@ const FashionPreview=(()=>{
    }catch(e){host.innerHTML=Avatar.render(profile.look,profile.outfit,{bg:false,items});return;}
   }
   v.host=host;v.profile=profile;v.items=items;v.runway=runway;v.observer?.disconnect();cancelAnimationFrame(v.frame);host.replaceChildren(v.renderer.domElement);host.classList.add('fashion-preview');
-  const resize=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;v.renderer.setSize(w,h);const aspect=w/h,half=Math.max(1.18,.65/aspect);v.camera.left=-half*aspect;v.camera.right=half*aspect;v.camera.top=half;v.camera.bottom=-half;v.camera.updateProjectionMatrix();};v.observer=new ResizeObserver(resize);v.observer.observe(host);resize();
+  const resize=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;v.renderer.setSize(w,h);const aspect=w/h;let half=Math.max(1.18,.65/aspect),cx=0,cy=0;
+    if(host.id==='design-model'){
+      v.camera.position.set(0,.78,5);v.camera.lookAt(0,.78,0);
+      const panel=document.querySelector('#design-workspace'),dock=document.querySelector('.design-dock'),rect=host.getBoundingClientRect(),edge=dock?.getBoundingClientRect().top-rect.top||h-76;
+      let left=12,right=w-12,top=62,bottom=edge-10;
+      if(panel&&!panel.hidden){const b=panel.getBoundingClientRect();if(w>h||w>760)right=b.left-rect.left-16;else bottom=b.top-rect.top-10;}
+      const usableH=Math.max(100,bottom-top),usableW=Math.max(120,right-left);half=Math.max(.95*h/usableH,.55*h/usableW);
+      cx=(1-(left+right)/w)*half*aspect;cy=((top+bottom)/h-1)*half;
+    }
+    v.camera.left=cx-half*aspect;v.camera.right=cx+half*aspect;v.camera.top=cy+half;v.camera.bottom=cy-half;v.camera.updateProjectionMatrix();};v.resize=resize;v.observer=new ResizeObserver(resize);v.observer.observe(host);resize();
   const loop=now=>{if(!host.isConnected)return;v.frame=requestAnimationFrame(loop);if(!host.getClientRects().length||document.hidden||v.lost)return;
    const bg=v.profile.outfit.bg||null;
    if(v.backgroundId!==bg){
@@ -25,5 +34,5 @@ const FashionPreview=(()=>{
  }
  function pause(){for(const v of instances.values()){cancelAnimationFrame(v.frame);v.observer?.disconnect();}}
  function dispose(){pause();for(const v of instances.values()){v.avatar.dispose();v.backgroundTexture?.dispose();v.renderer.dispose();v.renderer.forceContextLoss();}instances.clear();}
- return {mount,pause,dispose,debug:()=>Array.from(instances,([id,v])=>({id,avatar:v.avatar.debug()}))};
+ return {mount,pause,dispose,layout:id=>instances.get(id)?.resize?.(),debug:()=>Array.from(instances,([id,v])=>({id,angle:v.angle,avatar:v.avatar.debug()}))};
 })();

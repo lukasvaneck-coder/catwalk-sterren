@@ -1,6 +1,6 @@
 /* De dorpskaart en voortgang staan los van tekenen en bediening. Coördinaten in wereldpixels. */
 const TownRules = (() => {
-  const WIDTH = 2480, HEIGHT = 1760, CELL = 32, SPEED = 210, VERSION = 2;
+  const SCALE=1.35, WIDTH = 3348, HEIGHT = 2376, CELL = 32, SPEED = 245, VERSION = 3;
   const HOUSES = [
     { id:'keuken', x:1050, y:1160, w:230, h:160, icon:'🍳', name:'Thuiskeuken', sub:'Samen het avondeten maken', color:'#88a67b', zone:'Modeplein' },
     { id:'supermarkt', x:1340, y:1160, w:240, h:160, icon:'🛒', name:'Buurtsuper', sub:'Boodschappen voor thuis', color:'#d9ac62', zone:'Modeplein' },
@@ -16,13 +16,6 @@ const TownRules = (() => {
     { id:'knuffel', x:940, y:1490, w:250, h:210, icon:'🐾', name:'Knuffelhuis', sub:'Vriendjes kiezen & verzorgen', color:'#b8a071', zone:'Wandelpark' },
     { id:'disco', x:1560, y:1450, w:280, h:235, icon:'🪩', name:'Sterrenclub', sub:'Dans op het ritme', color:'#9978b7', zone:'Feestbuurt' },
     { id:'balzaal', x:2150, y:1510, w:350, h:270, icon:'💃', name:'Rozenzaal', sub:'Onthoud de feestelijke dans', color:'#b292b6', zone:'Feestbuurt' },
-  ];
-  const PATHS = [
-    [[180,620],[2280,620]], [[180,620],[180,1110],[1190,1110]],
-    [[1300,620],[1420,620],[1420,1120],[2280,1120],[2280,620]],
-    [[600,1110],[600,1600],[2280,1600],[2280,1120]], [[1420,1120],[1420,1600]],
-    [[180,1110],[180,1600],[600,1600]], [[1420,960],[1920,960],[1920,1120]],
-    ...HOUSES.map(h => h.y<250?[[h.x,h.y],[h.x,h.y+20],[h.x-160,h.y+20],[h.x-160,620]]:[[h.x,h.y],[h.x,h.y<650?620:h.y<1150?1110:1600]]),
   ];
   const POND = { x:1680, y:940, rx:172, ry:152 };
   const START = { x:950, y:710 };
@@ -41,6 +34,18 @@ const TownRules = (() => {
     { id:'button_4', x:310,y:1560,kind:'buttons',icon:'🧵',name:'Gouden knoop bij de fotostudio' },
     { id:'button_5', x:1830,y:1660,kind:'buttons',icon:'🧵',name:'Gouden knoop in de feestbuurt' },
   ];
+  // Expand streets and gardens, while keeping buildings comfortably readable.
+  for(const item of [...HOUSES,...NPCS,...NODES,START,POND]){item.x*=SCALE;item.y*=SCALE;}
+  POND.rx*=SCALE;POND.ry*=SCALE;
+  // Three broad east-west lanes and clear north-south routes, in front of the doors.
+  const PATHS=[[[240,820],[3180,820]],[[240,1660],[3180,1660]],[[240,2230],[3180,2230]],
+    [[240,820],[240,2230]],[[3180,820],[3180,2230]],[[1610,820],[1610,2230]],
+    [[1610,1296],[2600,1296],[2600,1660]],
+    ...HOUSES.map(h=>[[h.x,h.y],[h.x,h.y<900?820:h.y<1700?1660:2230]])];
+  const BRIDGE_Y=960*SCALE,FOUNTAIN={x:1050*SCALE,y:655*SCALE,rx:95*SCALE,ry:40*SCALE};
+  const BENCHES=[[4.6,7.8],[6,8],[12.9,8.3],[19,13.2],[7,12.9]].map(([x,y])=>({x:x*100*SCALE,y:y*100*SCALE,w:100,h:45}));
+  const GARLANDS=[[5,8.8],[12.4,17],[26.4,17.2]];
+  const STREET_OBSTACLES=[...BENCHES,...GARLANDS.flatMap(([x,y])=>[-1,1].map(side=>({x:(x+side*1.65)*100,y:y*100,w:26,h:26})))];
   const QUESTS = [
     { id:'garden', name:'Een dorp vol bloemen', icon:'🌷', who:'Fleur', desc:'Geef de drie bloembakken water. Loop naar een bloembak en pak je gieter!', goals:NODES.filter(n=>n.kind==='garden').map(n=>n.id), stars:2 },
     { id:'ribbons', name:'Lintjes voor het feest', icon:'🎀', who:'Noor', desc:'Breng Noors feestlintjes naar het Naaiatelier, de Sterrenclub en de Rozenzaal. Ga bij elk gebouw naar binnen.', goals:['atelier','disco','balzaal'], stars:2 },
@@ -50,9 +55,10 @@ const TownRules = (() => {
   const finite = v => typeof v === 'number' && Number.isFinite(v);
   function walkable(x,y) {
     if (!finite(x)||!finite(y)||x<48||y<100||x>WIDTH-48||y>HEIGHT-48) return false;
+    if(STREET_OBSTACLES.some(o=>Math.abs(x-o.x)<o.w/2&&Math.abs(y-o.y)<o.h/2))return false;
     if (HOUSES.some(h=>x>h.x-h.w/2-10&&x<h.x+h.w/2+10&&y>h.y-h.h-15&&y<h.y-15)) return false;
-    if (((x-POND.x)/POND.rx)**2+((y-POND.y)/POND.ry)**2<1.08 && Math.abs(y-960)>30) return false;
-    if (((x-1050)/95)**2+((y-655)/40)**2<1) return false;
+    if (((x-POND.x)/POND.rx)**2+((y-POND.y)/POND.ry)**2<1.08 && Math.abs(y-BRIDGE_Y)>30*SCALE) return false;
+    if (((x-FOUNTAIN.x)/FOUNTAIN.rx)**2+((y-FOUNTAIN.y)/FOUNTAIN.ry)**2<1) return false;
     return true;
   }
   const dist = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
@@ -86,12 +92,13 @@ const TownRules = (() => {
   }
   function migrate(p) {
     const old=p.town&&typeof p.town==='object'?p.town:{};
+    const savedPos=old.version===2?{x:old.pos?.x*SCALE,y:old.pos?.y*SCALE}:old.pos;
     const valid=(list,ids)=>[...new Set((Array.isArray(list)?list:[]).filter(id=>ids.includes(id)))];
     const records={};for(const id of ['disco','balzaal']){const r=old.records?.[id];if(r&&finite(r.stars)&&finite(r.score))records[id]={stars:Math.floor(Math.max(0,Math.min(3,r.stars))),score:Math.floor(Math.max(0,Math.min(12,r.score)))};}
     p.town={ version:VERSION, visited:valid(old.visited,HOUSES.map(h=>h.id)), accepted:valid(old.accepted,QUESTS.map(q=>q.id)),
       completed:valid(old.completed,QUESTS.map(q=>q.id)), collected:valid(old.collected,NODES.map(n=>n.id)),
       delivered:valid(old.delivered,['atelier','disco','balzaal']), cared:[...new Set((Array.isArray(old.cared)?old.cared:[]).filter(id=>typeof id==='string'))].slice(0,100), records,
-      pos:old.version===VERSION&&walkable(old.pos?.x,old.pos?.y)?{x:old.pos.x,y:old.pos.y}:{...START} };
+      pos:(old.version===VERSION||old.version===2)&&walkable(savedPos?.x,savedPos?.y)?{x:savedPos.x,y:savedPos.y}:{...START} };
     if(!p.town.accepted.includes('explorer'))p.town.accepted.push('explorer');
     return p.town;
   }
@@ -111,5 +118,5 @@ const TownRules = (() => {
   const danceStars=hits=>hits>=10?3:hits>=6?2:hits>0?1:0;
   function memory(seed=0){return {kind:'balzaal',round:0,index:0,errors:0,phase:'watch',time:0,sequence:Array.from({length:6},(_,i)=>(i*i+3*i+Math.floor(i/2)+seed)%4),finished:false};}
   function memoryPress(s,pad){if(s.finished||s.phase!=='input')return 'wait';if(pad!==s.sequence[s.index]){s.errors++;s.index=0;s.phase='retry';return 'retry';}s.index++;if(s.index===s.round+3){s.round++;s.index=0;if(s.round===4){s.finished=true;return 'finish';}s.phase='watch';s.time=0;return 'round';}return 'ok';}
-  return {WIDTH,HEIGHT,CELL,SPEED,VERSION,HOUSES,PATHS,POND,START,NPCS,NODES,QUESTS,walkable,dist,route,migrate,progress,accept,visit,collect,claim,nextTarget,rhythm,rhythmPress,danceStars,memory,memoryPress};
+  return {SCALE,BRIDGE_Y,FOUNTAIN,BENCHES,GARLANDS,STREET_OBSTACLES,WIDTH,HEIGHT,CELL,SPEED,VERSION,HOUSES,PATHS,POND,START,NPCS,NODES,QUESTS,walkable,dist,route,migrate,progress,accept,visit,collect,claim,nextTarget,rhythm,rhythmPress,danceStars,memory,memoryPress};
 })();
