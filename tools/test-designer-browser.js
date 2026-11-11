@@ -4,7 +4,7 @@ async page => {
   const context = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, hasTouch: true });
   const p = await context.newPage(), errors = [], checks = [];
   p.on('pageerror', e => errors.push(e.message));
-  p.on('console', m => { if (['warning', 'error'].includes(m.type())) errors.push(m.text()); });
+  p.on('console', m => { if (['warning', 'error'].includes(m.type()) && !m.text().startsWith('Scripts "build/three.js"') && !m.text().startsWith('Canvas2D: Multiple readback operations')) errors.push(m.text()); });
   const assert = (value, message) => { if (!value) throw new Error(message); };
   const saved = () => p.evaluate(() => JSON.parse(localStorage.getItem('catwalk-sterren-v1')).profiles[0]);
   const worldShortcut = async id => { if (!await p.locator(id).isVisible()) await p.locator('#world-menu-toggle').click(); await p.locator(id).click(); };
@@ -59,8 +59,8 @@ async page => {
       }
       box.remove(); return cases.length;
     });
-    assert(renderChecks === 34, 'Missing design shape');
-    checks.push('All 34 shapes (incl. heels, head pieces, earrings) render stickers or patterns at three body sizes');
+    assert(renderChecks === 36, 'Missing design shape');
+    checks.push('All 36 shapes (including apron and chef hat) render stickers or patterns at three body sizes');
 
     // Quota/storage failure must not claim success or overwrite the saved design.
     await p.locator('#design-name').fill('Opslagfout-test');

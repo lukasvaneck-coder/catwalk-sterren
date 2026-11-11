@@ -1,4 +1,9 @@
 /* De wereld vult het venster. Routekaart en opdrachten staan achter twee knoppen. */
+.village-3d{position:absolute;inset:0;touch-action:none;overflow:hidden}.village-3d canvas{display:block;width:100%;height:100%}
+.in-world .village-targets{position:absolute;inset:0;transform:none!important;pointer-events:none;width:100%;height:100%}
+.in-world .village-targets button{position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;min-height:44px;padding:0;border:0;background:transparent;box-shadow:none;outline:none;pointer-events:auto;font-size:0;border-radius:12px}
+.in-world .village-targets button:focus-visible{outline:3px solid #a486d1;background:#fff5dc66}
+.in-world .village-targets button>*{display:none!important}
 body.in-world { overflow:hidden; }
 .in-world #app { padding:0; max-width:none; height:100dvh; }
 .in-world #screen-world { position:fixed; inset:0; height:100dvh; gap:0; }

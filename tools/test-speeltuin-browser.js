@@ -19,7 +19,7 @@ async page => {
     await t.locator('#create-done').click();
     await t.waitForFunction(() => Avatar.isReady());
     await t.locator('#world-menu-toggle').click().catch(() => {});
-    await t.locator('#btn-world-speeltuin').click();
+    await t.locator('#btn-world-speeltuin').click();await t.locator('[data-fashion-station=play_springbaan]').click();await t.locator('#speeltuin h1').waitFor();
     assert(await t.locator('#speeltuin h1').isVisible(), 'lobby van de binnenspeeltuin opent vanuit het dorp');
     assert(await t.evaluate(() => [...document.querySelectorAll('.st-game img')].every(i => i.complete && i.naturalWidth > 0)), 'Blender-plaatjes in de lobby laden');
 
@@ -128,12 +128,8 @@ async page => {
     // veeg rustig van de bal in je hand naar de bak; aan het eind even stilhouden = geen extra vaart
     const swipeTo = async which => {
       const pts = await t.evaluate(w => {
-        const s = Speeltuin._state(), B = BallenbakRules, P = SpeeltuinExtra._proj, c = document.querySelector('#st-canvas').getBoundingClientRect();
-        const vw = s && c.width ? c.width : 1, view = { width: Math.max(640, 540 * c.width / c.height), height: Math.max(640, 540 * c.width / c.height) / (c.width / c.height) };
-        const later = { ...s, time: s.time + B.flight(.52) + .45 }, x = w === 'mis' ? 1.5 : B.bakX(later), d = w === 'mis' ? .05 : B.BB.bak.d;
-        const T = P.proj(view, x, d), from = { x: view.width / 2, y: view.height * .93 }, end = { x: from.x + (T.x - from.x) / .9, y: from.y + (T.y - from.y) / .9 };
-        const px = p => ({ x: c.left + p.x / view.width * c.width, y: c.top + p.y / view.height * c.height });
-        return { from: px(from), end: px(end) };
+        const s=Speeltuin._state(),B=BallenbakRules,later={...s,time:s.time+B.flight(.52)+.3},x=w==='mis'?1.5:B.bakX(later),d=w==='mis'?.05:B.BB.bak.d;
+        return {from:Speeltuin3D.project(0,1,1.2),end:Speeltuin3D.project(x*2.6,.45,-d*5)};
       }, which);
       await t.mouse.move(pts.from.x, pts.from.y); await t.mouse.down();
       await t.mouse.move(pts.end.x, pts.end.y, { steps: 6 }); await t.waitForTimeout(160); await t.mouse.up();
@@ -145,8 +141,7 @@ async page => {
     for (let i = 0; i < 3; i++) { await swipeTo('mis'); await t.waitForTimeout(820); }
     assert(await t.evaluate(() => Speeltuin._state().rain > 0 && document.querySelector('#st-jump').disabled), 'drie keer mis: ballenregen en even niet gooien');
     await t.screenshot({ path: 'test-results/speeltuin/ballenregen.png' });
-    await t.evaluate(() => { Speeltuin._state().time = BallenbakRules.BB.duration - .2; });
-    await t.waitForSelector('#st-result .pk-finish', { timeout: 5000 });
+    await t.waitForSelector('#st-result .pk-finish', { timeout: 50000 });
     const afterPit = await profile();
     assert(afterPit.speeltuin.records.ballenbak.best === pit.score && afterPit.speeltuin.parent === 'mama', 'ballenbak: record en keuze voor mama bewaard');
 
@@ -173,14 +168,14 @@ async page => {
     for (const play of ['[data-play="klimrek"][data-mode="klein"]', '[data-play="ballenbak"]']) {
       await t.locator(play).click();
       const phone = await t.evaluate(() => {
-        const c = document.querySelector('#st-canvas').getBoundingClientRect(), last = [...document.querySelectorAll('.st-controls button')].filter(b => !b.hidden && b.offsetParent).pop().getBoundingClientRect();
+        const c = document.querySelector('#st-canvas').getBoundingClientRect(), last = [...document.querySelectorAll('.st-controls button,#st-stick')].filter(b => !b.hidden && b.offsetParent).pop().getBoundingClientRect();
         return { canvas: Math.round(c.height), bottom: Math.round(last.bottom), vh: innerHeight, scroll: document.documentElement.scrollHeight };
       });
       assert(phone.canvas > 250 && phone.bottom <= phone.vh && phone.scroll <= phone.vh + 1, `telefoon: ${play.includes('klimrek') ? 'klimrek' : 'ballenbak'} ${phone.canvas}px hoog, knoppen in beeld`);
       await t.screenshot({ path: `test-results/speeltuin/telefoon-${play.includes('klimrek') ? 'klimrek' : 'ballenbak'}.png` });
       await t.locator('#st-back').click();
     }
-    await t.locator('#st-exit').click();
+    await t.locator('#st-exit').click();await t.locator('#fashion-exit').click();
     assert(await t.evaluate(() => document.body.dataset.screen === 'screen-world'), 'terug naar het dorp');
 
     assert(errors.length === 0, 'geen fouten in de console');

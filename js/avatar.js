@@ -142,7 +142,7 @@ const Avatar = (() => {
   // Stickers worden vóór het stofmasker getekend: ze blijven altijd op de kleding.
   function paintStickers(ctx, d) {
     if (!d.stickers?.length || typeof ClothingDesigns === 'undefined') return;
-    const boxes = { top: [165, 193, 235, 235], bottom: [160, 253, 240, 298], dress: [160, 194, 240, 278], shoes: [158, 368, 187, 383] };
+    const boxes = { apron:[170,210,230,300], top: [165, 193, 235, 235], bottom: [160, 253, 240, 298], dress: [160, 194, 240, 278], shoes: [158, 368, 187, 383] };
     const box = d.cat === 'bottom' && d.shape === 'shorts' ? [163, 250, 237, 264] : boxes[d.cat]; if (!box) return;
     d.stickers.forEach(s => {
       const sticker = ClothingDesigns.STICKERS.find(x => x.id === s.kind); if (!sticker) return;
@@ -329,7 +329,7 @@ const Avatar = (() => {
     drawLayer(ctx, h + 'skin', skin);
     drawLayer(ctx, h + 'eye', eye);
     drawLayer(ctx, h + 'keep', null);
-    if (!o.noHair) drawLayer(ctx, h + 'hair', hairDesign(look));
+    if (!o.noHair) { if(look.hairParts)HairParts.paint(ctx,look,'cap');else drawLayer(ctx, h + 'hair', hairDesign(look)); }
   }
 
   /* ---------- accessoires ---------- */
@@ -367,6 +367,7 @@ const Avatar = (() => {
   function brim(ctx, g, c, rx, ry, dy = 22) { blob(ctx, g.cx, g.top + dy, rx, ry, c); return [g.cx - rx, g.top + dy - ry, g.cx + rx, g.top + dy + ry]; }
 
   const HATS = {
+    chefhat:(ctx,it,g)=>{const x=g.cx,y=g.top;ctx.beginPath();rrect(ctx,x-52,y-6,104,33,9);fab(ctx,it,x-52,y-6,x+52,y+27);for(const [dx,dy,r] of [[-36,-24,29],[0,-35,34],[36,-24,29]]){ctx.beginPath();ellipse(ctx,x+dx,y+dy,r,r);fab(ctx,it,x+dx-r,y+dy-r,x+dx+r,y+dy+r);}return [x-68,y-70,x+68,y+28];},
     butterflyclip: E('🦋', g => g.cx + 54, g => g.top + 42, 45, { tint: 0, rot: .25 }),
     daisyclip: E('🌼', g => g.cx - 54, g => g.top + 42, 38),
     starclips: (ctx, it, g) => { [-1, 1].forEach(s => { starPath(ctx, g.cx + s * 55, g.top + 42, 15); clayFill(ctx, c0(it), g.cx - 70, g.top + 27, g.cx + 70, g.top + 57); }); return [g.cx - 72, g.top + 25, g.cx + 72, g.top + 59]; },
@@ -587,7 +588,8 @@ const Avatar = (() => {
     beard: (ctx, it, g) => { const [mx, my] = g.mouth; blob(ctx, mx, my + 16, 30, 16, c0(it)); blob(ctx, mx - 12, my - 5, 12, 4, c0(it), 0.25); blob(ctx, mx + 12, my - 5, 12, 4, c0(it), -0.25); ctx.save(); ctx.globalAlpha = .85; ctx.fillStyle = '#ff9a9a'; ellipse(ctx, mx, my, 7, 3); ctx.fill(); ctx.restore(); return [mx - 32, my - 12, mx + 32, my + 34]; },
   };
 
-  const ACC = { back: BACK, hat: HATS, glasses: GLASSES, ears: EARS, neck: NECKS, hand: HAND, pet: PETS, mk_eyes: MAKEUP, mk_lips: MAKEUP, mk_blush: MAKEUP, mk_face: MAKEUP };
+  const APRONS={apron:(ctx,it)=>{ctx.strokeStyle=it.c[1]||'#fff1c9';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(179,211);ctx.quadraticCurveTo(173,177,200,177);ctx.quadraticCurveTo(227,177,221,211);ctx.stroke();ctx.beginPath();ctx.moveTo(176,202);ctx.lineTo(224,202);ctx.lineTo(231,249);ctx.lineTo(255,329);ctx.quadraticCurveTo(200,344,145,329);ctx.lineTo(169,249);ctx.closePath();ctx.save();ctx.clip();fab(ctx,it,145,202,255,340);paintStickers(ctx,designOf(it));ctx.restore();ctx.strokeStyle=it.c[1]||'#fff1c9';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(154,250);ctx.lineTo(246,250);ctx.stroke();return [145,177,255,340];}};
+  const ACC = { apron:APRONS, back: BACK, hat: HATS, glasses: GLASSES, ears: EARS, neck: NECKS, hand: HAND, pet: PETS, mk_eyes: MAKEUP, mk_lips: MAKEUP, mk_blush: MAKEUP, mk_face: MAKEUP };
   function drawAcc(ctx, it, geo) {
     if (!it) return null;
     const fn = ACC[it.cat] && ACC[it.cat][it.shape];
@@ -599,11 +601,11 @@ const Avatar = (() => {
   const buildScale = b => 0.88 + Math.max(0, Math.min(100, typeof b === 'number' ? b : 40)) / 100 * 0.3;
   const cache = new Map();
   function compose(look, outfit, opts = {}) {
-    const key = JSON.stringify([look.skin, look.eyes, look.hairColor, look.build, outfit, opts.items ? Object.values(opts.items) : 0,
+    const key = JSON.stringify([look.skin, look.eyes, look.hairColor, look.build, look.hairParts, outfit, opts.items ? Object.values(opts.items) : 0,
       Object.values(outfit).map(id => ITEM_BY_ID[id]).filter(it => it?.custom)]);
     if (cache.has(key)) return cache.get(key);
     const get = slot => outfit[slot] ? ((opts.items && opts.items[outfit[slot]]) || ITEM_BY_ID[outfit[slot]]) : null;
-    const hi = headIndex(get('hair') || ITEM_BY_ID.hair_lang), geo = headGeo(hi);
+    const hi = look.hairParts ? 4 : headIndex(get('hair') || ITEM_BY_ID.hair_lang), geo = headGeo(hi);
     const skin = (SKINS.find(s => s.id === look.skin) || SKINS[1]).c;
     const c = mk(F, CH), ctx = c.getContext('2d');
     ctx.translate(0, TOP);
@@ -613,6 +615,7 @@ const Avatar = (() => {
     if (back && BACK[back.shape]) drawAcc(ctx, back, geo) || null;
     if (bag && BAGS[bag.shape] && BAGS[bag.shape].back) { ctx.save(); BAGS[bag.shape].back(ctx, bag, geo); ctx.restore(); }
     // 2. hoofd (boven de nek), daarna kleding eroverheen zodat kragen de hals bedekken
+    if(look.hairParts)HairParts.paint(ctx,look,'back');
     drawHead(ctx, geo, look);
     // 3. het lijf: schaal voor het postuur
     const sx = buildScale(look.build);
@@ -640,8 +643,9 @@ const Avatar = (() => {
       else drawStep(ctx, { k: 'T0', d: { c: ['#ffffff'] } }, skin);
     }
     ctx.restore();
+    drawAcc(ctx,get('apron'),geo);
     // 4. haar dat over de schouders valt
-    drawLayer(ctx, `H${hi}_low`, hairDesign(look));
+    if(look.hairParts)HairParts.paint(ctx,look,'sides');else drawLayer(ctx, `H${hi}_low`, hairDesign(look));
 
     // 5. voor het lijf
     if (back && BACK_FRONT[back.shape]) { ctx.save(); BACK_FRONT[back.shape](ctx, back, geo); ctx.restore(); }
@@ -661,6 +665,7 @@ const Avatar = (() => {
 
   /* ---------- miniatuur van één item ---------- */
   function drawThumbInto(target, item, look) {
+    if(item.cat==='hair')look={...look,hairParts:null};
     const c = mk(F, CH), ctx = c.getContext('2d');
     ctx.translate(0, TOP);
     let box = null;
@@ -746,5 +751,8 @@ const Avatar = (() => {
     const c = mk(STAGE.w, STAGE.h); fill(c, { kind: 'stage', look, outfit, opts: {}, bg }); return c;
   }
   const headThumb = () => '';
-  return { render, thumb, headThumb, compose, stage, mountAll, light, dark, emoji, blob, isReady: () => ready, FRAME: F, TOP, HEIGHT: CH, STAGE };
+  // The 3D wardrobe shares the exact fabric painter and saved sticker coordinates.
+  function fabric(item){const c=mk(256,256),g=c.getContext('2d'),b=({apron:[145,195,110,145],top:[145,168,110,85],bottom:[140,239,120,140],dress:[130,168,140,170],shoes:[150,350,100,45]})[item.cat]||[0,0,128,128];g.scale(256/b[2],256/b[3]);paintDesign(g,designOf(item),b[2],b[3],b[0],b[1]);g.translate(-b[0],-b[1]);paintStickers(g,designOf(item));return c;}
+  function accessory(item,look,hair){const c=mk(F,CH),g=c.getContext('2d');g.translate(0,TOP);const geo=headGeo(headIndex(hair||ITEM_BY_ID.hair_lang));if(item.cat==='bag'){BAGS[item.shape]?.back?.(g,item,geo);BAGS[item.shape]?.front?.(g,item,geo);}else{drawAcc(g,item,geo);if(item.cat==='back')BACK_FRONT[item.shape]?.(g,item,geo);}return c;}
+  return { render, thumb, headThumb, compose, stage, mountAll, light, dark, emoji, blob, fabric, accessory, isReady: () => ready, FRAME: F, TOP, HEIGHT: CH, STAGE };
 })();

@@ -19,7 +19,7 @@
 
   let DB = { profiles: [] };
   let P = null;                                   // actieve speler
-  const ui = { tab: 'dress', free: false, temp: null, editMode: false, duel: null };
+  const ui = { tab: 'dress', free: false, temp: null, editMode: false };
 
   const TIPS = {
     thema: 'Kijk naar de stickers bij de opdracht en kies kleding met dezelfde stickers.',
@@ -39,6 +39,9 @@
   function migrate(p) {
     ClothingDesigns.restore(p);
     p.look = p.look || {};
+    if(p.look.hairParts)p.look.hairParts=HairParts.normalize(p.look.hairParts);
+    if(p.look.customHair)p.look.customHair=HairParts.normalize(p.look.customHair);
+    p.look.hairCollection=HairParts.collection(p.look);
     if (!FACE_SHAPES.some(f => f.id === p.look.face)) p.look.face = 'ovaal';
     if (typeof p.look.build !== 'number') p.look.build = 40;
     if (!HAIR_COLORS.some(c => c.id === p.look.hairColor)) p.look.hairColor = 'bruin';
@@ -70,7 +73,6 @@
         p.budgetRun=LearningChallenges.startBudget(task);
       }
     }
-    p.duels = p.duels || { played: 0, won: 0 };
   }
   function save() { if (P) ClothingDesigns.touch(P); try { localStorage.setItem(SAVE_KEY, JSON.stringify(DB)); return true; } catch (e) { return false; } }
 
@@ -93,6 +95,9 @@
   /* ---------- schermen & hulpjes ---------- */
   function showScreen(id) {
     closeGameDialogs();
+    if(document.body.dataset.screen==='screen-fashion-room'&&id!=='screen-fashion-room')FashionRoom.hide();
+    if(!['screen-game','screen-designer','screen-create'].includes(id))FashionPreview.pause();
+    if (document.body.dataset.screen === 'screen-kitchen' && id !== 'screen-kitchen') Kitchen.hide();
     if (document.body.dataset.screen === 'screen-parkour' && id !== 'screen-parkour') Parkour.hide();
     if (document.body.dataset.screen === 'screen-speeltuin' && id !== 'screen-speeltuin') Speeltuin.hide();
     if (document.body.dataset.screen === 'screen-town-activities' && id !== 'screen-town-activities') TownActivities.hide();
@@ -101,7 +106,7 @@
   }
   /* ---------- het dorp: vanuit hier loop je naar de huisjes ---------- */
   function enterWorld(p) {
-    P = p; ui.free = false; ui.duel = null;
+    P = p; ui.free = false;
     if (ui.tab === 'bg') ui.tab = 'dress';
     showScreen('screen-world');
     World.show(P, {
@@ -109,32 +114,35 @@
       toast,
       reward: (stars,id) => townReward(stars,id),
       enter: id => {
-        if (id === 'kleedkamer') startGame(P);
-        else if (id === 'winkel') openShop();
+        if (id === 'kleedkamer') openFashionRoom('modehuis');
+        else if (id === 'winkel') openFashionRoom('winkel');
         else if (id === 'puzzel') openColorAtelier();
-        else if (id === 'atelier') openDesigner();
+        else if (id === 'atelier') openFashionRoom('atelier');
+        else if (id === 'keuken' || id === 'supermarkt') {
+          closeOverlay();showScreen('screen-kitchen');
+          Kitchen.show(P,id,{save,exit:()=>enterWorld(P)});
+        }
         else if (id === 'race') openParkour();
         else if (id === 'speeltuin') openSpeeltuin();
         else if (id === 'leshuis') openLearning();
-        else if (id === 'salon') openCreate(P);
+        else if (id === 'salon') openFashionRoom('salon');
         else if (['disco','balzaal','knuffel','foto'].includes(id)) openTownActivity(id);
-        else if (id === 'duel') { if (DB.profiles.length < 2) toast('Voor een duel heb je twee spelers nodig. Maak op het startscherm nog een speler.'); else openDuelSetup(); }
       },
     });
   }
-  function openParkour() {
+  function openParkour(courseId) {
     if (!P) return;
-    if (ui.duel) { toast('Maak eerst het duel af voordat je gaat racen.'); return; }
+    if(!ParkourRules.courses.some(c=>c.id===courseId)){openFashionRoom('race');return;}
     closeOverlay();
     showScreen('screen-parkour');
     Parkour.show(P, {
       save,
-      exit: () => enterWorld(P),
+      exit: () => openFashionRoom('race'),
       reward: (stars, courseId) => {
         const gained = award(P, { stars }, { id: `parkour_${courseId}` }, false);
         return { ...gained, extra: P.level > gained.prevLevel ? levelUpHtml(gained, P) : '' };
       },
-    });
+    },courseId);
   }
   function townReward(stars,id) {
     const gained=award(P,{stars},{id:`town_${id}`},false);
@@ -142,32 +150,87 @@
   }
   function openTownActivity(id) {
     closeOverlay();showScreen('screen-town-activities');
-    TownActivities.show(P,id,{save,exit:()=>enterWorld(P),reward:townReward,photo:bg=>makePhoto(bg)});
+    TownActivities.show(P,id,{save,exit:()=>enterWorld(P),reward:townReward,photo:(bg,data)=>makePhoto(bg,data)});
   }
-  function openSpeeltuin() {
+  function openSpeeltuin(selectedGame) {
     if (!P) return;
-    if (ui.duel) { toast('Maak eerst het duel af voordat je gaat spelen.'); return; }
+    if(!['springbaan','trampoline','klimrek','ballenbak'].includes(selectedGame)){openFashionRoom('play');return;}
     closeOverlay();
     showScreen('screen-speeltuin');
     Speeltuin.show(P, {
       save,
-      exit: () => enterWorld(P),
+      exit: () => openFashionRoom('play'),
       reward: (stars, gameId) => {
         const gained = award(P, { stars }, { id: `speeltuin_${gameId}` }, false);
         return { ...gained, extra: P.level > gained.prevLevel ? levelUpHtml(gained, P) : '' };
       },
-    });
+    },selectedGame);
   }
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 2400); }
+  function openFashionRoom(kind){
+    ui.fashionRoom=kind;closeOverlay();showScreen('screen-fashion-room');
+    FashionRoom.show(P,kind,{action:id=>{
+      if(id==='exit'){ui.fashionRoom=null;enterWorld(P);}
+      else if(id.startsWith('color_')){
+        if(['color_mono','color_buren','color_tegenover'].includes(id))openColorAtelier(id.slice(6));
+        else if(!P.colorMode){toast('Kies eerst een kleurenopdracht.');}
+        else if(id==='color_closet')startGame(P);
+        else {startGame(P);goJury();}
+      }
+      else if(id.startsWith('shop_')){
+        if(id==='shop_fitting')startGame(P);
+        else openShop({shop_clothes:'dress',shop_shoes:'shoes',shop_accessories:'ears',shop_beauty:'mk_eyes'}[id]||null);
+      }
+      else if(id.startsWith('lesson_')){
+        if(id==='lesson_weather'||id==='lesson_budget')openLearning(id==='lesson_weather'?'weather':'budget');
+        else if(!P.learningMode){toast('Kies eerst een weer- of winkelopdracht.');}
+        else if(id==='lesson_closet')startGame(P);
+        else {startGame(P);goJury();}
+      }
+      else if(id.startsWith('play_'))openSpeeltuin(id.slice(5));
+      else if(id.startsWith('race_'))openParkour(id.slice(5));
+      else if(id==='atelier')openFashionRoom('atelier');
+      else if(id==='closet')startGame(P);
+      else if(id==='mirror')openCreate(P);
+      else if(['haircut','haircolor','haircollection'].includes(id)){
+        openCreate(P);
+        if(id==='haircut')$('#hair-create').click();
+        else {const target=$(id==='haircolor'?'#hair-swatches':'#hair-collection');target.scrollIntoView({block:'center'});const button=target.querySelector('button');if(button)button.focus({preventScroll:true});}
+      }
+      else if(id==='jury'){startGame(P);goJury();}
+      else {openDesigner();if(id==='cooking')$('[data-design-theme="cooking"]').click();if(id==='collection')$('.design-library-heading').scrollIntoView({block:'start'});}
+    }});
+  }
   function openDesigner(cat) {
     if (!P) return;
-    if (ui.duel) { toast('Maak eerst het duel af voordat je kleding gaat ontwerpen.'); return; }
     const from = document.body.dataset.screen;
     closeOverlay(); showScreen('screen-designer');
     Designer.show(P, {
       saveDraft: save,
+      remove: id => {
+        const item=P.customDesigns.find(it=>it.id===id);
+        if(!item)return {error:'Dit ontwerp staat niet meer in je collectie.'};
+        const previous={customDesigns:P.customDesigns,owned:P.owned,outfit:P.outfit,designDraft:P.designDraft,designUsed:P.designUsed};
+        const dadOutfit=P.parkour?.dadOutfit;
+        const clean=outfit=>{
+          const next={...outfit};
+          for(const [slot,value] of Object.entries(next))if(value===id){
+            delete next[slot];
+            if(slot==='dress'||slot==='top')next.top='top_tshirt_blauw';
+            if(slot==='dress'||slot==='bottom')next.bottom='bot_jeans';
+            if(slot==='shoes')next.shoes='sh_sneakers';
+          }
+          return next;
+        };
+        P.customDesigns=P.customDesigns.filter(it=>it.id!==id);P.owned=P.owned.filter(value=>value!==id);P.outfit=clean(P.outfit);
+        if(dadOutfit)P.parkour.dadOutfit=clean(dadOutfit);
+        if(P.designDraft?.editingId===id)delete P.designDraft;
+        if(!save()){Object.assign(P,previous);if(dadOutfit)P.parkour.dadOutfit=dadOutfit;return {error:'Verwijderen is niet gelukt. Je ontwerp is behouden. Probeer opnieuw.'};}
+        ClothingDesigns.unregister(id);return {ok:true};
+      },
       exit: () => {
-        if (from === 'screen-world') enterWorld(P);
+        if(from==='screen-fashion-room')openFashionRoom('atelier');
+        else if (from === 'screen-world') enterWorld(P);
         else { renderAll(); renderTabs(); showScreen('screen-game'); }
       },
       commit: (draft, editingId, keepId) => {
@@ -199,7 +262,7 @@
   function openOverlay(html, cls = '') { closeGameDialogs(); const ov = $('#overlay'); ov.innerHTML = `<div class="modal ${cls}">${html}</div>`; ov.hidden = false; ov.scrollTop = 0; return ov; }
   function closeGameDialogs() { document.querySelectorAll('.game-dialog[open]').forEach(dialog => dialog.close()); }
   function closeOverlay() { const ov = $('#overlay'); ov.hidden = true; ov.innerHTML = ''; }
-  const modalLocked = () => !!$('#overlay .jury, #overlay .duel-lock');
+  const modalLocked = () => !!$('#overlay .jury');
 
   function confetti(container, n = 70) {
     const cols = ['#ff5da2', '#7c5cff', '#ffc531', '#3ddcb0', '#5aaeff', '#ff8c42'];
@@ -232,7 +295,6 @@
     const add = h('button', { class: 'profile card new', type: 'button' }, `<div class="plus">+</div><b>Nieuwe speler</b><small>Maak je eigen model</small>`);
     add.addEventListener('click', () => openCreate());
     box.appendChild(add);
-    $('#btn-duel').hidden = DB.profiles.length < 2;
   }
   function confirmDelete(p) {
     openOverlay(`<h2 class="h center">Speler verwijderen?</h2><p class="center">Wil je <b>${esc(p.name)}</b> echt verwijderen? Alle sterren, munten en gekochte spullen gaan dan weg.</p><div class="row center"><button class="btn ghost" id="del-no" type="button">Nee, laat maar</button><button class="btn" id="del-yes" type="button">Ja, verwijderen</button></div>`);
@@ -245,7 +307,7 @@
     ui.createReturn = document.body.dataset.screen;
     ui.editMode = !!profile;
     ui.temp = profile
-      ? { skin: profile.look.skin, eyes: profile.look.eyes, face: profile.look.face, build: profile.look.build, hairColor: profile.look.hairColor, hairStyle: profile.outfit.hair || 'hair_lang', name: profile.name }
+      ? { skin: profile.look.skin, eyes: profile.look.eyes, face: profile.look.face, build: profile.look.build, hairColor: profile.look.hairColor, hairParts: profile.look.hairParts?HairParts.normalize(profile.look.hairParts):null, customHair: profile.look.customHair?HairParts.normalize(profile.look.customHair):null, hairCollection:HairParts.collection(profile.look), activeHairId:profile.look.activeHairId||null, hairStyle: profile.outfit.hair || 'hair_lang', name: profile.name }
       : { skin: 's2', eyes: 'e1', face: 'ovaal', build: 40, hairStyle: 'hair_lang', hairColor: 'bruin', name: '' };
     $('#create-title').textContent = profile ? 'Pas je uiterlijk aan' : 'Maak je model';
     $('#create-done').textContent = profile ? 'Opslaan ✨' : 'Klaar! ✨';
@@ -260,14 +322,57 @@
     const styles = ui.editMode ? ITEMS.filter(i => i.cat === 'hair' && owned(i)) : ITEMS.filter(i => i.cat === 'hair' && i.lvl <= 1);
     const lvl = ui.editMode ? P.level : 1;
     const outfit = ui.editMode ? { ...P.outfit, hair: t.hairStyle } : { hair: t.hairStyle, top: 'top_tshirt_blauw', bottom: 'bot_jeans', shoes: 'sh_sneakers' };
-    $('#create-preview').innerHTML = Avatar.render(t, outfit, { bg: false });
+    if(ui.createReturn==='screen-fashion-room')FashionPreview.mount($('#create-preview'),{look:t,outfit});
+    else $('#create-preview').innerHTML = Avatar.render(t, outfit, { bg: false });
     if (previewOnly) return;
     swatches($('#skin-swatches'), SKINS.map(s => ({ id: s.id, c: s.c, title: 'Huidskleur' })), t.skin, id => { t.skin = id; renderCreate(); });
     swatches($('#eye-swatches'), EYES.map(e => ({ id: e.id, c: e.c, title: e.name })), t.eyes, id => { t.eyes = id; renderCreate(); });
+    $('#hair-custom-status').textContent=t.hairParts?'Voorbeeld: je eigen kapsel. Sla je uiterlijk op om het te dragen.':'';
+    $('#hair-own').hidden=!t.customHair;$('#hair-own').onclick=()=>{t.hairParts=HairParts.normalize(t.customHair);renderCreate();};
+    t.hairCollection=HairParts.collection(t);
+    const editHair=entry=>HairStudio.open(t,outfit,(parts,info)=>{
+      const item={id:info.id||'hair_'+crypto.randomUUID(),name:info.name,parts:{...parts}};
+      const index=t.hairCollection.findIndex(x=>x.id===item.id);
+      if(index<0)t.hairCollection.push(item);else t.hairCollection[index]=item;
+      t.hairParts=parts;t.customHair={...parts};t.activeHairId=item.id;renderCreate();
+    },entry);
+    $('#hair-create').onclick=()=>editHair(null);
+    let library=$('#hair-collection');
+    if(!library){library=document.createElement('div');library.id='hair-collection';$('#hair-styles').before(library);}
+    library.replaceChildren();
+    const title=document.createElement('h3');title.textContent='Mijn kapsels ('+t.hairCollection.length+')';library.append(title);
+    const grid=document.createElement('div');grid.className='hair-collection-grid';library.append(grid);
+    for(const entry of t.hairCollection){
+      const card=document.createElement('div');card.className='hair-collection-card';
+      const wear=document.createElement('button');wear.type='button';wear.className='btn ghost';wear.dataset.hairWear=entry.id;
+      const selected=!!t.hairParts&&(t.activeHairId?t.activeHairId===entry.id:JSON.stringify(HairParts.normalize(t.hairParts))===JSON.stringify(entry.parts));
+      wear.setAttribute('aria-pressed',selected);
+      wear.innerHTML=Avatar.render({...t,hairParts:entry.parts},outfit,{bg:false});
+      const label=document.createElement('span');label.textContent=entry.name;wear.append(label);
+      wear.onclick=()=>{t.hairParts={...entry.parts};t.customHair={...entry.parts};t.activeHairId=entry.id;renderCreate();};
+      const edit=document.createElement('button');edit.type='button';edit.className='btn ghost sm';edit.dataset.hairEdit=entry.id;edit.textContent='✎ Aanpassen';edit.setAttribute('aria-label',entry.name+' aanpassen');edit.onclick=()=>editHair(entry);
+      const remove=document.createElement('button');remove.type='button';remove.className='btn ghost sm';remove.dataset.hairDelete=entry.id;remove.textContent='Verwijderen';remove.setAttribute('aria-label',entry.name+' verwijderen');
+      remove.onclick=()=>{
+        const dialog=document.createElement('dialog');dialog.className='hair-delete-dialog';dialog.setAttribute('aria-labelledby','hair-delete-title');dialog.setAttribute('aria-describedby','hair-delete-message');
+        dialog.innerHTML='<h2 id="hair-delete-title">Kapsel verwijderen?</h2><p id="hair-delete-message"></p><p>Je huidige uiterlijk blijft hetzelfde. Sla daarna je uiterlijk op om deze wijziging te bewaren.</p><div class="row"><button type="button" class="btn ghost" data-hair-delete-cancel>Toch houden</button><button type="button" class="btn" data-hair-delete-confirm>Ja, verwijderen</button></div>';
+        dialog.querySelector('#hair-delete-message').textContent='Weet je zeker dat je „'+entry.name+'” uit je collectie wilt verwijderen?';
+        const close=()=>{dialog.close();dialog.remove();if(remove.isConnected)remove.focus();};
+        dialog.addEventListener('cancel',e=>{e.preventDefault();close();});
+        dialog.querySelector('[data-hair-delete-cancel]').onclick=close;
+        dialog.querySelector('[data-hair-delete-confirm]').onclick=()=>{
+          t.hairCollection=t.hairCollection.filter(item=>item.id!==entry.id);
+          if(t.activeHairId===entry.id)t.activeHairId=null;
+          if(t.customHair&&JSON.stringify(HairParts.normalize(t.customHair))===JSON.stringify(entry.parts))t.customHair=null;
+          close();renderCreate();$('#hair-create').focus();
+        };
+        document.body.append(dialog);dialog.showModal();dialog.querySelector('[data-hair-delete-cancel]').focus();
+      };
+      card.append(wear,edit,remove);grid.append(card);
+    }
     const hs = $('#hair-styles'); hs.innerHTML = '';
     styles.forEach(it => {
-      const b = h('button', { class: 'item' + (it.id === t.hairStyle ? ' selected' : ''), type: 'button' }, Avatar.thumb(it, { ...t, _hair: it.id }) + `<span class="name">${it.name}</span>`);
-      b.onclick = () => { Sound.play('pop'); t.hairStyle = it.id; renderCreate(); };
+      const b = h('button', { class: 'item' + (!t.hairParts && it.id === t.hairStyle ? ' selected' : ''), type: 'button' }, Avatar.thumb(it, { ...t, _hair: it.id }) + `<span class="name">${it.name}</span>`);
+      b.onclick = () => { Sound.play('pop'); t.hairStyle = it.id; t.hairParts=null; renderCreate(); };
       hs.appendChild(b);
     });
     swatches($('#hair-swatches'), HAIR_COLORS.filter(c => c.lvl <= lvl).map(c => ({ id: c.id, c: c.c === 'rainbow' ? HUES.multi.swatch : c.c, title: c.name })), t.hairColor, id => { t.hairColor = id; renderCreate(); });
@@ -283,14 +388,14 @@
 
   /* ---------- kleedkamer ---------- */
   function startGame(p) {
-    P = p; ui.free = false; ui.duel = null;
+    P = p; ui.free = false;
     if (ui.tab === 'bg') ui.tab = 'dress';
     if (!currentTheme()) pickTheme();
     renderAll();
     renderTabs();
     showScreen('screen-game');
   }
-  function renderAll() { renderHUD(); renderChallenge(); renderStage(); renderGrid(); }
+  function renderAll() { renderHUD(); renderChallenge(); renderStage(); renderGrid(); $('#btn-fashion-room').textContent=ui.fashionRoom==='winkel'?'← Sterrenwinkel':P.learningMode?'← Weer & Winkelhuis':P.colorMode?'← Kleurenhuis':'← Modehuis'; }
   // kleurenopdrachten: de gevraagde kleuren worden per keer gekozen
   const WHEEL = ['rood', 'oranje', 'geel', 'groen', 'blauw', 'paars'];
   function ruleColors(rule) {
@@ -306,20 +411,19 @@
     return { ...t, colors: cols, desc: t.desc.replace('{a}', lab(0)).replace('{b}', lab(1)) };
   }
   function currentTheme() {
-    if (ui.duel) return effectiveTheme(THEME_BY_ID[ui.duel.themeId], ui.duel.colors);
     const t = THEME_BY_ID[P.themeId];
     if (!t || (t.lvl > P.level && !(P.colorMode && t.rule===P.colorMode))) return null;
     if (t.rule && !(P.themeColors && P.themeColors.length)) { P.themeColors = ruleColors(t.rule); save(); }
     return effectiveTheme(t, P.themeColors);
   }
   function pickTheme(exclude, maxLevel = P.level) {
-    if (P.learningMode && !ui.duel) {
+    if (P.learningMode) {
       const available=THEMES.filter(t=>t.learning===P.learningMode&&t.lvl<=maxLevel);
       const choices=available.filter(t=>t.id!==exclude);
       if(available.length){const t=rand(choices.length?choices:available);selectLearningTheme(t);return t;}
       P.learningMode=null;
     }
-    if (P.colorMode && !ui.duel) {
+    if (P.colorMode) {
       const rule=P.colorMode, choices=ColorChallenges.palettes(rule,P.owned,ITEM_BY_ID);
       if (choices.length) {
         const t=THEMES.find(t=>t.rule===rule);
@@ -332,7 +436,7 @@
     const avail = THEMES.filter(t => !t.learning && t.lvl <= maxLevel && t.id !== exclude);
     const fresh = avail.filter(t => !P.done[t.id]);
     const t = rand(fresh.length ? fresh : (avail.length ? avail : THEMES));
-    if (!ui.duel) { P.themeId = t.id; P.themeColors = t.rule ? ruleColors(t.rule) : null; save(); }
+    P.themeId = t.id; P.themeColors = t.rule ? ruleColors(t.rule) : null; save();
     return t;
   }
   // de setting hoort bij de opdracht; alleen bij vrij spelen kies je zelf
@@ -379,15 +483,7 @@
     const summaryTheme = ui.free ? null : currentTheme() || pickTheme();
     $('#challenge-emoji').textContent = summaryTheme?.emoji || '🎨';
     $('#challenge-title').textContent = summaryTheme?.name || 'Jouw eigen modeshow';
-    $('#challenge-mode').textContent = ui.duel ? `Beurt van ${P.name}` : ui.free ? 'Vrij spelen' : 'Jouw opdracht';
-    if (ui.duel) {
-      const t = currentTheme();
-      const other = DB.profiles.find(p => p.id === ui.duel.ids[1 - ui.duel.turn]);
-      box.innerHTML = `${themeIcon(t)}<div class="ch-body"><small><span class="duel-banner">⚔️ Duel · beurt van ${esc(P.name)}</span> · 📍 ${SETTING_BY_ID[t.bg].name}</small><b>${t.name}</b><p>${t.desc}</p>${themeTags(t)}${colorLesson(t)}</div><div class="ch-actions"><span class="small">Daarna is ${esc(other.name)}</span><button class="btn ghost sm" id="btn-duel-stop" type="button">✖ Duel stoppen</button></div>`;
-      $('#btn-duel-stop').onclick = () => { Sound.play('klik'); ui.duel = null; renderStart(); showScreen('screen-start'); };
-      $('#btn-jury').textContent = 'Klaar! Naar de jury ✨';
-      return;
-    }
+    $('#challenge-mode').textContent = ui.free ? 'Vrij spelen' : 'Jouw opdracht';
     if (ui.free) {
       box.innerHTML = `<div class="ch-emoji">🎨</div><div class="ch-body"><small>Vrij spelen</small><b>Kleed je aan zoals jij wilt</b><p>Geen jury vandaag, wel een modeshow! Kies bij Setting zelf waar je staat.</p></div><div class="ch-actions"><button class="btn violet sm" id="btn-free" type="button">🏆 Terug naar opdrachten</button></div>`;
     } else {
@@ -406,7 +502,7 @@
   }
 
   function renderStage() {
-    $('#stage').innerHTML = Avatar.render(P.look, outfitForStage());
+    FashionPreview.mount($('#stage'),{look:P.look,outfit:outfitForStage()});
     $('#hud-avatar').innerHTML = Avatar.render(P.look, P.outfit, { head: true });
   }
 
@@ -482,6 +578,7 @@
   const thumbLook = () => ({ ...P.look, _hair: P.outfit.hair });
   function wear(it) {
     const slot = it.cat;
+    if(slot==='hair')P.look.hairParts=null;
     if (P.outfit[slot] === it.id && slot !== 'hair') delete P.outfit[slot];
     else {
       P.outfit[slot] = it.id;
@@ -495,7 +592,7 @@
     if (Math.random() < 0.45 && itemsOf('dress').length) { pick('dress'); delete P.outfit.top; delete P.outfit.bottom; }
     else { delete P.outfit.dress; pick('top'); pick('bottom'); }
     pick('shoes'); pick('hat', .5); pick('glasses', .3); pick('ears', .3); pick('neck', .45); pick('bag', .3); pick('hand', .35); pick('back', .25); pick('pet', .3);
-    pick('mk_eyes', .4); pick('mk_lips', .4); pick('mk_blush', .5); pick('mk_face', .25); pick('hair');
+    pick('mk_eyes', .4); pick('mk_lips', .4); pick('mk_blush', .5); pick('mk_face', .25); pick('hair'); P.look.hairParts=null;
     save(); renderStage(); renderGrid(); refreshLearningChecks();
   }
   function clearOutfit() { P.outfit = { hair: P.outfit.hair }; save(); renderStage(); renderGrid(); refreshLearningChecks(); }
@@ -508,7 +605,7 @@
   }
   function activeBudget() {
     const t=THEME_BY_ID[P?.themeId];
-    return !ui.duel&&P?.learningMode==='budget'&&t?.learning==='budget'?t:null;
+    return P?.learningMode==='budget'&&t?.learning==='budget'?t:null;
   }
   function budgetSummary(t) {
     const run=P.budgetRun;
@@ -516,9 +613,9 @@
     const things=n=>n===1?'ding':'dingen';
     return `<div class="budget-summary"><b>🐷 Je mag nog ${t.budget-run.spent} van de ${t.budget} munten uitgeven</b><p>🛍️ Gekocht: ${run.purchases.length} van de ${t.maxBuys} nieuwe ${things(t.maxBuys)}</p>${run.purchases.length?`<ul>${run.purchases.map(p=>`<li>${esc(ITEM_BY_ID[p.id]?.name||p.id)}: ${p.price} munten</li>`).join('')}</ul>`:'<p>Je hebt nog niks gekocht. Kleren uit je eigen kast zijn gratis!</p>'}<small>Je betaalt met je eigen munten (je hebt er ${P.coins}). Alles wat je koopt telt mee, ook als je het niet aantrekt.</small></div>`;
   }
-  function openLearning() {
-    if(ui.duel){toast('Maak eerst je duel af.');return;}
-    openOverlay(`<h2 class="h">🌦️ Weer & Winkelhuis</h2><p>Kies een opdracht. Kleed je aan en de jury kijkt of het klopt!</p>${['weather','budget'].map(group=>`<h3>${group==='weather'?'🌦️ Wat trek je aan bij dit weer?':'🛍️ Slim winkelen met je munten'}</h3><div class="learning-scenarios">${THEMES.filter(t=>t.learning===group).map(t=>`<button type="button" class="btn ghost learning-scenario" data-lesson="${t.id}" ${P.level<t.lvl?'disabled':''}><b>${t.emoji} ${t.name}</b><small>${group==='budget'?`🪙 ${t.budget} munten · ${t.maxBuys} nieuwe ${t.maxBuys===1?'ding':'dingen'}`:`${t.desc}`}</small><small>${P.level<t.lvl?'Vanaf level '+t.lvl:(P.done[t.id]?'Beste: '+'⭐'.repeat(P.done[t.id]):'Nieuw!')}</small></button>`).join('')}</div>`).join('')}<p class="small">Tip: kijk eerst in je eigen kast. Die kleren zijn gratis!</p><button class="btn ghost" id="learning-close">Terug</button>`);
+  function openLearning(group) {
+    if(!['weather','budget'].includes(group)){openFashionRoom('leshuis');return;}
+    openOverlay(`<h2 class="h">🌦️ Weer & Winkelhuis</h2><p>Kies een opdracht. Kleed je aan en de jury kijkt of het klopt!</p>${[group].map(group=>`<h3>${group==='weather'?'🌦️ Wat trek je aan bij dit weer?':'🛍️ Slim winkelen met je munten'}</h3><div class="learning-scenarios">${THEMES.filter(t=>t.learning===group).map(t=>`<button type="button" class="btn ghost learning-scenario" data-lesson="${t.id}" ${P.level<t.lvl?'disabled':''}><b>${t.emoji} ${t.name}</b><small>${group==='budget'?`🪙 ${t.budget} munten · ${t.maxBuys} nieuwe ${t.maxBuys===1?'ding':'dingen'}`:`${t.desc}`}</small><small>${P.level<t.lvl?'Vanaf level '+t.lvl:(P.done[t.id]?'Beste: '+'⭐'.repeat(P.done[t.id]):'Nieuw!')}</small></button>`).join('')}</div>`).join('')}<p class="small">Tip: kijk eerst in je eigen kast. Die kleren zijn gratis!</p><button class="btn ghost" id="learning-close">Terug</button>`);
     $('#learning-close').onclick=closeOverlay;
     document.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>{
       const t=THEME_BY_ID[b.dataset.lesson];if(t.lvl>P.level)return;
@@ -540,10 +637,10 @@
         <div class="shop-tabs"><button class="tab${filter === 'alles' ? ' active' : ''}" data-f="alles" type="button">Alles (${shopItems().length})</button>${cats.map(c => { const n = (c.slots || [c.id]).reduce((a, s) => a + shopItems(s).length, 0); return n ? `<button class="tab${filter === c.id ? ' active' : ''}" data-f="${c.id}" type="button"><span class="ti">${c.emoji}</span>${c.name} (${n})</button>` : ''; }).join('')}</div>
         ${list.length ? `<div class="shop-grid">${list.map(it => `<button class="item${P.coins < priceOf(it) ? ' poor' : ''}" data-id="${it.id}" type="button" title="${it.name}">${Avatar.thumb(it, thumbLook())}<span class="name">${it.name}</span><span class="price">🪙 ${priceOf(it)}</span></button>`).join('')}</div>` : `<div class="shop-empty">Alles gekocht! Speel een opdracht of haal een hoger level voor nieuwe spullen.</div>`}
         <p class="center small">Munten verdien je bij de jury en met de kleurenopdracht. Kies je kleding zelf en spaar voor wat je écht wilt.</p>
-        <div class="row center"><button class="btn ghost" id="shop-close" type="button">Terug naar de kleedkamer</button></div>`, 'shop');
+        <div class="row center"><button class="btn ghost" id="shop-close" type="button">${document.body.dataset.screen==='screen-fashion-room'?'Terug naar de winkel':'Terug naar de kleedkamer'}</button></div>`, 'shop');
       $('#shop-close').onclick = () => { closeOverlay(); renderAll(); };
       document.querySelectorAll('.shop-tabs .tab').forEach(b => { b.onclick = () => { Sound.play('klik'); filter = b.dataset.f; draw(); }; });
-      document.querySelectorAll('.shop-grid .item').forEach(b => { b.onclick = () => buyFlow(ITEM_BY_ID[b.dataset.id], draw); });
+      document.querySelectorAll('.shop-grid .item').forEach(b => { b.onclick = () => {const item=ITEM_BY_ID[b.dataset.id];if(document.body.dataset.screen==='screen-fashion-room'&&ui.fashionRoom==='winkel'){closeOverlay();FashionRoom.visit('shop_checkout',()=>buyFlow(item,draw));}else buyFlow(item,draw);}; });
     };
     draw();
   }
@@ -568,7 +665,8 @@
     $('#buy-cancel').onclick = () => back();
     document.querySelectorAll('#answers .btn').forEach(b => {
       b.onclick = async () => {
-        const v = +b.dataset.v, ok = v === rest;
+        const v = +b.dataset.v, ok = v === rest, purchasePanel=$('#buy-feedback');
+        $('#buy-cancel').disabled=true;
         document.querySelectorAll('#answers .btn').forEach(x => { x.disabled = true; x.classList.add(+x.dataset.v === rest ? 'right' : 'wrong'); });
         $('#sum-answer').textContent = rest;
         Sound.play(ok ? 'ster' : 'fout');
@@ -580,6 +678,7 @@
         }
         save();
         await wait(1300);
+        if(!purchasePanel.isConnected)return;
         Sound.play('tada');
         toast(`${it.name} is van jou! Je vindt hem in de kast.`);
         back();
@@ -690,7 +789,6 @@
   }
 
   function goJury() {
-    if (ui.duel) return duelTurnDone();
     if (ui.free) return fashionShow();
     const theme = currentTheme() || pickTheme();
     const res = evaluate(P.outfit, theme);
@@ -700,6 +798,7 @@
       <h2 class="h center" id="jury-title">De jury kijkt… 👀</h2>
       <div class="judges">${JUDGES.map(j => `<div class="judge"><div class="j-emoji">${j.emoji}</div><b>${j.name}</b><small>${j.title}</small><div class="score">–</div><p class="comment"></p></div>`).join('')}</div>
       <div class="result" id="result" hidden></div>`, 'jury');
+    const runway=ov.querySelector('.runway');runway.innerHTML='<div id="jury-model-3d"></div>';FashionPreview.mount($('#jury-model-3d'),P,{runway:true});
     const cards = [...ov.querySelectorAll('.judge')];
     let t = 1500;
     res.judges.forEach((r, i) => {
@@ -742,6 +841,7 @@
       <h2 class="h center">👏 Wat een show, ${esc(P.name)}! 👏</h2>
       <p class="center">Het publiek juicht en de camera's flitsen!</p>
       <div class="row center"><button class="btn ghost" id="show-photo" type="button">📸 Foto maken</button><button class="btn big" id="show-close" type="button">Dankjewel! 💖</button></div>`, 'show');
+    const runway=ov.querySelector('.runway');runway.innerHTML='<div id="jury-model-3d"></div>';FashionPreview.mount($('#jury-model-3d'),P,{runway:true});
     confetti(ov, 90);
     Sound.play('applaus'); setTimeout(() => Sound.play('tada'), 900);
     $('#show-close').onclick = closeOverlay;
@@ -749,76 +849,6 @@
   }
 
   /* ---------- bonusvraag van Madame Fleur over jouw eigen outfit ---------- */
-  /* ---------- duel: twee spelers, één opdracht ---------- */
-  function openDuelSetup() {
-    Sound.play('klik');
-    const picked = [];
-    const draw = () => {
-      openOverlay(`
-        <h2 class="h center">⚔️ Wie doen er mee?</h2>
-        <p class="center">Kies twee spelers. Jullie krijgen dezelfde opdracht en kleden je om de beurt aan. Daarna kijkt de jury naar allebei!</p>
-        <div class="pick-players">${DB.profiles.map(p => { const i = picked.indexOf(p.id); return `<div class="profile card${i >= 0 ? ' picked' : ''}" data-id="${p.id}" role="button" tabindex="0">${i >= 0 ? `<span class="badge">Speler ${i + 1}</span>` : ''}<div class="pav">${Avatar.render(p.look, p.outfit, { bg: false })}</div><b>${esc(p.name)}</b><small>Level ${p.level}</small></div>`; }).join('')}</div>
-        <div class="row center"><button class="btn ghost" id="duel-cancel" type="button">Terug</button><button class="btn big violet" id="duel-go" type="button" ${picked.length === 2 ? '' : 'disabled'}>Start het duel! ⚔️</button></div>`);
-      $('#duel-cancel').onclick = closeOverlay;
-      $('#duel-go').onclick = () => { if (picked.length === 2) startDuel(picked[0], picked[1]); };
-      document.querySelectorAll('.pick-players .profile').forEach(c => {
-        c.onclick = () => { Sound.play('pop'); const id = c.dataset.id; const i = picked.indexOf(id); if (i >= 0) picked.splice(i, 1); else if (picked.length < 2) picked.push(id); draw(); };
-      });
-    };
-    draw();
-  }
-  function startDuel(idA, idB) {
-    const a = DB.profiles.find(p => p.id === idA), b = DB.profiles.find(p => p.id === idB);
-    P = a; ui.free = false; if (ui.tab === 'bg') ui.tab = 'dress';
-    const maxLevel = Math.min(a.level, b.level);
-    ui.duel = { ids: [idA, idB], themeId: null, colors: null, turn: 0, results: [] };
-    const chosen = pickTheme(null, maxLevel);
-    ui.duel.themeId = chosen.id;
-    ui.duel.colors = chosen.rule ? ruleColors(chosen.rule) : null;
-    closeOverlay();
-    renderAll(); renderTabs();
-    showScreen('screen-game');
-    const t = currentTheme();
-    openOverlay(`<div class="handover"><div class="pav">${Avatar.render(a.look, a.outfit, { bg: false })}</div><h2 class="h">${esc(a.name)} begint!</h2><p>De opdracht is <b>${t.emoji} ${t.name}</b>. ${esc(b.name)} mag even niet kijken. 🙈</p><button class="btn big" id="ho-ok" type="button">Ik ben klaar om te beginnen!</button></div>`, 'duel-lock');
-    $('#ho-ok').onclick = closeOverlay;
-  }
-  function duelTurnDone() {
-    const theme = currentTheme();
-    const res = evaluate(P.outfit, theme);
-    ui.duel.results.push({ id: P.id, res, look: { ...P.look }, outfit: { ...P.outfit } });
-    if (ui.duel.turn === 0) {
-      ui.duel.turn = 1;
-      const b = DB.profiles.find(p => p.id === ui.duel.ids[1]);
-      P = b;
-      renderAll();
-      Sound.play('tada');
-      openOverlay(`<div class="handover"><div class="pav">${Avatar.render(b.look, b.outfit, { bg: false })}</div><h2 class="h">Geef de tablet aan ${esc(b.name)}! 🤲</h2><p>Zelfde opdracht: <b>${theme.emoji} ${theme.name}</b>. Kleed je aan en druk op Klaar.</p><button class="btn big" id="ho-ok" type="button">Ik ben ${esc(b.name)}, ik ben er!</button></div>`, 'duel-lock');
-      $('#ho-ok').onclick = closeOverlay;
-      return;
-    }
-    duelResult(theme);
-  }
-  function duelResult(theme) {
-    const [ra, rb] = ui.duel.results;
-    const pa = DB.profiles.find(p => p.id === ra.id), pb = DB.profiles.find(p => p.id === rb.id);
-    const ga = award(pa, ra.res, theme), gb = award(pb, rb.res, theme);
-    let winner = null;
-    if (ra.res.total > rb.res.total) winner = pa; else if (rb.res.total > ra.res.total) winner = pb;
-    if (winner) { winner.stars += DUEL_WIN_BONUS.stars; winner.coins += DUEL_WIN_BONUS.coins; winner.duels.won++; }
-    pa.duels.played++; pb.duels.played++;
-    save();
-    const col = (p, r, g) => `<div class="duel-col${winner === p ? ' winner' : ''}">${winner === p ? '<span class="crown">👑</span>' : ''}<div class="pav">${Avatar.render(r.look, r.outfit, { expr: winner === p || !winner ? 'grin' : 'smile', bg: false })}</div><b>${esc(p.name)}</b><div class="score">${r.res.total}</div>${starsHtml(r.res.stars)}<div class="gain">+${g.xp} XP · +${g.coins} 🪙${winner === p ? ` · winnaar +${DUEL_WIN_BONUS.stars} ⭐ +${DUEL_WIN_BONUS.coins} 🪙` : ''}</div><p class="small">${r.res.judges[1].comment}</p>${p.level > g.prevLevel ? `<p class="newtheme">🎊 Level ${p.level}! ${g.gifts.length} cadeautje${g.gifts.length === 1 ? '' : 's'} in de kast.</p>` : ''}</div>`;
-    const ov = openOverlay(`
-      <h2 class="h center">${winner ? `🏆 ${esc(winner.name)} wint het duel!` : '🤝 Gelijkspel! Allebei even goed!'}</h2>
-      <p class="center">Opdracht: ${theme.emoji} ${theme.name}</p>
-      <div class="duel-cols">${col(pa, ra, ga)}${col(pb, rb, gb)}</div>
-      <div class="row center wrap"><button class="btn ghost" id="duel-stop" type="button">Stoppen</button><button class="btn big violet" id="duel-again" type="button">🔁 Nog een duel!</button></div>`, 'duel-lock');
-    confetti(ov, 90);
-    Sound.play('applaus'); setTimeout(() => Sound.play('tada'), 900);
-    $('#duel-stop').onclick = () => { closeOverlay(); ui.duel = null; renderStart(); showScreen('screen-start'); };
-    $('#duel-again').onclick = () => { closeOverlay(); startDuel(pa.id, pb.id); };
-  }
-
   /* ---------- kleurenopdracht ---------- */
   // kleurenwiel; de gemarkeerde kleuren krijgen een rand en springen iets naar buiten
   const wheelSvg = (marks, extra = '') => {
@@ -826,21 +856,20 @@
     const seg = (i, hue) => { const a0 = (i * 60 - 90 - 30) * Math.PI / 180, a1 = (i * 60 - 90 + 30) * Math.PI / 180; const R = 120, r = 46; const p = (ang, rad) => `${(150 + Math.cos(ang) * rad).toFixed(1)} ${(150 + Math.sin(ang) * rad).toFixed(1)}`; const on = marked.includes(hue); const mid = (i * 60 - 90) * Math.PI / 180; const tr = on ? ` transform="translate(${(Math.cos(mid) * 8).toFixed(1)} ${(Math.sin(mid) * 8).toFixed(1)})"` : ''; return `<path class="seg${on ? ' ask' : ''}" data-hue="${hue}"${tr} d="M${p(a0, r)} L${p(a0, R)} A${R} ${R} 0 0 1 ${p(a1, R)} L${p(a1, r)} A${r} ${r} 0 0 0 ${p(a0, r)} Z" fill="${HUES[hue].swatch}" stroke="#fff" stroke-width="3" opacity="${marked.length && !on ? .45 : 1}"/>`; };
     return `<svg class="wheel" viewBox="0 0 300 300" aria-hidden="true">${WHEEL.map((hh, i) => seg(i, hh)).join('')}<circle cx="150" cy="150" r="40" fill="var(--surface)"/><text x="150" y="158" text-anchor="middle" font-size="26">🎨</text>${extra}</svg>`;
   };
-  function openColorAtelier() {
-    if (ui.duel) { toast('Maak eerst je duel af.'); return; }
+  function openColorAtelier(selectedRule) {
+    if(!['mono','buren','tegenover'].includes(selectedRule)){openFashionRoom('kleurenhuis');return;}
     const modes=[['mono','Eén kleurfamilie'],['buren','Buurkleuren'],['tegenover','Kleuren die knallen']];
-    openOverlay('<h2 class="h">🎨 Kleuratelier van de jury</h2><p>Madame Fleur geeft je een kleurdoel. Jij kleedt je eigen model aan en laat de jury kijken!</p><div class="row wrap">'+modes.map(([rule,label])=>'<button class="btn" data-color-rule="'+rule+'" '+(ColorChallenges.palettes(rule,P.owned,ITEM_BY_ID).length?'':'disabled')+'>'+label+'</button>').join('')+'</div><p class="small">Grijze opdrachten worden beschikbaar zodra je passende kleding in je kast hebt. Bij iedere opdracht krijg je een kort kleurenlesje.</p><button class="btn ghost" id="colors-close">Terug</button>');
+    openOverlay('<h2 class="h">🎨 Kleuratelier van de jury</h2><p>Madame Fleur geeft je een kleurdoel. Jij kleedt je eigen model aan en laat de jury kijken!</p><div class="row wrap">'+modes.filter(([rule])=>rule===selectedRule).map(([rule,label])=>'<button class="btn" data-color-rule="'+rule+'" '+(ColorChallenges.palettes(rule,P.owned,ITEM_BY_ID).length?'':'disabled')+'>'+label+'</button>').join('')+'</div><p class="small">Grijze opdrachten worden beschikbaar zodra je passende kleding in je kast hebt. Bij iedere opdracht krijg je een kort kleurenlesje.</p><button class="btn ghost" id="colors-close">Terug</button>');
     $('#colors-close').onclick=closeOverlay;
     document.querySelectorAll('[data-color-rule]').forEach(b=>b.onclick=()=>{
-      P.learningMode=null; P.budgetRun=null; P.colorMode=b.dataset.colorRule; pickTheme(); closeOverlay(); startGame(P);
+      P.learningMode=null; P.budgetRun=null;const rule=b.dataset.colorRule;if(P.colorMode!==rule||currentTheme()?.rule!==rule){P.colorMode=rule;pickTheme();}closeOverlay();startGame(P);
     });
   }
 
   /* ---------- foto ---------- */
-  function makePhoto(bg = currentBg()) {
-    const c = Avatar.stage(P.look, P.outfit, bg);
-    let data = '';
-    try { data = c.toDataURL('image/png'); } catch (e) { data = ''; }
+  function makePhoto(bg = currentBg(), renderedPhoto = null) {
+    let data = renderedPhoto || '';
+    if(!data)try { data = Avatar.stage(P.look, P.outfit, bg).toDataURL('image/png'); } catch (e) { data = ''; }
     if (!data) { toast('De foto kan alleen opgeslagen worden als het spel via een website draait (niet vanaf een los bestand).'); return; }
     const fname = `catwalk-${P.name.replace(/[^\w-]+/g, '_')}.png`;
     openOverlay(`<h2 class="h center">📸 Jouw foto</h2><div class="photo"><img src="${data}" alt="Foto van het model van ${esc(P.name)}"></div><p class="center small">Op een tablet: houd de foto lang ingedrukt om hem op te slaan.</p><div class="row center"><button class="btn ghost" id="photo-close" type="button">Sluiten</button><a class="btn" id="photo-dl" href="${data}" download="${fname}">⬇️ Opslaan</a></div>`, 'photo-modal');
@@ -904,6 +933,7 @@
     document.querySelectorAll('[data-settings]').forEach(b=>b.onclick=openSettings);
     $('#btn-learning').onclick=openLearning;
     $('#btn-world-learning').onclick=openLearning;
+    $('#btn-fashion-room').onclick=()=>{openFashionRoom(ui.fashionRoom==='winkel'?'winkel':P.learningMode?'leshuis':P.colorMode?'kleurenhuis':'modehuis');};
     $('#btn-world-designer').onclick = () => openDesigner();
     $('#btn-designer').onclick = () => openDesigner();
     $('#btn-world-parkour').onclick = openParkour;
@@ -912,22 +942,21 @@
     renderSoundButton();
     $('#btn-sound').onclick = () => { Sound.toggle(); renderSoundButton(); };
     $('#btn-next').onclick = showNextLevel;
-    $('#btn-shop').onclick = () => { Sound.play('klik'); openShop(); };
+    $('#btn-shop').onclick = () => { Sound.play('klik'); openFashionRoom('winkel'); };
     $('#btn-puzzle').onclick = openColorAtelier;
-    $('#btn-duel').onclick = openDuelSetup;
     $('#create-done').onclick = () => {
       const name = $('#name-input').value.trim().slice(0, 16) || 'Ster';
-      const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor };
-      if (ui.editMode) { P.name = name; P.look = look; P.outfit.hair = ui.temp.hairStyle; save(); if(ui.createReturn==='screen-world')enterWorld(P);else startGame(P); }
+      const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor, hairParts:ui.temp.hairParts?HairParts.normalize(ui.temp.hairParts):null, customHair:ui.temp.customHair?HairParts.normalize(ui.temp.customHair):null, hairCollection:HairParts.collection(ui.temp), activeHairId:ui.temp.activeHairId||null };
+      if (ui.editMode) { const previous={name:P.name,look:P.look,hair:P.outfit.hair};P.name = name; P.look = look; P.outfit.hair = ui.temp.hairStyle; if(!save()){P.name=previous.name;P.look=previous.look;P.outfit.hair=previous.hair;toast('Opslaan is niet gelukt. Je wijzigingen staan nog in het voorbeeld.');return;} if(ui.createReturn==='screen-fashion-room')openFashionRoom(ui.fashionRoom||'modehuis');else if(ui.createReturn==='screen-world')enterWorld(P);else startGame(P); }
       else { const p = newProfile(name, look, ui.temp.hairStyle); DB.profiles.push(p); save(); enterWorld(p); }
     };
-    $('#create-cancel').onclick = () => { if (ui.editMode) {if(ui.createReturn==='screen-world')enterWorld(P);else startGame(P);} else { renderStart(); showScreen('screen-start'); } };
+    $('#create-cancel').onclick = () => { if (ui.editMode) {if(ui.createReturn==='screen-fashion-room')openFashionRoom(ui.fashionRoom||'modehuis');else if(ui.createReturn==='screen-world')enterWorld(P);else startGame(P);} else { renderStart(); showScreen('screen-start'); } };
     $('#name-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('#create-done').click(); });
     $('#build-range').addEventListener('input', e => { ui.temp.build = +e.target.value; renderCreate(true); });
-    $('#hud-profile').onclick = () => { ui.duel = null; renderStart(); showScreen('screen-start'); };
-    $('#btn-world').onclick = () => { if (ui.duel) { toast('Maak eerst het duel af, of stop het bij de opdracht.'); return; } Sound.play('klik'); enterWorld(P); };
+    $('#hud-profile').onclick = () => { renderStart(); showScreen('screen-start'); };
+    $('#btn-world').onclick=()=>{Sound.play('klik');enterWorld(P);};
+    $('#btn-look').onclick=()=>openCreate(P);
     $('#btn-world-players').onclick = () => { renderStart(); showScreen('screen-start'); };
-    $('#btn-look').onclick = () => { if (ui.duel) { toast('Tijdens een duel kun je je uiterlijk niet aanpassen.'); return; } openCreate(P); };
     $('#btn-random').onclick = () => { Sound.play('tada'); randomOutfit(); };
     $('#btn-clear').onclick = () => { Sound.play('klik'); clearOutfit(); };
     $('#btn-photo').onclick = () => { Sound.play('klik'); makePhoto(); };

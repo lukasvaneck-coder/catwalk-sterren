@@ -52,3 +52,39 @@ body[data-screen="screen-town-activities"] #app { height:100dvh; min-height:0; p
 }
 @media(max-height:470px) and (orientation:landscape){.activity-layout{grid-template-columns:1fr 1.2fr;grid-template-rows:minmax(0,1fr)}.activity-header .eyebrow{display:none}.activity-panel{padding:12px}.activity-pads{grid-template-columns:repeat(4,1fr);gap:6px}.activity-pad{min-height:66px;padding:8px 2px;font-size:28px}}
 @media(prefers-reduced-motion:reduce){.activity-hop{animation:none}.activity-cue{--beat-scale:1!important} }
+
+/* The playable 3D view remains visible beside the compact touch controls. */
+.activity-3d .activity-scene { touch-action:none; background-image:none!important; }
+.activity-3d .activity-scene > canvas { display:block; width:100%; height:100%; }
+.activity-3d #activity-model,.activity-3d .activity-room-sign { display:none; }
+#activity-walk-status { position:absolute; bottom:6px; left:10px; right:10px; margin:0; text-align:center; font-size:12px; background:#fff8e8ed; border-radius:14px; padding:7px; pointer-events:none; }
+.activity-3d .activity-cue { top:10px; left:auto; right:12px; transform:scale(var(--beat-scale,1)); width:72px; height:72px; font-size:27px; border-width:4px; pointer-events:none; }
+.activity-3d .activity-cue small {font-size:9px;}
+.activity-3d .activity-panel { padding:16px; }
+@media(max-width:760px){
+ .activity-3d .activity-layout {grid-template-rows:minmax(190px,1fr) minmax(0,.65fr);}
+ .activity-3d .activity-panel {padding:10px;}
+ .activity-3d .activity-panel>.eyebrow,.activity-3d .activity-example {display:none;}
+ .activity-3d .activity-field {margin:5px 0;gap:3px;}
+ .activity-3d .activity-field select {padding:8px;}
+ .activity-3d .activity-care {flex-direction:row;gap:5px;margin:8px 0;}
+ .activity-3d .activity-care .btn {flex:1;padding:9px 4px;font-size:11px;min-height:44px;}
+ .activity-3d .activity-pad {min-height:60px;padding:5px 2px;}
+ #activity-walk-status {font-size:10px;padding:5px;}
+}
+@media(max-height:470px) and (orientation:landscape){
+ .activity-3d .activity-layout {grid-template-columns:1.2fr 1fr;grid-template-rows:minmax(0,1fr);}
+ .activity-3d .activity-header .h {font-size:18px;}
+}
+
+.activity-photo-poses {display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.activity-photo-poses [aria-pressed="true"] {background:var(--lilac);border-color:var(--primary)}
+
+@media(max-width:760px){
+ #town-activities[data-place="foto"] .activity-layout {grid-template-rows:minmax(190px,1fr) minmax(215px,.75fr);}
+ #town-activities[data-place="foto"] .activity-panel>h2,#town-activities[data-place="foto"] .activity-panel>p {display:none;}
+ #town-activities[data-place="foto"] .activity-photo-choices {margin:0 0 6px;gap:6px;}
+ #town-activities[data-place="foto"] .activity-photo-poses {flex-wrap:nowrap;margin:6px 0;}
+ #town-activities[data-place="foto"] .activity-photo-poses button {flex:1;padding:8px 3px;font-size:11px;min-height:44px;}
+ #town-activities[data-place="foto"] #activity-photo {width:100%;min-height:44px;padding:8px;}
+}
+@media(max-height:470px) and (orientation:landscape){#town-activities[data-place="foto"] .activity-layout{grid-template-columns:1.2fr 1fr;grid-template-rows:minmax(0,1fr)}}

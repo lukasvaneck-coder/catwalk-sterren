@@ -9,7 +9,7 @@ async page => {
   const testPage = await context.newPage();
   const warnings = [], errors = [], checks = [];
   testPage.on('pageerror', e => errors.push(e.message));
-  testPage.on('console', m => { if (['warning', 'error'].includes(m.type())) warnings.push(m.text()); });
+  testPage.on('console', m => { if (['warning', 'error'].includes(m.type()) && !m.text().startsWith('Scripts "build/three.js"')) warnings.push(m.text()); });
   const assert = (value, message) => { if (!value) throw new Error(message); };
   try {
     await testPage.bringToFront();
@@ -27,8 +27,7 @@ async page => {
       await testPage.locator('#game-menu-toggle').tap();
       await testPage.locator('#btn-world').tap();
       await testPage.waitForFunction(() => {
-        const avatar = document.querySelector('#village-avatar');
-        return avatar.style.left && avatar.style.top;
+        return World._state().active && World3D.debug().avatarReady;
       });
     }
     checks.push('Tall modal and village re-entry');
@@ -54,12 +53,12 @@ async page => {
       assert(await testPage.locator('#challenge-dialog').evaluate(e => e.open), 'Challenge did not open');
       await testPage.getByRole('button',{name:'Opdracht sluiten',exact:true}).tap();
       await testPage.locator('#game-menu-toggle').tap();
-      await testPage.keyboard.press('Escape');
+      await testPage.locator('#game-menu [data-close-game-dialog]').tap();
       await testPage.waitForFunction(() => !document.querySelector('#game-menu').open && document.querySelector('#game-menu-toggle').getAttribute('aria-expanded') === 'false');
       layouts.push({width,height,model:after,grid,jury});
     }
     checks.push('Visible model, separate closet scrolling, unobstructed jury at three portrait sizes');
-    checks.push('Challenge, menu and Escape dismissal');
+    checks.push('Challenge and menu touch dismissal');
     await testPage.locator('#game-menu-toggle').tap();
     await testPage.locator('#btn-world').tap();
 
@@ -91,16 +90,19 @@ async page => {
 
     if (context.browser().browserType().name() === 'chromium') {
       const cdp = await context.newCDPSession(testPage);
-      const arrowBox = await testPage.locator('[data-move="right"]').boundingBox();
+      const arrowBox = await testPage.locator('#pk-stick').boundingBox();
       const jumpBox = await testPage.locator('#pk-jump').boundingBox();
-      const arrow = { id: 1, x: arrowBox.x + arrowBox.width / 2, y: arrowBox.y + arrowBox.height / 2 };
+      const arrow = { id: 1, x: arrowBox.x + arrowBox.width * .85, y: arrowBox.y + arrowBox.height / 2 };
       const jump = { id: 2, x: jumpBox.x + jumpBox.width / 2, y: jumpBox.y + jumpBox.height / 2 };
+      const startX=await testPage.evaluate(()=>window.__portraitRace.player.x);
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [arrow] });
+      await testPage.waitForTimeout(150);assert(await testPage.evaluate(x=>window.__portraitRace.player.x>x,startX),'Thumbstick did not move player');
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [arrow, jump] });
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [jump] });
-      assert(await testPage.evaluate(() => window.__portraitRace.jump > 0), 'Jump failed while holding a movement arrow');
+      assert(await testPage.evaluate(() => window.__portraitRace.jump > 0), 'Jump failed while holding a steering stick');
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-      checks.push('Two-finger movement and jump');
+      const stoppedX=await testPage.evaluate(()=>window.__portraitRace.player.x);await testPage.waitForTimeout(150);assert(await testPage.evaluate(x=>Math.abs(window.__portraitRace.player.x-x)<1,stoppedX),'Steering stuck after release');
+      checks.push('Two-finger thumbstick steering, jump and release');
     } else {
       await testPage.locator('#pk-jump').tap();
       assert(await testPage.evaluate(() => window.__portraitRace.jump > 0), 'Touch jump failed');

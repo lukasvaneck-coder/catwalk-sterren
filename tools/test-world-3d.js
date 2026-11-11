@@ -1,0 +1,18 @@
+async page=>{
+ const ctx=await page.context().browser().newContext({viewport:{width:375,height:812},isMobile:true,hasTouch:true}),p=await ctx.newPage(),errors=[];
+ p.on('pageerror',e=>errors.push(e.message));const assert=(ok,message)=>{if(!ok)throw Error(message);};
+ try{
+  await p.goto('http://127.0.0.1:4173');await p.locator('#profiles .new').tap();await p.locator('#name-input').fill('3D dorp');await p.locator('#create-done').tap();await p.waitForFunction(()=>World3D.debug().avatarReady);
+  for(const [width,height] of [[320,568],[375,812],[412,915],[667,375],[1280,800]]){await p.setViewportSize({width,height});await p.waitForTimeout(250);const point=await p.evaluate(()=>{const s=World._state();return World3D.project(s.pos.x,s.pos.y,1.4);}),bar=await p.locator('.world-bottom').boundingBox();assert(point.y>55&&point.y<bar.y,'Doll obscured at '+width);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Overflow');await p.screenshot({path:`test-results/village3d-${width}.png`});}
+  await p.setViewportSize({width:375,height:812});await p.waitForTimeout(200);
+  const before=await p.evaluate(()=>World._state().pos),floor=await p.evaluate(()=>World3D.project(950,810));await p.touchscreen.tap(floor.x,floor.y);await p.waitForFunction(start=>World._state().pos.y>start.y+60,before);await p.waitForFunction(()=>!World._state().path.length);
+  await p.locator('#village-overview').tap();assert(await p.locator('[data-destination]').count()===await p.evaluate(()=>TownRules.HOUSES.length),'Map lost places');await p.locator('[data-destination=supermarkt]').tap();await p.waitForSelector('#market-3d canvas',{timeout:20000});await p.locator('#food-exit').tap();await p.waitForSelector('#village-3d canvas');
+  // Test a real 3D building hit with DOM hit areas disabled.
+  await p.locator('.village-targets').evaluate(el=>el.style.display='none');const house=await p.evaluate(()=>World3D.project(1200,140,1));await p.touchscreen.tap(house.x,house.y);await p.waitForSelector('#market-3d canvas');await p.locator('#food-exit').tap();
+  await p.locator('#village-journal').tap();await p.locator('[data-accept=garden]').tap();await p.locator('#town-dialog-close').tap();
+  await p.evaluate(()=>{World.hide();const db=JSON.parse(localStorage.getItem('catwalk-sterren-v1'));db.profiles[0].town.pos={x:570,y:700};localStorage.setItem('catwalk-sterren-v1',JSON.stringify(db));});await p.reload();await p.locator('#profiles .profile').first().tap();await p.locator('[data-node=garden_1]').tap();assert(await p.evaluate(()=>JSON.parse(localStorage.getItem('catwalk-sterren-v1')).profiles[0].town.collected.includes('garden_1')),'Watering failed');
+  const saved=await p.evaluate(()=>World._state().pos);await p.reload();await p.locator('#profiles .profile').first().tap();assert(await p.evaluate(saved=>TownRules.dist(World._state().pos,saved)<1,saved),'Position lost on reload');
+  const ext=await p.evaluate(()=>{window.testGL=document.querySelector('#village-3d canvas').getContext('webgl2').getExtension('WEBGL_lose_context');window.testGL?.loseContext();return !!window.testGL;});if(ext){await p.waitForFunction(()=>World3D.debug().contextLost);await p.evaluate(()=>window.testGL.restoreContext());await p.waitForFunction(()=>!World3D.debug().contextLost&&World3D.debug().drawCalls>0);}
+  assert(!errors.length,errors.join('\n'));return {ok:true,sizes:5,view:await p.evaluate(()=>World3D.debug())};
+ }catch(e){await p.screenshot({path:'test-results/village3d-error.png'});throw Error(e.message+' '+errors.join(';'));}finally{await ctx.close();}
+}

@@ -53,7 +53,7 @@ console.log(`Banen haalbaar: school ${school.time.toFixed(1)}s, regen ${rain.tim
 let saved='';ctx.localStorage={getItem(){return null;},setItem(key,value){saved=value;}};
 let game=fs.readFileSync(path.join(root,'js/game.js'),'utf8');
 game=game.slice(0,game.indexOf('  /* ---------- start ---------- */'))+'globalThis.profileTest={newProfile,award,migrate,setProfiles:ps=>DB.profiles=ps};})();';
-vm.runInContext(game,ctx);const api=ctx.profileTest;
+vm.runInContext(fs.readFileSync(path.join(root,'js/hair-parts.js'),'utf8'),ctx);vm.runInContext(game,ctx);const api=ctx.profileTest;
 const p=api.newProfile('Racer',{skin:'s2',eyes:'e1',hairColor:'bruin',build:40},'hair_lang');api.setProfiles([p]);
 const result=api.award(p,{stars:3},{id:'parkour_school'},false);
 assert.equal(p.shows,0);assert.equal(p.stars,3);assert.equal(p.xp,50);assert.equal(p.coins,55);assert.equal(result.first,true);

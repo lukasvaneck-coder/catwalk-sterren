@@ -3,7 +3,7 @@ const Designer = (() => {
   const D = ClothingDesigns;
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  let profile, callbacks, draft, editingId, activeSticker = -1, dirty = false, returnFocus;
+  let profile, callbacks, draft, editingId, activeSticker = -1, dirty = false, returnFocus, theme='free';
   const colorHint = type => draft.pattern === 'rainbow' ? 'Regenboogstof gebruikt alle regenboogkleuren.'
     : type.accent ? 'De tweede kleur zie je in de steentjes en versiering.'
     : draft.pattern === 'plain' ? 'Kies een patroon om ook je tweede kleur te zien.' : 'Tip: tik op een kleurvakje voor elke kleur die je wilt.';
@@ -11,22 +11,25 @@ const Designer = (() => {
   const choice = (value, label, selected, attr) => `<button type="button" class="design-choice" ${attr}="${esc(value)}" aria-pressed="${selected}">${label}</button>`;
   function show(p, cb, cat = 'top') {
     profile = p; callbacks = cb; returnFocus = document.activeElement;
+    theme=p.designDraft?.theme==='cooking'?'cooking':'free';
     draft = D.normalize(p.designDraft || { cat }); editingId = p.designDraft?.editingId || null;
     if (!p.customDesigns.some(i => i.id === editingId)) editingId = null;
     dirty = !!p.designDraft; activeSticker = draft.stickers.length - 1;
     render(); $('#design-back').focus();
   }
   function remember() {
-    dirty = true; profile.designDraft = { ...draft, editingId }; callbacks.saveDraft();
+    dirty = true; profile.designDraft = { ...draft, editingId, theme }; callbacks.saveDraft();
     $('#design-status').textContent = 'Probeer alles uit. Sla je ontwerp op als het klaar is.';
   }
   function preview() {
     const it = D.item(draft, 'design_preview', profile.id);
     const outfit = D.outfitWith(profile.outfit, it);
-    $('#design-model').innerHTML = Avatar.render(profile.look, outfit, { bg: false, items: { [it.id]: it } });
+    FashionPreview.mount($('#design-model'),{look:profile.look,outfit},{items:{[it.id]:it}});
     $('#design-fabric').innerHTML = Avatar.thumb(it, profile.look);
     $('#design-preview-name').textContent = draft.name;
   }
+  const availableTypes=()=>D.TYPES.filter(t=>theme==='free'||['apron','hat'].includes(t.id));
+  const availableShapes=type=>type.shapes.filter(s=>theme==='free'||['apron','chefhat'].includes(s[0]));
   function render() {
     const type = D.TYPES.find(t => t.id === draft.cat);
     $('#designer').innerHTML = `
@@ -38,9 +41,9 @@ const Designer = (() => {
           <b id="design-preview-name"></b><p>Jouw idee. Jouw stijl. ✨</p>
         </aside>
         <div class="design-workspace" id="design-workspace">
-          <section class="design-panel card"><h2>1. Wat ga je maken?</h2>
-            <div class="design-types">${D.TYPES.map(t => choice(t.id, `${t.emoji} ${t.name}`, t.id === draft.cat, 'data-design-type')).join('')}</div>
-            <label class="design-field" for="design-shape">Vorm<select id="design-shape">${type.shapes.map(s => `<option value="${s[0]}" ${s[0] === draft.shape ? 'selected' : ''}>${s[1]}</option>`).join('')}</select></label>
+          <section class="design-panel card"><h2>1. Wat ga je maken?</h2><div class="design-themes" aria-label="Ontwerpthema">${[['free','✨ Vrij ontwerpen'],['cooking','🧑‍🍳 In de keuken']].map(([id,name])=>choice(id,name,theme===id,'data-design-theme')).join('')}</div>
+            <div class="design-types">${availableTypes().map(t => choice(t.id, `${t.emoji} ${t.name}`, t.id === draft.cat, 'data-design-type')).join('')}</div>
+            <label class="design-field" for="design-shape">Vorm<select id="design-shape">${availableShapes(type).map(s => `<option value="${s[0]}" ${s[0] === draft.shape ? 'selected' : ''}>${s[1]}</option>`).join('')}</select></label>
           </section>
           <section class="design-panel card"><h2>2. ${type.accent ? 'Kies je kleuren' : 'Geef je stof kleur'}</h2><div class="design-colors">
             ${[0, 1].map(i => `<div><label class="design-color-label" for="design-color-${i}"><input type="color" id="design-color-${i}" value="${draft.c[i]}"><span>${colorName(type, i)}</span></label><div class="design-swatches">${D.PALETTE.map(c => `<button type="button" class="design-swatch" style="--swatch:${c}" data-design-color="${i}" data-color="${c}" aria-label="${colorName(type, i)} ${c}" aria-pressed="${draft.c[i] === c}"></button>`).join('')}</div></div>`).join('')}
@@ -50,14 +53,16 @@ const Designer = (() => {
             <div id="design-sticker-editor"></div>
           </section>
           <section class="design-panel card"><h2>${type.stickers === false ? 3 : 4}. Geef je ontwerp een naam</h2><label class="design-field" for="design-name">Naam op het label<input id="design-name" maxlength="32" value="${esc(draft.name)}" autocomplete="off"></label><p class="design-hint">Je ontwerp komt in je eigen kledingkast. Je kunt het dragen bij de jury en op het raceparkours.</p></section>
-          <section class="design-panel card"><div class="design-library-heading"><h2>Mijn ontwerpen <small>${profile.customDesigns.length}/${D.LIMIT}</small></h2><button class="btn ghost sm" type="button" id="design-new">＋ Nieuw</button></div>${profile.customDesigns.length >= D.LIMIT ? '<p class="design-hint" id="design-full">Je kast is vol! Maak je iets nieuws, dan ruimen we het ontwerp op dat je het langst niet hebt gedragen.</p>' : ''}<div class="design-library">${profile.customDesigns.length ? [...profile.customDesigns].reverse().map(it => `<button class="design-saved${it.id === editingId ? ' selected' : ''}" type="button" data-edit-design="${it.id}" aria-label="${esc(it.name)} aanpassen">${Avatar.thumb(it, profile.look)}<span>${esc(it.name)}</span><small>✎ Aanpassen</small></button>`).join('') : '<p class="design-hint">Hier komen jouw zelfgemaakte kledingstukken te hangen.</p>'}</div></section>
+          <section class="design-panel card"><div class="design-library-heading"><h2>Mijn ontwerpen <small>${profile.customDesigns.length}/${D.LIMIT}</small></h2><button class="btn ghost sm" type="button" id="design-new">＋ Nieuw</button></div>${profile.customDesigns.length >= D.LIMIT ? '<p class="design-hint" id="design-full">Je kast is vol! Maak je iets nieuws, dan ruimen we het ontwerp op dat je het langst niet hebt gedragen.</p>' : ''}<div class="design-library">${profile.customDesigns.length ? [...profile.customDesigns].reverse().map(it => `<div class="design-saved-card"><button class="design-saved${it.id === editingId ? ' selected' : ''}" type="button" data-edit-design="${it.id}" aria-label="${esc(it.name)} aanpassen">${Avatar.thumb(it, profile.look)}<span>${esc(it.name)}</span><small>✎ Aanpassen</small></button><button type="button" class="btn ghost sm" data-delete-design="${it.id}" aria-label="${esc(it.name)} verwijderen">Verwijderen</button></div>`).join('') : '<p class="design-hint">Hier komen jouw zelfgemaakte kledingstukken te hangen.</p>'}</div></section>
         </div>
       </div>
       <footer class="design-footer"><p id="design-status" role="status">${editingId ? 'Pas je ontwerp aan, of bewaar een nieuwe versie.' : 'Kies, kleur en versier. Je paspop verandert meteen mee!'}</p><div class="row"><button class="btn ghost sm" id="design-copy" type="button" ${editingId ? '' : 'hidden'}>Bewaar als nieuw</button><button class="btn" id="design-save" type="button">Opslaan & aantrekken ✨</button></div></footer>`;
     $('#design-back').onclick = () => { callbacks.exit(); if (returnFocus?.isConnected) returnFocus.focus(); };
+    document.querySelectorAll('[data-design-theme]').forEach(b=>b.onclick=()=>{if(editingId&&!dirty)editingId=null;theme=b.dataset.designTheme;if(theme==='cooking'&&!['apron','chefhat'].includes(draft.shape)){draft=D.normalize({...draft,cat:'apron',shape:'apron',name:''});}remember();render();});
     document.querySelectorAll('[data-design-type]').forEach(b => b.onclick = () => {
       if (draft.cat === b.dataset.designType) return;
-      draft = D.normalize({ ...draft, cat: b.dataset.designType, shape: null, name: '' }); remember(); render();
+      if(theme==='cooking'&&editingId&&!dirty)editingId=null;
+      draft = D.normalize({ ...draft, cat: b.dataset.designType, shape: theme==='cooking'?(b.dataset.designType==='hat'?'chefhat':'apron'):null, name: '' }); remember(); render();
       $(`[data-design-type="${draft.cat}"]`).focus();
     });
     $('#design-shape').onchange = e => {
@@ -83,12 +88,31 @@ const Designer = (() => {
     });
     document.querySelectorAll('[data-edit-design]').forEach(b => b.onclick = () => switchDraft(() => {
       const it = profile.customDesigns.find(i => i.id === b.dataset.editDesign);
-      draft = D.normalize(it); editingId = it.id; activeSticker = draft.stickers.length - 1;
+      draft = D.normalize(it);if(theme==='cooking'&&!['apron','chefhat'].includes(draft.shape))theme='free'; editingId = it.id; activeSticker = draft.stickers.length - 1;
     }));
-    $('#design-new').onclick = () => switchDraft(() => { draft = D.normalize({ cat: draft.cat }); editingId = null; activeSticker = -1; });
+    document.querySelectorAll('[data-delete-design]').forEach(b=>b.onclick=()=>confirmRemove(b.dataset.deleteDesign,b));
+    $('#design-new').onclick = () => switchDraft(() => { draft = D.normalize({ cat: draft.cat,shape:theme==='cooking'?draft.shape:null }); editingId = null; activeSticker = -1; });
     $('#design-save').onclick = () => commit(false);
     $('#design-copy').onclick = () => commit(true);
     renderStickers(); preview();
+  }
+  function confirmRemove(id,trigger){
+    const item=profile.customDesigns.find(it=>it.id===id);if(!item)return;
+    const dialog=document.createElement('dialog');dialog.className='hair-delete-dialog';dialog.setAttribute('aria-labelledby','design-delete-title');dialog.setAttribute('aria-describedby','design-delete-message');
+    dialog.innerHTML='<h2 id="design-delete-title">Ontwerp verwijderen?</h2><p id="design-delete-message"></p><p data-delete-detail></p><p data-delete-error role="alert"></p><div class="row"><button type="button" class="btn ghost" data-delete-cancel>Toch houden</button><button type="button" class="btn" data-delete-confirm>Ja, verwijderen</button></div>';
+    dialog.querySelector('#design-delete-message').textContent='Weet je zeker dat je „'+item.name+'” uit je collectie wilt verwijderen?';
+    const worn=[...Object.values(profile.outfit),...Object.values(profile.parkour?.dadOutfit||{})].includes(id);
+    dialog.querySelector('[data-delete-detail]').textContent=(worn?'Dit ontwerp is in gebruik en wordt ook uit de outfit gehaald. Voor kleding en schoenen komt er een basisstuk terug. ':'')+(editingId===id&&dirty?'Ook je onopgeslagen aanpassingen aan dit ontwerp verdwijnen.':'');
+    const close=()=>{dialog.close();dialog.remove();if(trigger.isConnected)trigger.focus();};
+    dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.querySelector('[data-delete-cancel]').onclick=close;
+    dialog.querySelector('[data-delete-confirm]').onclick=()=>{
+      const result=callbacks.remove(id);
+      if(result.error){dialog.querySelector('[data-delete-error]').textContent=result.error;return;}
+      if(editingId===id){draft=D.normalize({cat:draft.cat,shape:theme==='cooking'?draft.shape:null});editingId=null;dirty=false;activeSticker=-1;}
+      const scroll=$('#design-workspace').scrollTop;close();render();$('#design-workspace').scrollTop=scroll;
+      $('#design-status').textContent='„'+item.name+'” is uit je collectie verwijderd.';$('#design-new').focus({preventScroll:true});
+    };
+    document.body.append(dialog);dialog.showModal();dialog.querySelector('[data-delete-cancel]').focus();
   }
   function setColor(index, color) {
     draft.c[index] = color; $('#design-color-' + index).value = color;

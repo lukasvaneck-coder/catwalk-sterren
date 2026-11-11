@@ -348,29 +348,6 @@ svg, canvas.doll, canvas.bg-thumb { display: block; }
 .buy-preview { width: 120px; height: 120px; margin: 0 auto; background: var(--surface2); border: 1px solid var(--line); border-radius: 20px; padding: 8px; }
 .buy-preview canvas { width: 100%; height: 100%; }
 
-/* ---------- duel ---------- */
-.pick-players { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.pick-players .profile { width: 140px; }
-.pick-players .profile .pav { width: 80px; height: 120px; }
-.pick-players .profile.picked { outline: 3px solid var(--primary); outline-offset: 2px; background: var(--surface2); }
-.pick-players .profile .badge { position: absolute; top: 8px; left: 8px; background: var(--primary); color: #fff; border-radius: 30px; padding: 2px 8px; font: bold 12px var(--font); }
-.duel-banner { display: inline-flex; align-items: center; gap: 6px; background: var(--primary); color: #fff; border-radius: 30px; padding: 3px 10px; font: bold 11px var(--font); letter-spacing: 1px; }
-.handover { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.handover .pav { width: 120px; height: 180px; }
-.handover .pav canvas { width: 100%; height: 100%; }
-.duel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.duel-col { background: var(--surface2); border: 1px solid var(--line); border-radius: 22px; padding: 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
-.duel-col .pav { width: 120px; height: 190px; }
-.duel-col .pav canvas { width: 100%; height: 100%; }
-.duel-col b { font-size: 20px; font-weight: 900; }
-.duel-col .score { font: 900 34px/1 var(--font); color: var(--primary); }
-.duel-col .stars { font-size: 30px; letter-spacing: 3px; }
-.duel-col .stars span { opacity: 1; transform: none; }
-.duel-col.winner { outline: 4px solid var(--gold-bright); background: var(--gold); border-color: var(--gold-line); }
-.duel-col .crown { position: absolute; top: -18px; font-size: 34px; }
-.duel-col .gain { font-weight: bold; color: var(--mint-bright); }
-@media (max-width: 560px) { .duel-cols { grid-template-columns: 1fr; } }
-
 /* ---------- kleurenopdrachten & bonusvraag ---------- */
 .ch-wheel { width: 84px; height: 84px; flex: none; background: var(--cream); border-radius: 18px; padding: 6px; }
 .ch-wheel svg { width: 100%; height: 100%; }
@@ -416,10 +393,8 @@ svg, canvas.doll, canvas.bg-thumb { display: block; }
 
 /* ---------- poppetje (canvas) ---------- */
 canvas.doll { max-width: 100%; }
-.pav canvas, .profile .pav canvas, .handover .pav canvas, .duel-col .pav canvas { object-fit: contain; }
+.pav canvas, .profile .pav canvas { object-fit: contain; }
 .profile .pav { width: 140px; height: 140px; }
-.handover .pav { width: 180px; height: 180px; }
-.duel-col .pav { width: 170px; height: 170px; }
 .pick-players .profile .pav { width: 110px; height: 110px; }
 .stage { background: var(--pink-soft); }
 

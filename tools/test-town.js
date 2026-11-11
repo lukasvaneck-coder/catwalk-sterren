@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const ctx=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/town-rules.js'),'utf8'),ctx);
 const R=vm.runInContext('TownRules',ctx);
-assert.equal(R.HOUSES.length,13);assert.equal(new Set(R.HOUSES.map(h=>h.id)).size,13);
+assert.equal(R.HOUSES.length,14);assert.equal(new Set(R.HOUSES.map(h=>h.id)).size,14);
 assert(R.walkable(R.START.x,R.START.y));
 const targets=[...R.HOUSES,...R.NPCS,...R.NODES];
 for(const to of targets){
@@ -19,7 +19,7 @@ R.accept(p.town,'garden');for(const n of R.NODES.filter(n=>n.kind==='garden')){a
 assert(R.progress(p.town,'garden').ready);assert.equal(R.claim(p.town,'garden'),2);assert.equal(R.claim(p.town,'garden'),false);
 R.visit(p.town,'disco');R.accept(p.town,'ribbons');assert.equal(R.progress(p.town,'ribbons').done,0);
 for(const id of ['atelier','disco','balzaal'])R.visit(p.town,id);assert(R.progress(p.town,'ribbons').ready);
-for(const h of R.HOUSES)R.visit(p.town,h.id);assert.equal(R.progress(p.town,'explorer').done,13);assert.equal(R.claim(p.town,'explorer'),3);
+for(const h of R.HOUSES)R.visit(p.town,h.id);assert.equal(R.progress(p.town,'explorer').done,14);assert.equal(R.claim(p.town,'explorer'),3);
 const restored=JSON.parse(JSON.stringify(p));R.migrate(restored);assert.equal(R.claim(restored.town,'garden'),false);assert(restored.town.visited.includes('balzaal'));
 const b={};R.migrate(b);assert.equal(b.town.visited.length,0);assert.equal(b.town.collected.length,0);
 const dance=R.rhythm(1);dance.time=0;assert(!R.rhythmPress(dance,dance.notes[0]));
@@ -29,4 +29,6 @@ const wrong=R.rhythm();wrong.time=wrong.lead;assert(!R.rhythmPress(wrong,(wrong.
 const memory=R.memory(2);assert.equal(R.memoryPress(memory,0),'wait');memory.phase='input';assert.equal(R.memoryPress(memory,(memory.sequence[0]+1)%4),'retry');assert.equal(memory.errors,1);
 for(let round=0;round<4;round++){memory.phase='input';for(let i=0;i<round+3;i++)R.memoryPress(memory,memory.sequence[i]);}
 assert(memory.finished);assert.equal(memory.round,4);assert.equal(R.memoryPress(memory,0),'wait');
-console.log('Dorp OK: 13 deuren + 11 buitenplekken bereikbaar, alle onderlinge routes, botsingen/brug, veilige migratie, vier opdrachten, eenmalige beloningen, ritme- en dansgeheugenregels.');
+console.log('Dorp OK: 14 deuren + 11 buitenplekken bereikbaar, alle onderlinge routes, botsingen/brug, veilige migratie, vier opdrachten, eenmalige beloningen, ritme- en dansgeheugenregels.');
+
+const legacy={coins:71,town:{version:R.VERSION,pos:{x:1150,y:960},visited:[...R.HOUSES.map(h=>h.id),"duel"],accepted:["explorer"],completed:[]}};R.migrate(legacy);assert.equal(legacy.coins,71);assert(!legacy.town.visited.includes("duel"));assert.equal(R.progress(legacy.town,"explorer").total,14);assert(R.progress(legacy.town,"explorer").ready);assert.equal(R.claim(legacy.town,"explorer"),3);assert.equal(R.claim(legacy.town,"explorer"),false);R.migrate(legacy);assert.equal(R.claim(legacy.town,"explorer"),false);assert.equal(legacy.town.pos.x,1150);
