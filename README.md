@@ -320,3 +320,10 @@ Het poppetje aanpassen, kapsels maken, kleding ontwerpen en aankleden gebruiken 
 `DesignMirror` tekent de 2D-voorbeelden rechtstreeks uit dezelfde `look`, `outfit` en ontwerpgegevens die `Avatar3D` in de wereld gebruikt. Er is geen dubbele collectie of nieuwe opslagindeling. Haarstukken, gezichtskeuzes, kleuren, kledingvormen, patronen, stickers en heupaccessoires behouden hun gegevens. De wereld gebruikt de bijbehorende 3D-vormen en gedeelde stofschildering; dit is een gestileerde vertaling, geen identieke platte afbeelding op een 3D-model. De ontwerpers hebben daarom geen veegrotatie meer; lopen, draaien en de catwalk in de 3D-wereld blijven behouden.
 
 `tools/test-2d-design-world.js` controleert drie mobiele schermformaten, vrij zicht bij open panelen, bewaren van kapsels en ontwerpen, en toepassing van die gegevens op het 3D-model. De salon- en ateliercontroles zijn aangepast aan de 2D-voorbeelden.
+
+### Duidelijker snijden en controle van kapsels
+Tijdens een snijtaak toont de keuken één korte, aanklikbare aanwijzing: pak het benodigde ingrediënt, breng het naar de snijplank en wacht terwijl het poppetje snijdt. De hulpknop laat het poppetje zelf naar de juiste plek lopen. Zodra alle benodigde ingrediënten op de snijplank liggen begint het snijden automatisch, met een voortgangsbalk. Weglopen onderbreekt het werk; de bewaarde voortgang kan via de hulpknop weer worden hervat. Er is geen tijdsdruk en herhaald tikken is niet nodig.
+
+Alle 29 modulaire haaropties zijn gecontroleerd op behoud in de 3D-avatar. Golvend achterhaar heeft nu ook een eigen golvende 2D-vorm; een staart, vlecht of knot achterop staat centraal achter het hoofd in beide weergaven. De 2D-huid wordt onder modulaire kapsels aangevuld waar de atlas uitsparingen voor de oude pony had. Achterhaar kan van voren grotendeels achter hoofd en lijf verdwijnen, zoals in 3D.
+
+Tests: `tools/test-easy-cutting.js` (mobiele pak/neerleg/snijd-route, voortgang en herladen) en `tools/test-hair-translation.js` (29 opties plus 2D/3D-voor-/achteraanzichten).

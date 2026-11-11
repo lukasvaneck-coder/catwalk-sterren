@@ -8,10 +8,11 @@ const HairParts=(()=>{
   const p=normalize(look.hairParts),color=(HAIR_COLORS.find(c=>c.id===look.hairColor)||HAIR_COLORS[2]).c;
   const blob=(x,y,rx,ry)=>Avatar.blob(ctx,x,y,rx,ry,color==='rainbow'?'#b18bd3':color);
   if(layer==='back'){
-   if(['long','wavy'].includes(p.back))blob(200,178,68,87);
-   if(p.back==='tail')blob(252,155,25,69);
-   if(p.back==='braid')for(let i=0;i<6;i++)blob(250+Math.sin(i*2)*3,142+i*18,12-i*.7,13);
-   if(p.back==='bun')blob(260,135,24,23);
+   if(p.back==='long')blob(200,178,68,87);
+   if(p.back==='wavy')for(let i=0;i<4;i++)blob(200+Math.sin(i*2)*5,137+i*29,68,38);
+   if(p.back==='tail')blob(200,207,30,72);
+   if(p.back==='braid')for(let i=0;i<6;i++)blob(200+Math.sin(i*2)*3,159+i*20,15-i*.8,16);
+   if(p.back==='bun')blob(200,142,35,32);
   }
   if(layer==='cap'){
    const edge=look.hairline==='high'?55:look.hairline==='peak'?81:68;
