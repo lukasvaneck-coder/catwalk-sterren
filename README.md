@@ -327,3 +327,8 @@ Tijdens een snijtaak toont de keuken één korte, aanklikbare aanwijzing: pak he
 Alle 29 modulaire haaropties zijn gecontroleerd op behoud in de 3D-avatar. Golvend achterhaar heeft nu ook een eigen golvende 2D-vorm; een staart, vlecht of knot achterop staat centraal achter het hoofd in beide weergaven. De 2D-huid wordt onder modulaire kapsels aangevuld waar de atlas uitsparingen voor de oude pony had. Achterhaar kan van voren grotendeels achter hoofd en lijf verdwijnen, zoals in 3D.
 
 Tests: `tools/test-easy-cutting.js` (mobiele pak/neerleg/snijd-route, voortgang en herladen) en `tools/test-hair-translation.js` (29 opties plus 2D/3D-voor-/achteraanzichten).
+
+### Hulpknop voor het hele kookproces
+De hulpknop volgt nu alle receptstappen: ingrediënten pakken, snijden, mengen, koken, bakken, oven/ijsmachine, een schoon bord pakken, opdienen en serveren. Elke tik laat het poppetje naar de juiste plek lopen en daar de aangegeven handeling uitvoeren. Zodra alle benodigdheden klaarliggen begint de bereiding vanzelf. Tijdens lopen of bereiden vertelt de knop wat er gebeurt; werk en warme pannen tonen voortgang zonder tijdsdruk. Na het eten helpt de knop ook met afwassen, en als er geen schoon bord is begeleidt hij eerst het schoonmaken.
+
+De keuze van de volgende handeling staat in `KitchenRules.guide`, zodat handmatige verplaatsingen en opgeslagen voortgang worden meegenomen. Tests: `tools/test-cooking-guide.js` voltooit alle vijf recepten en de afwas, inclusief herladen van warme pannen en starten met vuile borden; `tools/test-guided-cooking-browser.js` voltooit nasi met alleen tikken op de hulpknop, van voorraad tot schone afwas.

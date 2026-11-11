@@ -78,8 +78,32 @@ const KitchenRules = (() => {
     const i=taskAt(p,station);if(i<0)return false;const a=p.kitchen.active,r=recipes.find(r=>r.id===a.id);if(heat.has(station)){a.jobs[i]=duration(r,i);return 'cooking';}
     a.work[i]=(a.work[i]||0)+dt;a.taps=a.work[a.step]||0;return a.work[i]+.00001>=duration(r,i)?finish(p,i):'working';
   }
+  const workLabels={cut:'🔪 Aan het snijden',boil:'🍲 Aan het koken',fry:'🍳 Aan het bakken',oven:'♨️ De oven is bezig',mix:'🥣 Aan het mengen',ice:'🍨 Het ijs wordt gemaakt',plate:'🍽️ Aan het opdienen',serve:'🪑 Het eten op tafel zetten',sink:'🫧 Aan het afwassen'};
+  function guide(p,{working=null,target=null}={}){
+    const a=p.kitchen.active,r=recipes.find(r=>r.id===a?.id),hand=held(p),items=allItems(p);
+    const take=(item,text)=>({text:text||`${itemInfo(r,item.id).icon} Tik hier: pak ${itemInfo(r,item.id).name}`,station:item.at,item:item.id});
+    const bring=station=>({text:`${stations[station]?.[0]||'🙌'} Tik hier: ${{cut:'leg het op de snijplank',boil:'doe het in de kookpan',fry:'doe het in de bakpan',oven:'zet het in de oven',mix:'doe het in de mengkom',ice:'doe het in de ijsmachine',plate:hand?.id.startsWith('dish')?'zet het bord bij Opdienen':'breng het eten naar Opdienen',serve:'zet het eten op tafel',sink:'zet het bord bij de afwas',rack:'zet het bord op de stapel',counterA:'leg het op het aanrecht'}[station]||'breng het naar de werkplek'}`,station});
+    const wash=()=>{const dirty=p.kitchen.dishes.find(d=>d.dirty&&d.at!=='meal');return dirty?(dirty.at==='sink'?{text:'🫧 Tik hier om af te wassen',station:'sink'}:take(dirty,'🍽️ Tik hier: pak het vuile bord')):null;};
+    if(target?.station)return {text:`🚶 Onderweg naar ${stations[target.station]?.[1].toLowerCase()||'de voorraad'}…`};
+    if(working==='sink')return {text:workLabels.sink+'… Even wachten',progress:p.kitchen.wash,max:3};
+    if(working&&a){const i=taskAt(p,working);if(i>=0)return {text:workLabels[working]+'… Je hoeft niets te doen',progress:a.work[i]||0,max:duration(r,i)};}
+    if(hand){
+      if(hand.id.startsWith('dish'))return bring(hand.dirty?'sink':a&&!a.done.includes(r.steps.length-2)?'plate':'rack');
+      if(a){const next=r.steps.findIndex((_,i)=>!a.done.includes(i)&&flows[r.id][i].includes(hand.id));if(next>=0)return bring(r.steps[next][0]);}
+      return bring('counterA');
+    }
+    if(!a)return wash()||(p.kitchen.served?{text:'✨ Alles klaar! Kies gerust een nieuw gerecht.'}:null);
+    const i=r.steps.findIndex((_,i)=>!a.done.includes(i)),station=r.steps[i][0];
+    if(a.jobs[i])return {text:workLabels[station]+'… Wacht rustig tot het klaar is',progress:duration(r,i)-a.jobs[i],max:duration(r,i)};
+    if(station==='plate'&&!p.kitchen.dishes.some(d=>!d.dirty&&d.at==='plate')){
+      const clean=p.kitchen.dishes.find(d=>!d.dirty&&d.at!=='meal');return clean?take(clean,'🍽️ Tik hier: pak een schoon bord'):wash();
+    }
+    const missing=flows[r.id][i].map(id=>items.find(item=>item.id===id&&item.at!==station)).find(Boolean);
+    if(missing)return take(missing);
+    return ready(p,station)?{text:`${stations[station][0]} Tik hier: ${r.steps[i][1].toLowerCase()}`,station}:null;
+  }
   const act=(p,station)=>work(p,station,.5);
   function advance(p,dt){const a=p.kitchen.active;if(!a||!Number.isFinite(dt)||dt<=0||!Object.keys(a.jobs).length)return false;let result='ticking';for(const key of Object.keys(a.jobs)){a.jobs[key]-=Math.min(dt,.5);if(a.jobs[key]<=0){finish(p,+key);result='prepared';}}return result;}
-  return {ingredients,stations,recipes,flows,positions,layout,heat,duration,walkable,segment,route,near,itemInfo,allItems,held,pickup,putdown,ready,taskAt,work,advance,migrate,missing,cost,buy,start,act};
+  return {ingredients,stations,recipes,flows,positions,layout,heat,duration,guide,workLabels,walkable,segment,route,near,itemInfo,allItems,held,pickup,putdown,ready,taskAt,work,advance,migrate,missing,cost,buy,start,act};
 })();
 if(typeof module!=='undefined')module.exports=KitchenRules;
