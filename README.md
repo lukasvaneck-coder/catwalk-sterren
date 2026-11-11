@@ -301,3 +301,8 @@ Het kapselatelier vult nu het scherm met een draaibaar 3D-poppetje. Haarstukken,
 Bij **Gezicht** zijn vijf hoofdvormen, vier oogvormen, vier neuzen, vier mondjes en vier wenkbrauwvormen beschikbaar, plus oog- en wenkbrauwkleur. De hoofdvorm schaalt haar en hoofdaccessoires mee. Gezichtskeuzes worden per speler bewaard en door de gedeelde avatar gebruikt in alle 3D-ruimtes. **Gebruik** neemt wijzigingen over in het voorbeeld; **Opslaan** in de salon bewaart ze. Terug/annuleren bewaart de wijzigingen niet. Gezicht aanpassen maakt geen extra kapsel in de collectie.
 
 Mobiele regressie: `tools/test-salon-fullscreen.js` controleert drie schermformaten, tikken, veegrotatie, kapselcollectie, gezicht opslaan/herladen en annuleren.
+
+### Haarlijn en schermvullend aankleden
+De gezichtskenmerken staan iets lager op het hoofd, inclusief neus, make-up en brillen. De haarbasis laat meer ruimte boven de wenkbrauwen en bij de slapen. In de salon zijn onder **Gezicht → Haarlijn** een ronde, hoge en puntige haarlijn te kiezen; deze keuze wordt met het uiterlijk bewaard. De rechte en schuine pony volgen nu als gebogen haarstukken het voorhoofd; de krullenpony sluit daarop aan. Ook bestaande standaardkapsels met een pony gebruiken de nieuwe vorm.
+
+Het aankleden in het modehuis gebruikt nu een schermvullende 3D-paspop met een inklapbare kledingkast. De camera houdt het hele poppetje zichtbaar boven het paneel of ernaast in liggende stand. Alle kleding- en accessoirecategorieën blijven beschikbaar; foto, verrassen en uitkleden staan in het menu. Opdracht en jury blijven bereikbaar onderin. `tools/test-wardrobe-fullscreen.js` controleert vier schermformaten, haarlijnopslag, ponyvoorbeelden, kleding/accessoires en menu's.

@@ -131,3 +131,29 @@ body[data-screen="screen-create"]:has(.salon-editor) #app{max-width:none;height:
  .salon-fullscreen:has([data-hair-tab]:only-child) .salon-dock{display:flex}
  .salon-fullscreen:has([data-hair-tab]:only-child) .salon-tray{bottom:calc(86px + env(safe-area-inset-bottom))}
 }
+/* The wardrobe is a fitting mirror with an optional tray, on every screen size. */
+body[data-screen="screen-game"] #app{max-width:none;height:100dvh;padding:0;overflow:hidden}
+#screen-game{position:relative;height:100dvh;overflow:hidden;gap:0}
+#screen-game .room,#screen-game .stage.card{display:contents}
+#screen-game #stage{position:absolute;inset:0;width:100%;height:100%;max-height:none;border-radius:0;background:radial-gradient(ellipse at 50% 40%,#fff7ea,#e6dbea)}
+#screen-game #stage canvas{width:100%;height:100%;max-height:none}
+#screen-game .hud{display:contents}#screen-game .hud>#hud-profile,#screen-game .hud>.hud-stars{display:none}
+#screen-game #btn-fashion-room{position:absolute;top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));z-index:22;min-height:44px;background:#fff9f1}
+#screen-game #game-menu-toggle{position:absolute;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:22;display:flex;min-height:44px;background:#fff9f1}
+#screen-game .wardrobe-dock{position:absolute;bottom:max(10px,env(safe-area-inset-bottom));left:8px;right:8px;display:flex;gap:6px;padding:6px;z-index:25;border-radius:20px;background:#fff9f1f5;box-shadow:0 4px 22px #6a496522}
+#screen-game .wardrobe-dock>button{flex:1;min-width:0;width:auto;min-height:52px;height:auto;margin:0;padding:8px 5px;font-size:12px;line-height:1.2;border-radius:14px}
+#screen-game .wardrobe-dock #challenge-toggle{display:flex;position:static;box-shadow:none;max-width:none}
+#screen-game .wardrobe-dock .challenge-info,#screen-game .wardrobe-dock #challenge-mode{display:none}
+#screen-game .wardrobe-dock .challenge-label{min-width:0}#screen-game .wardrobe-dock #challenge-title{font-size:11px;white-space:normal;overflow-wrap:anywhere}
+#screen-game .actions{display:none}
+#screen-game #wardrobe-panel{position:absolute;left:8px;right:8px;bottom:calc(86px + env(safe-area-inset-bottom));height:min(38dvh,360px);min-height:0;z-index:24;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:22px;background:#fff9f1f5;overflow:hidden}
+#screen-game #wardrobe-close{position:absolute;right:8px;top:8px;z-index:2;min-width:44px;min-height:44px;padding:6px}
+#screen-game #tabs{display:flex;flex-wrap:nowrap;overflow:auto;min-height:52px;max-height:60px;margin-right:50px;gap:4px;flex:none;padding:2px}
+#screen-game #tabs .tab{flex:none;min-width:56px;min-height:48px;padding:4px 8px;font-size:11px}
+#screen-game #tabs .ti{font-size:18px}
+#screen-game #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));overflow:auto;min-height:0;padding:5px;gap:6px}
+#screen-game #grid .item{min-height:100px}#screen-game #grid .item img,#screen-game #grid .item svg{height:76px;max-width:100%;object-fit:contain}
+#screen-game .game-dialog:not([open]){display:none}
+#screen-game .game-dialog[open]{position:fixed;inset:0;margin:auto;width:min(480px,calc(100vw - 24px));max-height:80dvh;overflow:auto;padding:16px;border:1px solid #dcc8d8;border-radius:22px;background:#fff9f1}
+#screen-game .game-dialog .dialog-heading{display:flex}#screen-game .game-dialog .stage-tools{display:flex;position:static;flex-wrap:wrap}
+@media(min-width:761px),(orientation:landscape){#screen-game #wardrobe-panel{left:auto;right:10px;top:64px;bottom:86px;width:min(40vw,400px);height:auto}#screen-game .wardrobe-dock{right:auto;width:min(55vw,580px)}}
