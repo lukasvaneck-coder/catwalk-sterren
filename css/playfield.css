@@ -1,0 +1,62 @@
+/* Mobile playfields own the viewport. Menus are layers, never layout columns. */
+.mobile-drawer-toggle,.mobile-drawer-close{display:none}
+@media(max-width:760px),(pointer:coarse),(max-height:500px){
+ :root{--hud-top:max(8px,env(safe-area-inset-top));--hud-bottom:max(10px,env(safe-area-inset-bottom));--hud-left:max(8px,env(safe-area-inset-left));--hud-right:max(8px,env(safe-area-inset-right));--hud-paper:#fff9e9ed}
+ body:has(#screen-kitchen:not([hidden])),body[data-screen="screen-fashion-room"],body[data-screen="screen-town-activities"],body.in-race,body.in-speeltuin{overflow:hidden}
+ body[data-screen="screen-kitchen"] #app,body[data-screen="screen-town-activities"] #app{padding:0;max-width:none;height:100dvh}
+ #fashion-room,.activity-3d,#kitchen .food-shell,.in-race #parkour,.in-speeltuin #speeltuin:has(#st-canvas){position:relative;display:block!important;width:100%;max-width:none;height:100dvh!important;min-height:0;padding:0!important;overflow:hidden;margin:0}
+ #fashion-view,.activity-3d .activity-scene,#kitchen #kr-room,#market-3d,.in-race .pk-canvas-wrap,.in-speeltuin .pk-canvas-wrap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;aspect-ratio:auto!important;border:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important}
+ #fashion-view canvas,.activity-scene>canvas,#pk-canvas,#st-canvas{width:100%!important;height:100%!important;max-height:none!important;aspect-ratio:auto!important}
+ #kitchen .food-layout,#kitchen .kr-wrap,#kitchen .market-play,.activity-3d .activity-layout{display:contents!important}
+ .fashion-header,.activity-header,#kitchen .food-header,.pk-race-head{position:absolute;inset:var(--hud-top) var(--hud-right) auto var(--hud-left);z-index:20;display:flex;gap:6px;justify-content:space-between;pointer-events:none}
+ .fashion-header>*,.activity-header>*,.food-header>*,.pk-race-head>*{pointer-events:auto}
+ .fashion-header h1,.activity-header>div,#kitchen .food-header>div,.pk-race-head>b{display:none}
+ .fashion-header .btn,.activity-header .btn,.pk-race-head .btn,#food-exit{background:var(--hud-paper);min-height:44px;padding:8px 12px}
+ #fashion-status,#activity-walk-status,#kitchen .food-message,.pk-message,.pk-outfit-bonus,.in-race #parkour>.pk-times{display:none!important}
+ #kitchen .food-header>b{display:none}
+ #kitchen .food-tabs{position:absolute;z-index:20;top:var(--hud-top);left:105px;right:64px;display:flex;gap:5px;margin:0}
+ #kitchen .food-tabs .btn{font-size:0;padding:8px;min-width:44px;min-height:44px;flex:0;background:var(--hud-paper)}
+ #food-home:after{content:'🍳';font-size:22px}#food-shop:after{content:'🛒';font-size:22px}
+ #kitchen .food-tabs>span{display:none}
+ #kitchen .kr-orders{position:absolute;z-index:10;left:var(--hud-left);top:calc(var(--hud-top) + 52px);padding:5px;border-radius:12px;max-width:calc(100% - 16px);background:#284650dd}
+ #kitchen .kr-order-title{display:none}#kitchen .kr-tickets{margin:0;padding:0}#kitchen .kr-ticket{flex:none;min-width:38px;padding:3px}#kitchen .kr-ticket b{font-size:19px}#kitchen .kr-ticket span{font-size:12px}
+ #kitchen .kr-bottom{position:absolute;z-index:20;bottom:var(--hud-bottom);left:var(--hud-left);right:var(--hud-right);padding:0;background:none;display:flex;align-items:end;gap:6px}
+ #kitchen .kr-hands{display:none}#kitchen .kr-controls{display:flex;gap:6px;margin-left:auto;flex-wrap:nowrap}#kitchen .kr-controls .btn{flex:none;min-width:44px;min-height:48px;background:var(--hud-paper);font-size:20px}
+ #kitchen .kr-help{display:none}#kitchen .food-stock{position:absolute;left:var(--hud-left);bottom:var(--hud-bottom);z-index:21;margin:0;padding:0;background:var(--hud-paper);border-radius:14px}
+ #kitchen .food-stock summary{font-size:0;min-width:44px;min-height:48px;padding:8px;list-style:none}#kitchen .food-stock summary:after{content:'🧺';font-size:22px}
+ #kitchen .food-stock[open]{position:absolute;inset:auto var(--hud-right) var(--hud-bottom) var(--hud-left);max-height:70dvh;padding:12px;overflow:auto;box-shadow:0 0 0 100vmax #24354177}#kitchen .food-stock[open] summary{font-size:14px}
+ .market-actions{position:absolute!important;z-index:20;bottom:var(--hud-bottom);right:var(--hud-right);left:auto!important;background:none!important;padding:0!important;display:flex;gap:6px}.market-actions>.btn,.market-actions>details{background:var(--hud-paper)}
+ #market-list{position:absolute;top:65px;left:8px;z-index:10;background:var(--hud-paper);border-radius:12px;max-width:calc(100% - 16px);font-size:12px;padding:4px}#market-list:empty{display:none}
+ .mobile-drawer-toggle{display:block;position:absolute;top:var(--hud-top);right:var(--hud-right);z-index:25;min-width:44px;min-height:44px;border-radius:14px;background:var(--hud-paper);border:1px solid #d6c8e8;font:inherit;font-size:22px}
+ .mobile-drawer:not(.mobile-open){display:none!important}
+ .mobile-drawer.mobile-open{display:block!important;position:absolute!important;inset:68px var(--hud-right) auto var(--hud-left)!important;z-index:50;max-height:calc(100dvh - 90px);overflow:auto;background:#fff9ef!important;padding:18px!important;border-radius:20px;box-shadow:0 0 0 100vmax #24354188;margin:0!important;pointer-events:auto}
+ .mobile-drawer-close{display:block;position:sticky;top:0;margin-left:auto;min-height:44px;min-width:44px;z-index:2}
+ #fashion-stations.mobile-open{display:flex!important;flex-direction:column}
+ .activity-3d .activity-sound{margin-right:52px}
+ .activity-3d .activity-panel:not(.mobile-drawer){position:absolute;bottom:var(--hud-bottom);left:var(--hud-left);right:var(--hud-right);z-index:20;padding:8px;border:0;background:#fff9e9dc;border-radius:18px;max-height:45dvh;overflow:auto}
+ .activity-3d .activity-panel>h2,.activity-3d .activity-panel>.eyebrow,.activity-3d .activity-panel>.small,.activity-3d .activity-panel>.activity-example{display:none}
+ .activity-3d .activity-pads{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0}.activity-3d .activity-pad{min-height:48px;padding:4px;font-size:24px}.activity-3d .activity-pad small{display:none}
+ .activity-3d .activity-cue{top:70px;right:12px}.activity-3d #activity-instruction{margin:4px 0;font-size:12px;min-height:0}
+ .in-race .pk-live,.in-speeltuin .pk-live{position:absolute;top:62px;left:var(--hud-left);z-index:20;background:var(--hud-paper);border-radius:14px;padding:5px 10px;margin:0;gap:8px;font-size:12px}
+ .in-race .pk-controls,.in-speeltuin .pk-controls{position:absolute;inset:auto var(--hud-right) var(--hud-bottom) var(--hud-left);z-index:20;display:flex;flex-direction:row;justify-content:space-between;align-items:end;gap:8px;padding:0;pointer-events:none}
+ .pk-controls>*{pointer-events:auto}.pk-controls>p,.pk-controls>span{display:none}.pk-controls .touch-stick{opacity:.8}.pk-controls .btn{min-width:72px!important;min-height:56px;background:var(--hud-paper)}
+ #pk-map{bottom:135px}#pk-direction{top:110px}
+ .in-world .world-bottom{background:transparent;border:0;box-shadow:none;pointer-events:none}.in-world .world-bottom>*{pointer-events:auto}.in-world .world-bottom .btn{background:var(--hud-paper)}
+}
+.camera-overview{display:none}
+@media(max-width:760px),(pointer:coarse),(max-height:500px){
+ .camera-overview{display:block;position:absolute;left:var(--hud-left);bottom:calc(var(--hud-bottom) + 70px);z-index:30;border:1px solid #d6c8e8;border-radius:14px;min-width:44px;min-height:44px;font-size:22px;background:var(--hud-paper);pointer-events:auto}
+ #kr3d-host .camera-overview{z-index:5}
+ .kr-orders:has(.kr-tickets:empty),.kr-orders:not(:has(.kr-ticket)){display:none}
+}
+.mobile-drawer-shade{display:none}
+@media(max-width:760px),(pointer:coarse),(max-height:500px){
+ :has(>.mobile-open)>.mobile-drawer-shade{display:block;position:fixed;inset:0;z-index:45;border:0;background:#24354177;cursor:pointer}
+ .mobile-drawer.mobile-open{box-shadow:0 8px 30px #24354144}
+ .activity-scene .camera-overview{bottom:auto;top:130px}
+ .activity-panel:not(.mobile-drawer)>p:not([id]){display:none}
+}
+@keyframes hud-feedback{0%,80%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
+@media(max-width:760px),(pointer:coarse),(max-height:500px){
+ #kitchen .food-message[data-feedback="true"]{display:block!important;position:absolute;top:125px;left:12px;right:12px;z-index:35;margin:0;padding:8px 12px;border-radius:14px;background:var(--hud-paper);font-size:12px;pointer-events:none;animation:hud-feedback 7s forwards}
+}

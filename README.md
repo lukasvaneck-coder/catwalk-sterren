@@ -9,6 +9,10 @@ De voortgang wordt per speler in de browser bewaard (localStorage), dus meerdere
 
 ## Spelen op telefoon en tablet
 
+De 3D-ruimtes vullen op mobiel het hele scherm. Bediening zweeft boven het speelveld; recepten, werkplekken en foto-/huisdierkeuzes openen als een sluitbaar paneel. De camera volgt je poppetje van dichtbij. Met de vergrootglasknop wissel je naar het overzicht van de hele ruimte. Keuken en buurtsuper staan naast elkaar aan het open pad ten zuiden van het Modeplein.
+
+Controle: `tools/test-all-rooms-own-avatar.js` toetst alle 14 ruimtes op schermvullend beeld in drie formaten; `tools/test-playfield-menus.js` controleert de menu’s, camerakeuze en zichtbare ingangen. `tools/test-touch-first.js` speelt een volledige maaltijd met tikbediening en controleert de race- en speeltuinknoppen.
+
 De speluitleg gebruikt tikken en vegen, zonder toetsenbordverwijzingen. In dorp en keuken loop je naar de plek die je aantikt. Races hebben een duimstick die tegelijk met de springknop werkt. Speelvelden en bediening passen op kleine telefoons in portret en landschap; de keuken houdt het veld en de acties in hetzelfde scherm. Voorraad en hulp openen als een uitklapbaar paneel. Knoppen en invoervelden zijn aangepast voor aanraken en schermranden met een uitsparing. Browserzoomen blijft beschikbaar.
 
 Aanraaktests: `tools/test-touch-first.js`, `tools/test-mobile-portrait.js` en `tools/test-town-mobile.js`, via een Playwright-sessie met de lokale game geopend. Deze gebruiken aparte testprofielen. Desktopbesturing blijft ondersteund.

@@ -148,10 +148,10 @@ const FashionRoom=(()=>{
   for(const hit of ray.intersectObjects(targets,true)){let node=hit.object;while(node&&!node.userData.station)node=node.parent;if(node){const s=stations.find(s=>s.id===node.userData.station);go(s,s.id);return;}}
   const p=new T.Vector3();if(ray.ray.intersectPlane(new T.Plane(new T.Vector3(0,1,0),0),p))go(p);
  }
- function resize(){if(!host||!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h);const aspect=w/h,half=Math.max(5.3,5.65/aspect);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();}
+ function resize(){if(!host||!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h);const aspect=w/h,half=Math.max(5.3,5.65/aspect);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();if(typeof MobilePlayfield!=='undefined')MobilePlayfield.fit(camera);}
  function tick(now){if(!active)return;frame=requestAnimationFrame(tick);if(lost||document.hidden){last=now;return;}const dt=Math.min(.05,(now-last)/1000||0);last=now;let moving=false;
   if(path.length&&document.querySelector('#overlay').hidden){const next=path[0],dx=next.x-pos.x,dz=next.z-pos.z,d=Math.hypot(dx,dz),distance=dt*2.5;moving=true;if(d<=distance){pos={...next};path.shift();}else{pos.x+=dx/d*distance;pos.z+=dz/d*distance;}}
-  positions[kind]={...pos};const y=kind==='modehuis'&&Math.abs(pos.x-2.25)<.78&&Math.abs(pos.z+.1)<2.1?.16:.05;avatar.update(profile,new T.Vector3(pos.x,y,pos.z),{moving,now});renderer.render(scene,camera);
+  positions[kind]={...pos};const y=kind==='modehuis'&&Math.abs(pos.x-2.25)<.78&&Math.abs(pos.z+.1)<2.1?.16:.05;avatar.update(profile,new T.Vector3(pos.x,y,pos.z),{moving,now});if(typeof MobilePlayfield!=='undefined')MobilePlayfield.frame(camera,avatar.root.position,host);renderer.render(scene,camera);
   if(!path.length&&document.querySelector('#overlay').hidden){marker.visible=false;if(pending){const id=pending;pending=null;const action=pendingAction;pendingAction=null;document.querySelector('#fashion-status').textContent='Tik op meubels of kies een werkplek';if(action)action();else callbacks.action(id);}}
  }
  function show(p,room,cb){hide();profile=p;kind=room;callbacks=cb;pos=positions[kind]||{x:0,z:2.5};active=true;lost=false;obstacles=[];stations=[];targets=[];path=[];pending=null;pendingAction=null;

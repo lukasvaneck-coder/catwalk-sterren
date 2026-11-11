@@ -8,16 +8,16 @@ async page=>{
   try{
     await p.goto(page.url());await p.locator('#profiles .new').tap();await p.locator('#name-input').fill('Aanraaktest');await p.locator('#create-done').tap();await noKeys();assert(!await p.locator('.world-controls').isVisible(),'World arrows still visible');
     await p.locator('#village-overview').tap();await p.locator('#town-dialog-close').tap();checks.push('Town map and touch-first guidance');
-    await at('keuken');await p.locator('#food-list').tap();await p.locator('.market-actions summary').click();await p.locator('[data-shelf=produce]').click();await p.locator('.market-dialog').waitFor({timeout:15000});await p.locator('[data-add="potato"]').tap();await p.locator('[data-add="potato"]').tap();await p.locator('[data-add="tomato"]').tap();await p.locator('[data-cancel]').tap();await p.locator('#market-cart').tap();await p.locator('#food-pay').waitFor({timeout:15000});await p.locator('#food-pay').tap();await p.locator('[data-cancel]').tap();await p.locator('#food-home').tap();await p.locator('#food-start').tap();
+    await at('keuken');await p.locator('#kitchen .mobile-drawer-toggle').tap();await p.locator('#food-list').tap();await p.locator('.market-actions summary').click();await p.locator('[data-shelf=produce]').click();await p.locator('.market-dialog').waitFor({timeout:15000});await p.locator('[data-add="potato"]').tap();await p.locator('[data-add="potato"]').tap();await p.locator('[data-add="tomato"]').tap();await p.locator('[data-cancel]').tap();await p.locator('#market-cart').tap();await p.locator('#food-pay').waitFor({timeout:15000});await p.locator('#food-pay').tap();await p.locator('[data-cancel]').tap();await p.locator('#food-home').tap();await p.locator('#kitchen .mobile-drawer-toggle').tap();await p.locator('#food-start').tap();
     for(const [width,height] of [[320,568],[375,667],[412,839],[667,375],[844,390]]){
       await p.setViewportSize({width,height});await p.waitForTimeout(100);await noKeys();assert(!await p.locator('.kr-dpad').isVisible(),'Kitchen arrows visible');
       await fits('#kr3d-host');await fits('#kr-pick');await fits('#kr-action');await fits('#kr-dash');
       assert((await p.locator('#kr3d-host').boundingBox()).height>=120,'3D kitchen too short');assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Kitchen horizontal overflow');
       await p.screenshot({path:`test-results/touch/kitchen-${width}.png`});
     }
-    await p.setViewportSize({width:375,height:667});await p.locator('[data-station="pantry"]').tap();await p.locator('.kr-pick-dialog').waitFor();await fits('.kr-pick-dialog');await p.locator('[data-choose="potato"]').tap();
+    await p.setViewportSize({width:375,height:667});await p.locator('#kr3d-host .camera-overview').tap();await p.locator('[data-station="pantry"]').tap();await p.locator('.kr-pick-dialog').waitFor();await fits('.kr-pick-dialog');await p.locator('[data-choose="potato"]').tap();
     await p.waitForFunction(()=>JSON.parse(localStorage.getItem('catwalk-sterren-v1')).profiles[0].kitchen.active.items.some(v=>v.id==='potato'&&v.at==='hands'));
-    await p.locator('.kr-help summary').tap();await noKeys();await fits('.kr-help');await p.locator('.kr-help summary').tap();
+    await p.locator('#kitchen .mobile-drawer-toggle').tap();await p.locator('.kr-recipe-help summary').tap();await noKeys();await fits('#kitchen .mobile-open');await p.locator('#kitchen .mobile-drawer-close').tap();
     // Finish the meal using only taps, including clean-plate collection.
     const profile=()=>p.evaluate(()=>JSON.parse(localStorage.getItem('catwalk-sterren-v1')).profiles[0]);
     const heldAt=async(id,at)=>p.waitForFunction(({id,at})=>{const k=JSON.parse(localStorage.getItem('catwalk-sterren-v1')).profiles[0].kitchen;return [...(k.active?.items||[]),...k.dishes].some(v=>v.id===id&&v.at===at);},{id,at});
@@ -39,10 +39,10 @@ async page=>{
     }
     assert((await profile()).kitchen.served===1,'Touch-only meal was not completed');
     await p.locator('#food-exit').tap();checks.push('Kitchen controls fit five sizes, big ingredient chooser, touch help');
-    await at('race');await p.locator('[data-fashion-station=race_school]').tap();await p.locator('#pk-start').waitFor();await noKeys();await p.locator('[data-course="rain"]').tap();await p.locator('#pk-start').tap();await p.locator('#pk-pause').tap();
+    await at('race');await p.locator('#fashion-room .mobile-drawer-toggle').tap();await p.locator('[data-fashion-station=race_school]').tap();await p.locator('#pk-start').waitFor();await noKeys();await p.locator('[data-course="rain"]').tap();await p.locator('#pk-start').tap();await p.locator('#pk-pause').tap();
     for(const [width,height] of [[320,568],[667,375],[844,390]]){await p.setViewportSize({width,height});await noKeys();await fits('#pk-stick');await fits('#pk-jump');await fits('#pk-canvas');await p.screenshot({path:`test-results/touch/race-${width}.png`});}
     await p.locator('#pk-back').tap();await p.locator('#pk-exit').tap();checks.push('Race thumbstick and jump visible in portrait and landscape');
-    await p.setViewportSize({width:375,height:667});await at('speeltuin');await p.locator('[data-fashion-station=play_springbaan]').tap();await p.locator('[data-play=springbaan]').waitFor();await noKeys();
+    await p.setViewportSize({width:375,height:667});await at('speeltuin');await p.locator('#fashion-room .mobile-drawer-toggle').tap();await p.locator('[data-fashion-station=play_springbaan]').tap();await p.locator('[data-play=springbaan]').waitFor();await noKeys();
     for(const id of ['springbaan','trampoline','klimrek','ballenbak']){
       const start=p.locator(`[data-play="${id}"]`);if(!await start.count())throw Error('Missing playground start '+id);await start.first().tap();await p.locator('#st-pause').tap();await noKeys();
       for(const [width,height] of [[320,568],[667,375]]){await p.setViewportSize({width,height});await fits('#st-canvas');await fits('#st-pause');if(await p.locator('#st-jump').isVisible())await fits('#st-jump');}
