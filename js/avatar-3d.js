@@ -21,12 +21,11 @@ const Avatar3D=(()=>{
    const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const g=canvas.getContext('2d');
    const X=x=>(x+.21)/.42*512,Y=y=>(.195-y)/.39*512;
    function ellipse(x,y,rx,ry,color){g.fillStyle=color;g.beginPath();g.ellipse(X(x),Y(y),rx/.42*512,ry/.39*512,0,0,TAU);g.fill();}
-   for(const side of [-1,1]){const x=side*.09;ellipse(x,.025,.047,.06,'#fff8ef');ellipse(x,.022,.026,.038,eyeColor);ellipse(x,.02,.012,.025,'#302d36');ellipse(x-.008,.04,.008,.009,'#ffffff');g.strokeStyle='#664637';g.lineWidth=5;g.lineCap='round';g.beginPath();g.moveTo(X(x-.035),Y(.105));g.quadraticCurveTo(X(x),Y(.12),X(x+.033),Y(.106));g.stroke();}
-   if(!p.outfit.mk_lips){g.strokeStyle='#a45c65';g.lineWidth=5;g.lineCap='round';g.beginPath();g.moveTo(X(-.04),Y(-.105));g.bezierCurveTo(X(-.02),Y(-.14),X(.02),Y(-.14),X(.04),Y(-.105));g.stroke();}
+   FaceFeatures.paint(g,p.look,eyeColor,X,Y,512/.42,512/.39);
    const regions={mk_lips:[-.055,-.085,.11,.055],mk_eyes:[-.16,.11,.32,.1],mk_blush:[-.18,-.035,.36,.07],mk_face:[-.17,.02,.34,.18]};
    for(const [slot,r] of Object.entries(regions)){const item=p.items?.[p.outfit[slot]]||ITEM_BY_ID[p.outfit[slot]];if(!item)continue;const source=Avatar.accessory(item,p.look,hair),pixels=source.getContext('2d').getImageData(0,0,source.width,source.height);let x0=source.width,y0=source.height,x1=0,y1=0;for(let y=0;y<source.height;y++)for(let x=0;x<source.width;x++)if(pixels.data[(y*source.width+x)*4+3]>16){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}if(x1>x0&&y1>y0)g.drawImage(source,x0,y0,x1-x0+1,y1-y0+1,X(r[0]),Y(r[1]),r[2]/.42*512,r[3]/.39*512);}
    const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;ownedTextures.add(texture);const m=material('#ffffff');m.map=texture;m.transparent=true;m.depthWrite=false;
-   const positions=[],uv=[],indices=[];for(let row=0;row<=32;row++)for(let col=0;col<=32;col++){const x=-.21+col/32*.42,y=.195-row/32*.39,z=.23*Math.sqrt(Math.max(0,1-(x/.25)**2-(y/.27)**2));positions.push(x,y,z+.0015);uv.push(col/32,1-row/32);if(row<32&&col<32){const a=row*33+col;indices.push(a,a+33,a+1,a+1,a+33,a+34);}}
+   const positions=[],uv=[],indices=[];for(let row=0;row<=32;row++)for(let col=0;col<=32;col++){const x=-.21+col/32*.42,y=.195-row/32*.39,z=.23*Math.sqrt(Math.max(0,1-(x/.25)**2-(y/.27)**2));positions.push(x*FaceFeatures.jaw(p.look.face,y),y,z+.0015);uv.push(col/32,1-row/32);if(row<32&&col<32){const a=row*33+col;indices.push(a,a+33,a+1,a+1,a+33,a+34);}}
    const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();const face=mesh(head,geometry,m);face.name='face-surface';face.castShadow=false;
   }
   function hairModel(shape,color,parts){
@@ -180,11 +179,12 @@ const Avatar3D=(()=>{
     cylinder(arm,skin,0,-.16,0,.055,.045,.31);sphere(arm,skin,0,-.34,0,.055,.065,.05);
     const sleeve=top&&!['tank','crop','bikini','swimsuit','sundress'].includes(top.shape);sphere(arm,sleeve?sleeveFabric:skin,0,-.012,0,sleeve?.075:.058,sleeve?.074:.058,sleeve?.073:.056).name='shoulder-joint';anchor(arm,'hand-'+side,0,-.34,.015);if(sleeve){const longSleeve=/sweater|hoodie|jacket|coat|blouse|puffer|turtleneck|onesie/.test(top.shape);cylinder(arm,sleeveFabric,0,longSleeve?-.13:-.065,0,.074,.065,longSleeve?.29:.15);}
    }
-   head=anchor(body,'head',0,1.2,0);anchor(head,'ear-left',-.253,-.055,.006);anchor(head,'ear-right',.253,-.055,.006);anchor(body,'chest',0,0,0);anchor(body,'back',0,.85,-.14);anchor(body,'waist',0,.57,0);const skull=mesh(head,new T.SphereGeometry(1,64,48),skin);skull.scale.set(.25,.27,.23);for(const side of [-1,1])sphere(head,skin,side*.244,-.025,-.005,.036,.054,.032);
+   head=anchor(body,'head',0,1.2,0);anchor(head,'ear-left',-.253,-.055,.006);anchor(head,'ear-right',.253,-.055,.006);anchor(body,'chest',0,0,0);anchor(body,'back',0,.85,-.14);anchor(body,'waist',0,.57,0);const skull=mesh(head,new T.SphereGeometry(1,64,48),skin);skull.name='skull';skull.scale.set(.25,.27,.23);const sv=skull.geometry.attributes.position;for(let i=0;i<sv.count;i++)sv.setX(i,sv.getX(i)*FaceFeatures.jaw(p.look.face,sv.getY(i)*.27));sv.needsUpdate=true;skull.geometry.computeVertexNormals();for(const side of [-1,1])sphere(head,skin,side*.244,-.025,-.005,.036,.054,.032);
    faceModel(p,eye.color.getStyle(),hair);
-   sphere(head,skin,0,-.045,.219,.025,.031,.025);
+   const nose=FaceFeatures.noseSize(p.look.nose);sphere(head,skin,0,-.045,.219,...nose).name='nose';
    hairModel(hair.shape,hairColor,p.look.hairParts);
    for(const [slot,id] of Object.entries(p.outfit||{})){const item=p.items?.[id]||ITEM_BY_ID[id];if(item&&!['hair','top','bottom','dress','shoes','bg','mk_lips','mk_eyes','mk_blush','mk_face'].includes(slot))accessory(item,p,hair);}
+   const hs=FaceFeatures.scale(p.look.face);head.scale.set(hs[0],hs[1],1);
    heldAnchor=new T.Object3D();heldAnchor.position.set(0,.69,.36);body.add(heldAnchor);ready=true;
   }
   function update(p,position,{moving=false,working=false,carrying=false,sitting=false,dance=-1,now=performance.now()}={}){

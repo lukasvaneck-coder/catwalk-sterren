@@ -326,9 +326,14 @@ const Avatar = (() => {
     const skin = (SKINS.find(s => s.id === look.skin) || SKINS[1]).c;
     const eye = (EYES.find(e => e.id === look.eyes) || EYES[0]).c;
     const h = `H${geo.hi}_`;
-    drawLayer(ctx, h + 'skin', skin);
-    drawLayer(ctx, h + 'eye', eye);
-    drawLayer(ctx, h + 'keep', null);
+    const custom=Object.entries(FaceFeatures.normalize(look)).some(([key,value])=>value!==FaceFeatures.defaults[key]);
+    if(!custom){drawLayer(ctx,h+'skin',skin);drawLayer(ctx,h+'eye',eye);drawLayer(ctx,h+'keep',null);}
+    else{
+      const [x0,y0,x1,y1]=geo.face,cx=(x0+x1)/2,cy=(y0+y1)/2,rx=(x1-x0)/2,ry=(y1-y0)/2,[sx,sy]=FaceFeatures.scale(look.face);
+      ctx.save();ctx.translate(cx,cy);ctx.scale(sx,sy);ctx.translate(-cx,-cy);
+      ctx.beginPath();for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,y=Math.sin(a)*ry,x=Math.cos(a)*rx*FaceFeatures.jaw(look.face,-y/ry*.27);i?ctx.lineTo(cx+x,cy+y):ctx.moveTo(cx+x,cy+y);}ctx.closePath();clayFill(ctx,skin,x0,y0,x1,y1);
+      const ux=rx/.25,uy=ry/.27;FaceFeatures.paint(ctx,look,eye,x=>cx+x*ux,y=>cy-y*uy,ux,uy,{nose:true});ctx.restore();
+    }
     if (!o.noHair) { if(look.hairParts)HairParts.paint(ctx,look,'cap');else drawLayer(ctx, h + 'hair', hairDesign(look)); }
   }
 
@@ -601,7 +606,7 @@ const Avatar = (() => {
   const buildScale = b => 0.88 + Math.max(0, Math.min(100, typeof b === 'number' ? b : 40)) / 100 * 0.3;
   const cache = new Map();
   function compose(look, outfit, opts = {}) {
-    const key = JSON.stringify([look.skin, look.eyes, look.hairColor, look.build, look.hairParts, outfit, opts.items ? Object.values(opts.items) : 0,
+    const key = JSON.stringify([FaceFeatures.normalize(look),look.skin, look.eyes, look.hairColor, look.build, look.hairParts, outfit, opts.items ? Object.values(opts.items) : 0,
       Object.values(outfit).map(id => ITEM_BY_ID[id]).filter(it => it?.custom)]);
     if (cache.has(key)) return cache.get(key);
     const get = slot => outfit[slot] ? ((opts.items && opts.items[outfit[slot]]) || ITEM_BY_ID[outfit[slot]]) : null;
