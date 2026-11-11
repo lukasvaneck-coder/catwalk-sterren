@@ -342,7 +342,7 @@ const Avatar = (() => {
     const skin = (SKINS.find(s => s.id === look.skin) || SKINS[1]).c;
     const eye = (EYES.find(e => e.id === look.eyes) || EYES[0]).c;
     const h = `H${geo.hi}_`;
-    const custom=Object.entries(FaceFeatures.normalize(look)).some(([key,value])=>value!==FaceFeatures.defaults[key]);
+    const custom=Object.entries(FaceFeatures.normalize(look)).some(([key,value])=>key!=='hairline'&&value!==FaceFeatures.defaults[key]);
     if(!custom){drawLayer(ctx,h+'skin',skin);drawLayer(ctx,h+'eye',eye);drawLayer(ctx,h+'keep',null);}
     else{
       const [x0,y0,x1,y1]=geo.face,cx=(x0+x1)/2,cy=(y0+y1)/2,rx=(x1-x0)/2,ry=(y1-y0)/2,[sx,sy]=FaceFeatures.scale(look.face);

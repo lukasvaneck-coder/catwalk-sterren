@@ -2,7 +2,7 @@
 const FashionPreview=(()=>{
  const T=THREE,instances=new Map();
  function mount(host,profile,{items={},runway=false}={}){
-  if(!host)return;let v=instances.get(host.id);
+  if(!host)return;if(['design-model','create-preview','stage'].includes(host.id))return DesignMirror.mount(host,profile,{items});let v=instances.get(host.id);
   if(!v){
    try{const renderer=new T.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;
     const scene=new T.Scene(),camera=new T.OrthographicCamera(-1,1,1,-1,.1,20);camera.position.set(0,1.05,5);camera.lookAt(0,1.05,0);scene.add(new T.HemisphereLight('#fff4e5','#80758e',2.4));const sun=new T.DirectionalLight('#fff',2);sun.position.set(-3,5,5);scene.add(sun);const avatar=Avatar3D.create();scene.add(avatar.root);
@@ -32,7 +32,7 @@ const FashionPreview=(()=>{
    const z=v.runway?Math.sin(now*.0007)*.18:0;v.avatar.update({...v.profile,items:v.items},new T.Vector3(0,0,z),{moving:v.runway,now});v.avatar.root.rotation.y=v.runway?Math.sin(now*.0005)*.45:v.angle;v.renderer.render(v.scene,v.camera);
   };v.frame=requestAnimationFrame(loop);
  }
- function pause(){for(const v of instances.values()){cancelAnimationFrame(v.frame);v.observer?.disconnect();}}
- function dispose(){pause();for(const v of instances.values()){v.avatar.dispose();v.backgroundTexture?.dispose();v.renderer.dispose();v.renderer.forceContextLoss();}instances.clear();}
- return {mount,pause,dispose,layout:id=>instances.get(id)?.resize?.(),debug:()=>Array.from(instances,([id,v])=>({id,angle:v.angle,avatar:v.avatar.debug()}))};
+ function pause(){DesignMirror.pause();for(const v of instances.values()){cancelAnimationFrame(v.frame);v.observer?.disconnect();}}
+ function dispose(){pause();DesignMirror.dispose();for(const v of instances.values()){v.avatar.dispose();v.backgroundTexture?.dispose();v.renderer.dispose();v.renderer.forceContextLoss();}instances.clear();}
+ return {mount,pause,dispose,layout:id=>{DesignMirror.layout(id);instances.get(id)?.resize?.();},debug:()=>DesignMirror.debug().concat(Array.from(instances,([id,v])=>({id,angle:v.angle,avatar:v.avatar.debug()})))};
 })();
