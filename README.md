@@ -313,3 +313,10 @@ In het naaiatelier hebben **Top** en **Jurk** elk drie extra vormen: linkerschou
 **Rond je heupen** bevat een heupriem, heuptasje en opgerolde hondenlijn aan de riem. Beide kleuren en stofpatronen zijn aanpasbaar; deze kleine accessoires hebben geen stickers. Ze gebruiken een eigen outfitplek, zodat ze kleding en handaccessoires niet vervangen, en staan in de kledingkast onder **Heupen**. De hondenlijn is een opgerold accessoire, geen nieuwe hond-uitlaatactiviteit.
 
 Controles: `tools/test-shoulder-waist-designs.js` bewaart en herlaadt alle negen varianten en controleert de 3D-geometrie en heupbevestiging tijdens lopen. `tools/review-shoulder-waist.js` maakt een overzicht van alle varianten van voren en opzij in een loopstand. Beide gebruiken de lokale testserver op poort 4175.
+
+### Ontwerpen in de oorspronkelijke 2D-stijl, spelen in 3D
+Het poppetje aanpassen, kapsels maken, kleding ontwerpen en aankleden gebruiken weer de oorspronkelijke illustraties van `Avatar`. De schermvullende mobiele spiegel en inklapbare bediening blijven behouden. Het kapselvoorbeeld toont hoofd en bovenlijf; de kledingvoorbeelden tonen de volledige outfit en passen zich aan open panelen aan.
+
+`DesignMirror` tekent de 2D-voorbeelden rechtstreeks uit dezelfde `look`, `outfit` en ontwerpgegevens die `Avatar3D` in de wereld gebruikt. Er is geen dubbele collectie of nieuwe opslagindeling. Haarstukken, gezichtskeuzes, kleuren, kledingvormen, patronen, stickers en heupaccessoires behouden hun gegevens. De wereld gebruikt de bijbehorende 3D-vormen en gedeelde stofschildering; dit is een gestileerde vertaling, geen identieke platte afbeelding op een 3D-model. De ontwerpers hebben daarom geen veegrotatie meer; lopen, draaien en de catwalk in de 3D-wereld blijven behouden.
+
+`tools/test-2d-design-world.js` controleert drie mobiele schermformaten, vrij zicht bij open panelen, bewaren van kapsels en ontwerpen, en toepassing van die gegevens op het 3D-model. De salon- en ateliercontroles zijn aangepast aan de 2D-voorbeelden.
