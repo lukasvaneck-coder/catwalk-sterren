@@ -14,9 +14,9 @@ const FashionPreview=(()=>{
   }
   v.host=host;v.profile=profile;v.items=items;v.runway=runway;v.observer?.disconnect();cancelAnimationFrame(v.frame);host.replaceChildren(v.renderer.domElement);host.classList.add('fashion-preview');
   const resize=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;v.renderer.setSize(w,h);const aspect=w/h;let half=Math.max(1.18,.65/aspect),cx=0,cy=0;
-    if(host.id==='design-model'||host.id==='create-preview'&&document.querySelector('#screen-create.salon-editor')){
+    if(host.id==='stage'||host.id==='design-model'||host.id==='create-preview'&&document.querySelector('#screen-create.salon-editor')){
       v.camera.position.set(0,.78,5);v.camera.lookAt(0,.78,0);
-      const salon=host.id==='create-preview',panel=document.querySelector(salon?'#screen-create .options':'#design-workspace'),dock=document.querySelector(salon?'#screen-create .salon-dock':'.design-dock'),rect=host.getBoundingClientRect(),edge=dock?.getBoundingClientRect().top-rect.top||h-76;
+      const wardrobe=host.id==='stage',salon=host.id==='create-preview',panel=document.querySelector(wardrobe?'#wardrobe-panel':salon?'#screen-create .options':'#design-workspace'),dock=document.querySelector(wardrobe?'#wardrobe-dock':salon?'#screen-create .salon-dock':'.design-dock'),rect=host.getBoundingClientRect(),edge=dock?.getBoundingClientRect().top-rect.top||h-76;
       let left=12,right=w-12,top=62,bottom=edge-10;
       if(panel&&!panel.hidden&&(!salon||panel.classList.contains('salon-tray-open'))){const b=panel.getBoundingClientRect();if(w>h||w>760)right=b.left-rect.left-16;else bottom=b.top-rect.top-10;}
       const usableH=Math.max(100,bottom-top),usableW=Math.max(120,right-left);half=Math.max(.95*h/usableH,.55*h/usableW);

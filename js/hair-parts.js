@@ -14,10 +14,11 @@ const HairParts=(()=>{
    if(p.back==='bun')blob(260,135,24,23);
   }
   if(layer==='cap'){
-   ctx.save();ctx.beginPath();ctx.moveTo(125,126);ctx.bezierCurveTo(108,6,290,6,275,126);ctx.bezierCurveTo(256,98,245,70,200,64);ctx.bezierCurveTo(155,70,145,98,125,126);ctx.closePath();ctx.clip();blob(200,70,82,68);ctx.restore();
-   if(p.front==='fringe')for(let i=0;i<5;i++)blob(151+i*24,72,18,15);
-   if(p.front==='swept')blob(175,62,48,16);
-   if(p.front==='curls')for(let i=0;i<6;i++)blob(144+i*22,65+(i%2)*5,15,15);
+   const edge=look.hairline==='high'?55:look.hairline==='peak'?81:68;
+   ctx.save();ctx.beginPath();ctx.moveTo(125,126);ctx.bezierCurveTo(108,6,290,6,275,126);ctx.bezierCurveTo(256,98,245,58,200,edge);ctx.bezierCurveTo(155,58,145,98,125,126);ctx.closePath();ctx.clip();blob(200,70,82,68);ctx.restore();
+   if(p.front==='fringe')for(let i=0;i<5;i++)blob(151+i*24,85,18,20);
+   if(p.front==='swept')blob(175,76,48,20);
+   if(p.front==='curls')for(let i=0;i<6;i++)blob(144+i*22,82+(i%2)*5,15,15);
    if(p.top==='bun')blob(200,20,26,24);
    if(['buns','puffs'].includes(p.top))for(const x of [135,265])blob(x,39,p.top==='puffs'?32:23,p.top==='puffs'?31:23);
    if(p.top==='curls')for(let i=0;i<9;i++)blob(132+i*17,39-Math.sin(i/8*Math.PI)*15,20,20);

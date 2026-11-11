@@ -23,22 +23,33 @@ const Avatar3D=(()=>{
    function ellipse(x,y,rx,ry,color){g.fillStyle=color;g.beginPath();g.ellipse(X(x),Y(y),rx/.42*512,ry/.39*512,0,0,TAU);g.fill();}
    FaceFeatures.paint(g,p.look,eyeColor,X,Y,512/.42,512/.39);
    const regions={mk_lips:[-.055,-.085,.11,.055],mk_eyes:[-.16,.11,.32,.1],mk_blush:[-.18,-.035,.36,.07],mk_face:[-.17,.02,.34,.18]};
-   for(const [slot,r] of Object.entries(regions)){const item=p.items?.[p.outfit[slot]]||ITEM_BY_ID[p.outfit[slot]];if(!item)continue;const source=Avatar.accessory(item,p.look,hair),pixels=source.getContext('2d').getImageData(0,0,source.width,source.height);let x0=source.width,y0=source.height,x1=0,y1=0;for(let y=0;y<source.height;y++)for(let x=0;x<source.width;x++)if(pixels.data[(y*source.width+x)*4+3]>16){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}if(x1>x0&&y1>y0)g.drawImage(source,x0,y0,x1-x0+1,y1-y0+1,X(r[0]),Y(r[1]),r[2]/.42*512,r[3]/.39*512);}
+   for(const [slot,r] of Object.entries(regions)){const item=p.items?.[p.outfit[slot]]||ITEM_BY_ID[p.outfit[slot]];if(!item)continue;const source=Avatar.accessory(item,p.look,hair),pixels=source.getContext('2d').getImageData(0,0,source.width,source.height);let x0=source.width,y0=source.height,x1=0,y1=0;for(let y=0;y<source.height;y++)for(let x=0;x<source.width;x++)if(pixels.data[(y*source.width+x)*4+3]>16){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}if(x1>x0&&y1>y0)g.drawImage(source,x0,y0,x1-x0+1,y1-y0+1,X(r[0]),Y(r[1]-.035),r[2]/.42*512,r[3]/.39*512);}
    const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;ownedTextures.add(texture);const m=material('#ffffff');m.map=texture;m.transparent=true;m.depthWrite=false;
    const positions=[],uv=[],indices=[];for(let row=0;row<=32;row++)for(let col=0;col<=32;col++){const x=-.21+col/32*.42,y=.195-row/32*.39,z=.23*Math.sqrt(Math.max(0,1-(x/.25)**2-(y/.27)**2));positions.push(x*FaceFeatures.jaw(p.look.face,y),y,z+.0015);uv.push(col/32,1-row/32);if(row<32&&col<32){const a=row*33+col;indices.push(a,a+33,a+1,a+1,a+33,a+34);}}
    const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();const face=mesh(head,geometry,m);face.name='face-surface';face.castShadow=false;
   }
-  function hairModel(shape,color,parts){
+  function hairModel(shape,color,parts,hairline='rounded'){
    const hair=material(color),vertices=[],indices=[];
    // A raised forehead, lower temples and a full nape instead of a hemispherical fringe.
-   for(let row=0;row<=16;row++)for(let col=0;col<=48;col++){const phi=col/48*TAU,front=Math.max(0,Math.cos(phi)),limit=1.92-.91*Math.pow(front,2),theta=row/16*limit;vertices.push(.267*Math.sin(theta)*Math.sin(phi),.286*Math.cos(theta),.249*Math.sin(theta)*Math.cos(phi)-.015);if(row<16&&col<48){const a=row*49+col;indices.push(a,a+49,a+1,a+1,a+49,a+50);}}
+   for(let row=0;row<=16;row++)for(let col=0;col<=48;col++){const phi=col/48*TAU,front=Math.max(0,Math.cos(phi)),limit=1.92-(1.92-(hairline==='high'?.85:1.02))*Math.pow(front,.45)+(hairline==='peak'?.16*Math.pow(front,16):0),theta=row/16*limit;vertices.push(.267*Math.sin(theta)*Math.sin(phi),.286*Math.cos(theta),.249*Math.sin(theta)*Math.cos(phi)-.015);if(row<16&&col<48){const a=row*49+col;indices.push(a,a+49,a+1,a+1,a+49,a+50);}}
    const capGeometry=new T.BufferGeometry();capGeometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));capGeometry.setIndex(indices);capGeometry.computeVertexNormals();const cap=mesh(head,capGeometry,hair);cap.name='hair-cap';cap.material.side=T.DoubleSide;
    sphere(head,hair,0,-.025,-.17,.225,.235,.105);
+   // A thin curved sheet grows from the crown onto the forehead, following the skull.
+   function fringe(kind){
+    if(!['fringe','swept','curls'].includes(kind))return;
+    const positions=[],triangles=[];
+    for(let row=0;row<=12;row++)for(let col=0;col<=32;col++){
+     const u=col/32,phi=(u-.5)*1.8,end=kind==='swept'?1.28-.35*u:kind==='curls'?1.12:1.24-.035*Math.cos(u*Math.PI*8),theta=.48+(end-.48)*row/12;
+     positions.push(.27*Math.sin(theta)*Math.sin(phi),.289*Math.cos(theta),.252*Math.sin(theta)*Math.cos(phi)-.009);
+     if(row<12&&col<32){const a=row*33+col;triangles.push(a,a+33,a+1,a+1,a+33,a+34);}
+    }
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setIndex(triangles);g.computeVertexNormals();mesh(head,g,hair).name='hair-fringe';
+    if(kind==='curls')for(let i=0;i<7;i++){const phi=(i/6-.5)*1.7;sphere(head,hair,.27*Math.sin(1.1)*Math.sin(phi),.127,.252*Math.sin(1.1)*Math.cos(phi)-.009,.035,.037,.035);}
+   }
+
    if(parts){
     const p=HairParts.normalize(parts);
-    if(p.front==='fringe')for(let i=0;i<5;i++)sphere(head,hair,-.16+i*.08,.195,.155,.06,.055,.065);
-    if(p.front==='swept'){const lock=sphere(head,hair,-.07,.218,.145,.16,.047,.065);lock.rotation.z=-.22;}
-    if(p.front==='curls')for(let i=0;i<6;i++)sphere(head,hair,-.19+i*.075,.205+Math.sin(i)*.02,.14,.055);
+    fringe(p.front);
     for(const [key,side] of [['left',-1],['right',1]]){const id=p[key],x=side*.23;
      if(id==='short')sphere(head,hair,x,-.045,-.06,.065,.14,.1);
      if(id==='long')sphere(head,hair,x,-.17,-.085,.075,.29,.12);
@@ -59,7 +70,7 @@ const Avatar3D=(()=>{
    const long=['lang','lang_pony','golvend','krullen','halfop','vlechten','zijvlecht','kroonvlecht'].includes(shape),bob=['bob','bob_pony'].includes(shape);
    if(long||bob)for(const side of [-1,1]){const length=bob?.19:.29;for(let i=0;i<(shape==='golvend'?3:1);i++)sphere(head,hair,side*(.218+Math.sin(i)*.02),(bob?-.08:-.17)-i*.09,-.085,.075,length/(shape==='golvend'?2:1),.12);}
    if(long)sphere(head,hair,0,-.17,-.2,.22,.32,.09);
-   if(['bob_pony','lang_pony','kort'].includes(shape))for(let i=0;i<5;i++)sphere(head,hair,-.16+i*.08,.195,.155,.06,.055,.065);
+   if(['bob_pony','lang_pony','kort'].includes(shape))fringe('fringe');
    if(['staart','zijstaart','staartjes','vlechten','zijvlecht'].includes(shape)){
     const sides=['staartjes','vlechten'].includes(shape)?[-1,1]:[shape.startsWith('zij')?1:0];
     sides.forEach(side=>{const braid=shape.includes('vlecht');for(let i=0;i<(braid?5:2);i++)sphere(head,hair,side*(.27+(braid?Math.sin(i*2)*.025:0)),.07-i*(braid?.085:.15),side?-.08:-.3,braid?.065:.105,braid?.075:.18,.1);});
@@ -101,8 +112,8 @@ const Avatar3D=(()=>{
    const o=accessoryMesh(item,source);if(!o)return;const art=o.userData.art;
    if(item.cat==='glasses'){
     const width=Math.min(.34,art.w),height=Math.min(.14,art.h*width/art.w);
-    wrapAccessory(o,width,.025+height/2,height,(x,y,z)=>[x,y,.23*Math.sqrt(Math.max(.05,1-(x/.25)**2-(y/.27)**2))+.004+z]);attach(head,o,item);
-    const m=material(item.c?.[0]);for(const side of [-1,1])cord(head,m,[[side*.14,.025,.2],[side*.2,.025,.15],[side*.25,-.015,.02]],.007);return;
+    wrapAccessory(o,width,-.01+height/2,height,(x,y,z)=>[x,y,.23*Math.sqrt(Math.max(.05,1-(x/.25)**2-(y/.27)**2))+.004+z]);attach(head,o,item);
+    const m=material(item.c?.[0]);for(const side of [-1,1])cord(head,m,[[side*.14,-.01,.2],[side*.2,-.01,.15],[side*.25,-.035,.02]],.007);return;
    }
    if(item.cat==='neck'){
     const width=Math.min(.33,art.w),height=Math.min(.26,art.h*width/art.w);
@@ -181,8 +192,8 @@ const Avatar3D=(()=>{
    }
    head=anchor(body,'head',0,1.2,0);anchor(head,'ear-left',-.253,-.055,.006);anchor(head,'ear-right',.253,-.055,.006);anchor(body,'chest',0,0,0);anchor(body,'back',0,.85,-.14);anchor(body,'waist',0,.57,0);const skull=mesh(head,new T.SphereGeometry(1,64,48),skin);skull.name='skull';skull.scale.set(.25,.27,.23);const sv=skull.geometry.attributes.position;for(let i=0;i<sv.count;i++)sv.setX(i,sv.getX(i)*FaceFeatures.jaw(p.look.face,sv.getY(i)*.27));sv.needsUpdate=true;skull.geometry.computeVertexNormals();for(const side of [-1,1])sphere(head,skin,side*.244,-.025,-.005,.036,.054,.032);
    faceModel(p,eye.color.getStyle(),hair);
-   const nose=FaceFeatures.noseSize(p.look.nose);sphere(head,skin,0,-.045,.219,...nose).name='nose';
-   hairModel(hair.shape,hairColor,p.look.hairParts);
+   const nose=FaceFeatures.noseSize(p.look.nose);sphere(head,skin,0,-.08,.213,...nose).name='nose';
+   hairModel(hair.shape,hairColor,p.look.hairParts,p.look.hairline);
    for(const [slot,id] of Object.entries(p.outfit||{})){const item=p.items?.[id]||ITEM_BY_ID[id];if(item&&!['hair','top','bottom','dress','shoes','bg','mk_lips','mk_eyes','mk_blush','mk_face'].includes(slot))accessory(item,p,hair);}
    const hs=FaceFeatures.scale(p.look.face);head.scale.set(hs[0],hs[1],1);
    heldAnchor=new T.Object3D();heldAnchor.position.set(0,.69,.36);body.add(heldAnchor);ready=true;

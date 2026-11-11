@@ -107,7 +107,7 @@
   }
   /* ---------- het dorp: vanuit hier loop je naar de huisjes ---------- */
   function enterWorld(p) {
-    P = p; ui.free = false;
+    P = p; ui.free = false;setupWardrobe();setWardrobeOpen(false);
     if (ui.tab === 'bg') ui.tab = 'dress';
     showScreen('screen-world');
     World.show(P, {
@@ -399,12 +399,26 @@
 
   /* ---------- kleedkamer ---------- */
   function startGame(p) {
-    P = p; ui.free = false;
+    P = p; ui.free = false;setupWardrobe();setWardrobeOpen(false);
     if (ui.tab === 'bg') ui.tab = 'dress';
     if (!currentTheme()) pickTheme();
     renderAll();
     renderTabs();
     showScreen('screen-game');
+  }
+  function setWardrobeOpen(open){
+    const panel=$('#screen-game .closet');panel.hidden=!open;
+    $('#wardrobe-toggle')?.setAttribute('aria-expanded',String(open));
+    requestAnimationFrame(()=>FashionPreview.layout('stage'));
+  }
+  function setupWardrobe(){
+    if($('#wardrobe-dock'))return;
+    const screen=$('#screen-game'),dock=document.createElement('nav');dock.id='wardrobe-dock';dock.className='wardrobe-dock';dock.setAttribute('aria-label','Aankleden');
+    const toggle=document.createElement('button');toggle.id='wardrobe-toggle';toggle.className='btn';toggle.textContent='👗 Kledingkast';toggle.setAttribute('aria-controls','wardrobe-panel');toggle.onclick=()=>setWardrobeOpen($('#screen-game .closet').hidden);
+    screen.querySelector('.closet').id='wardrobe-panel';
+    const close=document.createElement('button');close.id='wardrobe-close';close.className='btn ghost';close.textContent='✕';close.setAttribute('aria-label','Kledingkast sluiten');close.onclick=()=>setWardrobeOpen(false);screen.querySelector('.closet').prepend(close);
+    dock.append(toggle,$('#challenge-toggle'),$('#btn-jury'));screen.append(dock);
+    $('#game-menu .hud-tools').append(screen.querySelector('.stage-tools'));
   }
   function renderAll() { renderHUD(); renderChallenge(); renderStage(); renderGrid(); $('#btn-fashion-room').textContent=ui.fashionRoom==='winkel'?'← Sterrenwinkel':P.learningMode?'← Weer & Winkelhuis':P.colorMode?'← Kleurenhuis':'← Modehuis'; }
   // kleurenopdrachten: de gevraagde kleuren worden per keer gekozen
