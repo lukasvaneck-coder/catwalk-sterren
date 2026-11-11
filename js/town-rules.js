@@ -2,8 +2,8 @@
 const TownRules = (() => {
   const WIDTH = 2480, HEIGHT = 1760, CELL = 32, SPEED = 210, VERSION = 2;
   const HOUSES = [
-    { id:'keuken', x:800, y:200, w:230, h:160, icon:'🍳', name:'Thuiskeuken', sub:'Samen het avondeten maken', color:'#88a67b', zone:'Modeplein' },
-    { id:'supermarkt', x:1200, y:200, w:240, h:160, icon:'🛒', name:'Buurtsuper', sub:'Boodschappen voor thuis', color:'#d9ac62', zone:'Modeplein' },
+    { id:'keuken', x:1050, y:1160, w:230, h:160, icon:'🍳', name:'Thuiskeuken', sub:'Samen het avondeten maken', color:'#88a67b', zone:'Modeplein' },
+    { id:'supermarkt', x:1340, y:1160, w:240, h:160, icon:'🛒', name:'Buurtsuper', sub:'Boodschappen voor thuis', color:'#d9ac62', zone:'Modeplein' },
     { id:'kleedkamer', x:400, y:470, w:250, h:220, icon:'👗', name:'Modehuis', sub:'Aankleden & de jury', color:'#d986b0', zone:'Modeplein' },
     { id:'atelier', x:810, y:450, w:230, h:210, icon:'✂️', name:'Naaiatelier', sub:'Je eigen kleding maken', color:'#ca9976', zone:'Modeplein' },
     { id:'winkel', x:1210, y:450, w:230, h:210, icon:'🛍️', name:'Sterrenwinkel', sub:'Nieuwe spullen uitzoeken', color:'#d8ae60', zone:'Modeplein' },

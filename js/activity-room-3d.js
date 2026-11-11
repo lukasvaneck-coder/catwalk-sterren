@@ -61,7 +61,7 @@ const ActivityRoom3D=(()=>{
  function shoot(){if(!active||lost||locked)return;locked=true;action='photo';actionTime=.8;status.textContent='Even lachen…';}
  function capture(){
   if(!renderer||lost)return null;const shot=new T.OrthographicCamera(-1.1,1.1,1.4666667,-1.4666667,.1,30);shot.position.set(0,1.65,1.7);shot.lookAt(0,1.2,-.75);const oldSize=renderer.getSize(new T.Vector2()),ratio=renderer.getPixelRatio(),visible=marker.visible;marker.visible=false;photoMark.visible=false;
-  try{renderer.setPixelRatio(1);renderer.setSize(900,1200,false);renderer.render(scene,shot);return renderer.domElement.toDataURL('image/png');}catch(e){return null;}finally{marker.visible=visible;photoMark.visible=true;renderer.setPixelRatio(ratio);renderer.setSize(oldSize.x,oldSize.y,false);renderer.render(scene,camera);}
+  try{renderer.setPixelRatio(1);renderer.setSize(900,1200,false);renderer.render(scene,shot);return renderer.domElement.toDataURL('image/png');}catch(e){return null;}finally{marker.visible=visible;photoMark.visible=true;renderer.setPixelRatio(ratio);renderer.setSize(oldSize.x,oldSize.y,false);if(typeof MobilePlayfield!=='undefined')MobilePlayfield.frame(camera,avatar.root.position,host);renderer.render(scene,camera);}
  }
  function build(){
   scene=new T.Scene();scene.background=new T.Color(kind==='disco'?'#b4a5d1':kind==='balzaal'?'#ead5dd':'#dce6d9');scene.add(new T.HemisphereLight('#fff4df','#817993',2.4));const sun=new T.DirectionalLight('#fff7ef',2);sun.position.set(-3,8,5);scene.add(sun);
@@ -97,7 +97,7 @@ const ActivityRoom3D=(()=>{
   for(const hit of ray.intersectObjects(targets,true)){let node=hit.object;while(node&&!node.userData.station)node=node.parent;if(node){const s=stations.find(s=>s.id===node.userData.station);go(s,s.id);return;}}
   const p=new T.Vector3();if(ray.ray.intersectPlane(new T.Plane(new T.Vector3(0,1,0),0),p))go(p);
  }
- function resize(){if(!host||!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h);const aspect=w/h,half=Math.max(5,5.4/aspect);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();}
+ function resize(){if(!host||!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h);const aspect=w/h,half=Math.max(5,5.4/aspect);camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();if(typeof MobilePlayfield!=='undefined')MobilePlayfield.fit(camera);}
  function tick(now){if(!active)return;frame=requestAnimationFrame(tick);if(lost||document.hidden){last=now;return;}const dt=Math.min(.05,(now-last)/1000||0);last=now;let moving=false;
   if(!paused&&path.length){const next=path[0],dx=next.x-pos.x,dz=next.z-pos.z,d=Math.hypot(dx,dz),distance=dt*2.8;moving=true;if(d<=distance){pos={...next};path.shift();}else{pos.x+=dx/d*distance;pos.z+=dz/d*distance;}}
   if(!paused){actionTime=Math.max(0,actionTime-dt);danceTime=Math.max(0,danceTime-dt);}
@@ -113,7 +113,7 @@ const ActivityRoom3D=(()=>{
    if(action&&actionTime===0){const done=action;action=null;locked=false;status.textContent='Je vriendje is blij! Tik op een volgende speelplek.';callbacks.care(done);}
   }
   if(kind==='foto'&&action==='photo'&&actionTime===0){action=null;const data=capture();locked=false;status.textContent=data?'Je foto is klaar!':'De foto lukte niet. Probeer opnieuw.';if(data)callbacks.photo(data);}
-  renderer.render(scene,camera);
+  if(typeof MobilePlayfield!=='undefined')MobilePlayfield.frame(camera,avatar.root.position,host);renderer.render(scene,camera);
   if(!path.length){marker.visible=false;if(pending){const id=pending;pending=null;callbacks.action(id);}}
  }
  let lastAnimation=0;
