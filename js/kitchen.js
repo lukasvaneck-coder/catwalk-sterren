@@ -29,7 +29,7 @@ const Kitchen = (() => {
     cart:()=>cart,wanted:()=>wanted,
     add:id=>{if((cart[id]||0)<99)cart[id]=(cart[id]||0)+1;},
     remove:id=>{if(--cart[id]<=0)delete cart[id];},
-    pay:()=>{if(!change(()=>R.buy(P,cart)))return false;cart={};wanted={};message='🛍️ Betaald! Je boodschappen liggen thuis klaar.';document.querySelector('.food-message').textContent=message;document.querySelector('.food-stock>div').innerHTML=Object.entries(R.ingredients).map(([id,v])=>`<span>${v[0]} ${v[1]} <b>× ${P.kitchen.stock[id]}</b></span>`).join('');Sound.play('ding');return true;}
+    pay:()=>{if(!change(()=>R.buy(P,cart)))return false;cart={};wanted={};message='🛍️ Afgerekend! Je boodschappen liggen thuis klaar.';document.querySelector('.food-message').textContent=message;document.querySelector('.food-stock>div').innerHTML=Object.entries(R.ingredients).map(([id,v])=>`<span>${v[0]} ${v[1]} <b>× ${P.kitchen.stock[id]}</b></span>`).join('');Sound.play('ding');return true;}
   });}
   function hide(){Supermarket.unmount();document.body.classList.remove('in-kitchen-play','in-supermarket');KitchenRoom.unmount();if(P)cb.save();}
   return {show,hide};

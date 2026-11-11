@@ -58,7 +58,7 @@ De grotere wereld is 2480 × 1760 wereldpixels. De camera volgt je model; huizen
 | Gebouw | Wat je er doet |
 | --- | --- |
 | Thuiskeuken | Zonder tijdsdruk het avondeten of een toetje maken |
-| Buurtsuper | Ingrediënten uitzoeken en met je spelmunten afrekenen |
+| Buurtsuper | Ingrediënten uitzoeken en gratis bij de kassa afrekenen |
 | Modehuis | Aankleden, modeopdrachten, jury en vrij spelen |
 | Naaiatelier | Eigen kleding, hakjes, hoofdjes en oorbellen ontwerpen, dragen en aanpassen |
 | Sterrenwinkel | Spullen kopen met een rekenvraag |
@@ -90,7 +90,7 @@ Via de dorpskaart ga je naar **Thuiskeuken** of **Buurtsuper**. Kies Snackbar (f
 
 De buurtsuper is een echte 3D-winkel met schuin bovenaanzicht. Tik op de vloer om te lopen of op een schap om er met je eigen aangeklede poppetje naartoe te gaan. Bij het schap kies je producten met grote tikknoppen. Je draagt een mandje en loopt naar de kassa om af te rekenen; daar kun je ook producten terugleggen. Het mandje blijft behouden wanneer je tussen keuken en winkel wisselt, maar wordt niet opgeslagen na het verlaten van de activiteit. De winkel past zich aan staand en liggend mobiel aan.
 
-Je begint met een lege voorraad. **Maak mijn boodschappenlijst** neemt de ontbrekende hoeveelheden mee naar de supermarkt. Pak producten uit het schap, leg eventueel iets terug en reken af met spelmunten. Alleen betaalde boodschappen worden voorraad. Bij de start van een gerecht worden de ingrediënten één keer gereserveerd. Voorraad, munten, voorbereide onderdelen, resterende kooktijd, borden, looppositie en de plek van ieder schaaltje worden per speler bewaard, ook na herladen. Oudere kookvoortgang wordt overgenomen.
+Je begint met een lege voorraad. **Maak mijn boodschappenlijst** neemt de ontbrekende hoeveelheden mee naar de supermarkt. Pak producten uit het schap, leg eventueel iets terug en reken gratis af bij de kassa. Je spelmunten blijven behouden, ook als je nul munten hebt. Alleen afgerekende boodschappen worden voorraad. Bij de start van een gerecht worden de ingrediënten één keer gereserveerd. Voorraad, munten, voorbereide onderdelen, resterende kooktijd, borden, looppositie en de plek van ieder schaaltje worden per speler bewaard, ook na herladen. Oudere kookvoortgang wordt overgenomen.
 
 Besturing: tik op de vloer om te lopen of op een werkplek om erheen te gaan. Met de grote actieknoppen pak je iets, leg je iets neer of werk je aan je gerecht. Liggen meerdere dingen bij elkaar, dan kies je uit grote vakken. Tik op 💨 voor een korte sprint. Automatische routes respecteren het keukeneiland en de werkbladen.
 

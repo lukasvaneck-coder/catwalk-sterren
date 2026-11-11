@@ -11,7 +11,7 @@ async page => {
     await p.goto(page.url());await p.locator('#profiles .new').click();await p.locator('#name-input').fill('Keukentest');await p.locator('#create-done').click();
     await enter('keuken');assert(await p.locator('#food-start').isDisabled(),'Empty pantry must block cooking');
     await p.locator('#food-list').click();await p.locator('.market-actions summary').click();await p.locator('[data-shelf=produce]').click();await p.locator('.market-dialog').waitFor({timeout:15000});await p.locator('[data-add="potato"]').click();await p.locator('[data-add="potato"]').click();await p.locator('[data-add="tomato"]').click();
-    const before=await state();await p.locator('[data-cancel]').click();await p.locator('#market-cart').click();await p.locator('#food-pay').waitFor({timeout:15000});await p.locator('#food-pay').click();await p.locator('[data-cancel]').click();assert((await state()).coins===before.coins-6,'Checkout total');
+    const before=await state();await p.locator('[data-cancel]').click();await p.locator('#market-cart').click();await p.locator('#food-pay').waitFor({timeout:15000});await p.locator('#food-pay').click();await p.locator('[data-cancel]').click();assert((await state()).coins===before.coins,'Free checkout preserves coins');
     await p.screenshot({path:'test-results/kitchen-shop.png'});
     await p.locator('#food-home').click();await p.locator('#food-start').click();
     await p.waitForFunction(()=>Avatar.isReady());

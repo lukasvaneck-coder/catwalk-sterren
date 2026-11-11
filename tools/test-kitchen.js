@@ -3,7 +3,7 @@ const go=(p,s)=>{p.kitchen.pos={...R.positions[s]};};
 const carry=(p,id,to)=>{const item=R.allItems(p).find(v=>v.id===id);go(p,item.at);assert(R.pickup(p,item.at,id));go(p,to);assert(R.putdown(p,to));};
 const finishWork=(p,s)=>{go(p,s);for(let n=0;n<20&&R.ready(p,s);n++)assert(R.work(p,s,.5));};
 for(const r of R.recipes){
-  let p={coins:100};R.migrate(p);assert(!R.start(p,r.id));assert(R.buy(p,r.needs));assert.equal(p.coins,100-R.cost(r.needs));assert(R.start(p,r.id));assert(!R.start(p,r.id));
+  let p={coins:100};R.migrate(p);assert(!R.start(p,r.id));assert(R.buy(p,r.needs));assert.equal(p.coins,100);assert(R.start(p,r.id));assert(!R.start(p,r.id));
   assert(!R.pickup(p,'pantry',Object.keys(r.needs)[0]),'Cannot pick up at a distance');
   for(let i=0;i<r.steps.length;i++){
     const station=r.steps[i][0];go(p,station);assert(!R.ready(p,station),'Ingredients must be delivered');
@@ -21,5 +21,5 @@ let saved=JSON.parse(JSON.stringify(p));R.migrate(saved);assert.equal(saved.kitc
 const old={kitchen:{active:{id:'fries',step:2,taps:1}}};R.migrate(old);assert(old.kitchen.active.done.includes(1));assert(old.kitchen.active.items.some(v=>v.id==='step1'));assert.equal(old.kitchen.active.items.find(v=>v.id==='tomato').at,'cut');
 for(const a of Object.values(R.positions))for(const b of Object.values(R.positions)){assert(R.walkable(a.x,a.y));const path=R.route(a,b);assert(path.length);let prev=a;for(const to of path){assert(R.segment(prev,to));prev=to;}}
 assert(!R.walkable(500,380),'Island is solid');assert(!R.walkable(20,20));
-const poor={coins:0};R.migrate(poor);assert(!R.buy(poor,{potato:1}));poor.coins=100;for(const cart of [{},{potato:-1},{potato:1.5},{fake:1},{potato:100}])assert(!R.buy(poor,cart));
+const poor={coins:0};R.migrate(poor);assert(R.buy(poor,{potato:1}));assert.equal(poor.coins,0);assert.equal(poor.kitchen.stock.potato,1);poor.coins=100;for(const cart of [{},{potato:-1},{potato:1.5},{fake:1},{potato:100}])assert(!R.buy(poor,cart));
 console.log('Kitchen OK: all five recipes, carry, automatic cooking, parallel preparation, clean plates, washing/reuse, saved timers/items, old-save migration, all station routes around solid island, purchases.');

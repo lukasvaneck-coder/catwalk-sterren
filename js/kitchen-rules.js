@@ -61,7 +61,7 @@ const KitchenRules = (() => {
   }
   const missing=(p,r)=>Object.entries(r.needs).filter(([id,n])=>p.kitchen.stock[id]<n).map(([id,n])=>({id,n:n-p.kitchen.stock[id]}));
   const cost=cart=>Object.entries(cart).reduce((sum,[id,n])=>sum+(ingredients[id]?.[2]||0)*n,0);
-  function buy(p,cart){const entries=Object.entries(cart);if(!entries.length||entries.some(([id,n])=>!ingredients[id]||!Number.isSafeInteger(n)||n<1||n>99||p.kitchen.stock[id]+n>9999))return false;const total=cost(cart);if(!Number.isFinite(p.coins)||p.coins<total)return false;p.coins-=total;for(const [id,n] of entries)p.kitchen.stock[id]+=n;return true;}
+  function buy(p,cart){const entries=Object.entries(cart);if(!entries.length||entries.some(([id,n])=>!ingredients[id]||!Number.isSafeInteger(n)||n<1||n>99||p.kitchen.stock[id]+n>9999))return false;for(const [id,n] of entries)p.kitchen.stock[id]+=n;return true;}
   function start(p,id){const r=recipes.find(r=>r.id===id);if(!r||p.kitchen.active||missing(p,r).length)return false;for(const [key,n] of Object.entries(r.needs))p.kitchen.stock[key]-=n;p.kitchen.active={id,step:0,taps:0,done:[],work:{},jobs:{},items:initialItems(r),plateId:null};return true;}
   function locked(p,item){const a=p.kitchen.active;return a&&Object.keys(a.jobs).some(i=>flows[a.id][i].includes(item.id));}
   function pickup(p,station,id){if(held(p)||!near(p,station))return false;const item=allItems(p).find(v=>v.id===id&&v.at===station);if(!item||locked(p,item))return false;item.at='hands';return 'picked';}
