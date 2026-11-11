@@ -53,7 +53,7 @@ De ontwerpregels staan in `js/clothing-designs.js`, het atelier in `js/designer.
 
 ## Een gezellig dorp om te ontdekken
 
-De grotere wereld is 2480 × 1760 wereldpixels. De camera volgt je model; huizen en de vijver blokkeren de doorgang, de brug is begaanbaar. Je kunt ook over het gras wandelen. Gebouwen, bewoners en zoekvoorwerpen hebben een eigen plek. Tikken op een verre plek laat je erheen lopen. Kaart, dorpsboek en menu pauzeren het wandelen; een nieuwe tik kiest een andere route. De wandelpositie wordt per speler bewaard. Spelers van de oude kaart beginnen op het nieuwe Modeplein met behoud van hun kleding en voortgang.
+De grotere wereld is 3348 × 2376 wereldpixels. De camera volgt je model; huizen en de vijver blokkeren de doorgang, de brug is begaanbaar. Je kunt ook over het gras wandelen. Gebouwen, bewoners en zoekvoorwerpen hebben een eigen plek. Tikken op een verre plek laat je erheen lopen. Kaart, dorpsboek en menu pauzeren het wandelen; een nieuwe tik kiest een andere route. De wandelpositie wordt per speler bewaard. Posities van de vorige 3D-kaart worden meegeschaald; kleding, munten, stempels en opdrachten blijven behouden. Onveilige posities worden op het Modeplein hersteld.
 
 | Gebouw | Wat je er doet |
 | --- | --- |
@@ -77,6 +77,12 @@ De Sterrenclub beloont 10–12 goede passen met drie sterren, 6–9 met twee en 
 Fleur vraagt om drie bloembakken water te geven. Noor wil feestlintjes laten bezorgen bij het Naaiatelier, de Sterrenclub en de Rozenzaal. Bo zoekt vijf gouden knopen in het dorp. Neem een opdracht aan via de bewoner of het dorpsboek. Je paspoort verzamelt automatisch veertien stempels door gebouwen te bezoeken. Met **Wijs de weg** krijg je hulp bij je volgende bestemming. Iedere dorpsopdracht beloont één keer sterren, XP en munten; herladen geeft geen tweede beloning. Er zijn geen tijdslimieten of dagelijkse verplichtingen.
 
 `js/town-rules.js` bevat kaart, routes, opdrachten en dansregels. `js/village-art.js` tekent het dorp; `js/world.js` regelt lopen en interacties. `js/town-activities.js` verzorgt de nieuwe binnenactiviteiten. `node tools/test-town.js` controleert alle deuren, routes, de brug, opslag, opdrachten en dansregels. De browsertest is `playwright-cli -s=town run-code --filename=tools/test-town-browser.js` met het spel in die browsersessie geopend; deze test gebruikt een eigen context.
+
+## Het magische dorp
+
+De kaart heeft 82% meer oppervlakte, bredere paden en vier gekleurde tuinzones. Elk van de veertien huizen heeft een eigen palet en een groot 3D-herkenningspunt: koksmuts, boodschappenmand, kroon, naaimachine met garen, sterren, weerwolk, raceauto en vlaggen, spiegel, verfpalet, speeltorens, camera, berenhoofd, discobal of rozenboog. Bloesembomen, bloemen, warme entreelampen, lichtslingers en rustige lichtpuntjes maken de straten levendig. Bij verminderde beweging blijven de lichtpuntjes stil.
+
+De modellen staan in `js/village-landmarks.js`; `world-3d.js` bundelt herhaalde vormen voor mobiel. Bankjes en lantaarnpalen delen hun posities met de botsingsregels. `node tools/test-town.js` controleert alle routes en de versie-2-migratie; `tools/test-magic-village.js` controleert alle veertien ingangen met mobiele screenshots en echte tikken.
 
 ## Thuis koken en boodschappen doen
 

@@ -10,7 +10,7 @@ for(const to of targets){
   let prev=R.START;for(const p of route){const n=Math.ceil(R.dist(prev,p)/4);for(let i=0;i<=n;i++)assert(R.walkable(prev.x+(p.x-prev.x)*i/n,prev.y+(p.y-prev.y)*i/n),`Route to ${to.id} crosses obstacle near ${JSON.stringify(p)}`);prev=p;}
 }
 for(const a of R.HOUSES)for(const b of R.HOUSES)assert(R.route(a,b).length,`${a.id} cannot reach ${b.id}`);
-assert(!R.walkable(R.POND.x,R.POND.y-90));assert(R.walkable(R.POND.x,960),'Bridge must be passable');
+assert(!R.walkable(R.POND.x,R.POND.y-90));assert(R.walkable(R.POND.x,R.BRIDGE_Y),'Bridge must be passable');
 assert(!R.walkable(-100,500));assert(!R.walkable(NaN,500));assert.equal(R.route({},R.START).length,0);
 const p={worldPos:{x:51,y:42},coins:55,outfit:{top:'top_tshirt_blauw'}};R.migrate(p);
 assert.deepEqual(p.outfit,{top:'top_tshirt_blauw'});assert.equal(p.coins,55);assert.equal(p.town.pos.x,R.START.x);
@@ -32,3 +32,9 @@ assert(memory.finished);assert.equal(memory.round,4);assert.equal(R.memoryPress(
 console.log('Dorp OK: 14 deuren + 11 buitenplekken bereikbaar, alle onderlinge routes, botsingen/brug, veilige migratie, vier opdrachten, eenmalige beloningen, ritme- en dansgeheugenregels.');
 
 const legacy={coins:71,town:{version:R.VERSION,pos:{x:1150,y:960},visited:[...R.HOUSES.map(h=>h.id),"duel"],accepted:["explorer"],completed:[]}};R.migrate(legacy);assert.equal(legacy.coins,71);assert(!legacy.town.visited.includes("duel"));assert.equal(R.progress(legacy.town,"explorer").total,14);assert(R.progress(legacy.town,"explorer").ready);assert.equal(R.claim(legacy.town,"explorer"),3);assert.equal(R.claim(legacy.town,"explorer"),false);R.migrate(legacy);assert.equal(R.claim(legacy.town,"explorer"),false);assert.equal(legacy.town.pos.x,1150);
+
+const oldMap={coins:70,town:{version:2,pos:{x:950,y:710},visited:["keuken"],collected:["button_1"]}};R.migrate(oldMap);assert.equal(oldMap.town.pos.x,950*R.SCALE);assert.equal(oldMap.town.pos.y,710*R.SCALE);assert(oldMap.town.visited.includes("keuken"));assert(oldMap.town.collected.includes("button_1"));assert.equal(oldMap.coins,70);
+
+for(const prop of R.STREET_OBSTACLES)assert(!R.walkable(prop.x,prop.y),"Street props must have collision");
+
+for(const road of R.PATHS)for(let i=1;i<road.length;i++){const [ax,ay]=road[i-1],[bx,by]=road[i],n=Math.ceil(Math.hypot(bx-ax,by-ay)/8);for(let j=0;j<=n;j++)assert(R.walkable(ax+(bx-ax)*j/n,ay+(by-ay)*j/n),"Drawn road crosses an obstacle at "+[ax+(bx-ax)*j/n,ay+(by-ay)*j/n]);}
