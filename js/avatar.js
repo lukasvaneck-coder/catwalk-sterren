@@ -343,7 +343,15 @@ const Avatar = (() => {
     const eye = (EYES.find(e => e.id === look.eyes) || EYES[0]).c;
     const h = `H${geo.hi}_`;
     const custom=Object.entries(FaceFeatures.normalize(look)).some(([key,value])=>key!=='hairline'&&value!==FaceFeatures.defaults[key]);
-    if(!custom){drawLayer(ctx,h+'skin',skin);drawLayer(ctx,h+'eye',eye);drawLayer(ctx,h+'keep',null);}
+    if(!custom){
+      if(look.hairParts){
+        // The atlas skin has cut-outs for its original fringe; fill a clean forehead under modular hair.
+        const [x0,y0,x1,y1]=geo.face;
+        ctx.save();ctx.beginPath();ctx.rect(x0,y0,x1-x0,geo.eyeY-12-y0);ctx.clip();
+        ctx.beginPath();ctx.ellipse((x0+x1)/2,(y0+y1)/2,(x1-x0)/2,(y1-y0)/2,0,0,Math.PI*2);clayFill(ctx,skin,x0,y0,x1,y1);ctx.restore();
+      }
+      drawLayer(ctx,h+'skin',skin);drawLayer(ctx,h+'eye',eye);drawLayer(ctx,h+'keep',null);
+    }
     else{
       const [x0,y0,x1,y1]=geo.face,cx=(x0+x1)/2,cy=(y0+y1)/2,rx=(x1-x0)/2,ry=(y1-y0)/2,[sx,sy]=FaceFeatures.scale(look.face);
       ctx.save();ctx.translate(cx,cy);ctx.scale(sx,sy);ctx.translate(-cx,-cy);
