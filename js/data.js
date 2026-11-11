@@ -732,19 +732,20 @@ const CATEGORIES = [
   { id: 'shoes',   name: 'Schoenen',    emoji: '👟' },
   { id: 'apron',   name: 'Schorten', emoji: '🧑‍🍳' },
   { id: 'hat',     name: 'Hoedjes',     emoji: '👒' },
+  { id: 'waist', name: 'Heupen', emoji: '👝' },
   { id: 'acc',     name: 'Sieraden',    emoji: '💍', slots: ['ears', 'neck', 'glasses', 'bag'] },
   { id: 'extra',   name: 'Extra',       emoji: '✨', slots: ['hand', 'back', 'pet'] },
   { id: 'bg',      name: 'Setting',     emoji: '🏝️', freeOnly: true },
 ];
 const SLOT_NAMES = {
-  apron:'Schort', hair: 'Haar', top: 'Top', bottom: 'Broek of rok', dress: 'Jurk of pakje', shoes: 'Schoenen', hat: 'Hoedje',
+  waist:'Heupaccessoire', apron:'Schort', hair: 'Haar', top: 'Top', bottom: 'Broek of rok', dress: 'Jurk of pakje', shoes: 'Schoenen', hat: 'Hoedje',
   glasses: 'Bril', ears: 'Oorbellen', neck: 'Om de nek', bag: 'Tas', hand: 'In je hand', back: 'Op je rug', pet: 'Huisdier',
   mk_eyes: 'Oogschaduw', mk_lips: 'Lippen', mk_blush: 'Blush', mk_face: 'Gezichtsversiering', bg: 'Setting',
 };
-const CAT_EMOJI = { apron:'🧑‍🍳', hair: '💇', top: '👕', bottom: '👖', dress: '👗', shoes: '👟', hat: '👒', glasses: '🕶️', ears: '💎', neck: '📿', bag: '👜', hand: '🎈', back: '🦋', pet: '🐶', mk_eyes: '💄', mk_lips: '💄', mk_blush: '💄', mk_face: '💄' };
+const CAT_EMOJI = { waist:'👝', apron:'🧑‍🍳', hair: '💇', top: '👕', bottom: '👖', dress: '👗', shoes: '👟', hat: '👒', glasses: '🕶️', ears: '💎', neck: '📿', bag: '👜', hand: '🎈', back: '🦋', pet: '🐶', mk_eyes: '💄', mk_lips: '💄', mk_blush: '💄', mk_face: '💄' };
 // Slots die meetellen als 'kledingstuk' voor thema en kleur
-const OUTFIT_SLOTS = ['top', 'bottom', 'dress', 'shoes', 'hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back'];
-const ACC_SLOTS = ['hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back', 'pet', 'mk_eyes', 'mk_lips', 'mk_face'];
+const OUTFIT_SLOTS = ['waist','top', 'bottom', 'dress', 'shoes', 'hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back'];
+const ACC_SLOTS = ['waist','hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back', 'pet', 'mk_eyes', 'mk_lips', 'mk_face'];
 const ALL_SLOTS = ['hair', 'top', 'bottom', 'dress', 'shoes', 'hat', 'glasses', 'ears', 'neck', 'bag', 'hand', 'back', 'pet', 'mk_eyes', 'mk_lips', 'mk_blush', 'mk_face'];
 
 /* ---------- Opdrachten (thema's) — elke opdracht heeft zijn eigen setting ---------- */

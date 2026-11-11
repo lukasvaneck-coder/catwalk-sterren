@@ -242,6 +242,10 @@ const Avatar = (() => {
     overall: it => [{ k: 'B0', d: designOf(it) }, { k: 'T0', d: second(it) }],
     swimsuit: it => [{ k: 'B1', d: designOf(it) }, { k: 'T0', d: designOf(it) }],
   };
+  for(const shape of ['bare_left','bare_right','bare_both']){
+    TOP_RECIPES[shape]=it=>[{k:'T0',d:designOf(it),custom:'shoulders'}];
+    DRESS_RECIPES[shape]=it=>[{k:'D',d:designOf(it),custom:'shoulders'}];
+  }
   const SHOE_KEY = { sneaker: 'S0', boot: 'S1', rainboot: 'S1', snowboot: 'S1', monster: 'S1', bunny: 'S1', pirateboot: 'S2', spaceboot: 'S2', heels: 'S3', dress: 'S3', ballet: 'S3', flipflop: 'S3', clog: 'S3', sandal: 'S3', elf: 'S3', platform: 'S3' };
   const SHOE_BY_ID = { sh_rijlaarzen: 'S2', sh_cowboy: 'S2', sh_boots: 'S2', sh_hightops: 'S1' };
   const shoeRecipe = it => ['pumps', 'heels', 'strappy', 'bowheels'].includes(it.shape) ? [{ k: 'Spumps', d: designOf(it), custom: 'pumps' }] : [{ k: SHOE_BY_ID[it.id] || SHOE_KEY[it.shape] || 'S0', d: designOf(it) }];
@@ -250,6 +254,18 @@ const Avatar = (() => {
   // Eigen silhouetten, gedeeld door de miniaturen en het aangeklede model.
   function drawTailored(ctx, step, skin) {
     const color = step.d.c[0];
+    if(step.custom==='shoulders'){
+      const dress=step.k==='D',shape=step.d.shape,left=shape==='bare_left'||shape==='bare_both',right=shape==='bare_right'||shape==='bare_both';
+      if(!step.fab){drawLayer(ctx,dress?'D_skin':'T0_skin',skin);ctx.beginPath();ctx.moveTo(165,180);ctx.quadraticCurveTo(200,168,235,180);ctx.lineTo(237,243);ctx.lineTo(163,243);ctx.closePath();clayFill(ctx,skin,160,174,240,245);}
+      const yLeft=right?205:180,yRight=left?205:180;
+      ctx.beginPath();ctx.moveTo(157,yLeft);ctx.lineTo(243,yRight);ctx.lineTo(235,240);
+      if(dress){ctx.lineTo(264,335);ctx.quadraticCurveTo(200,350,136,335);ctx.lineTo(165,240);}else{ctx.lineTo(237,250);ctx.lineTo(163,250);}
+      ctx.closePath();ctx.save();ctx.clip();ctx.save();ctx.translate(136,175);paintDesign(ctx,step.d,128,dress?175:80,136,175);ctx.restore();paintStickers(ctx,step.d);ctx.restore();
+      // Covered shoulders have a short sleeve; bare shoulders keep the skin visible.
+      for(const [x,bare] of [[150,right],[250,left]])if(!bare){ctx.beginPath();ctx.roundRect(x-12,182,24,31,9);fab(ctx,step.d,x-12,182,x+12,213);}
+      return;
+    }
+
     if (step.custom === 'wideleg') {
       if (!step.fab) drawLayer(ctx, 'B0_skin', skin);
       ctx.beginPath(); ctx.moveTo(157, 239); ctx.lineTo(240, 239);
@@ -309,7 +325,7 @@ const Avatar = (() => {
     subs.forEach(s => drawLayer(ctx, `${step.k}_${s}`, s === 'skin' ? skin : s === 'fab' ? step.d : null));
     ctx.restore();
   }
-  const stepBox = step => step.custom === 'wideleg' ? [138, 239, 260, 375] : step.custom === 'pumps' ? [152, 357, 247, 394] : union(SUBLAYERS[step.k[0]].map(s => layerBox(`${step.k}_${s}`)));
+  const stepBox = step => step.custom==='shoulders' ? (step.k==='D'?[136,175,264,350]:[138,175,262,250]) : step.custom === 'wideleg' ? [138, 239, 260, 375] : step.custom === 'pumps' ? [152, 357, 247, 394] : union(SUBLAYERS[step.k[0]].map(s => layerBox(`${step.k}_${s}`)));
 
   /* ---------- hoofd ---------- */
   const headIndex = hairItem => HAIR_SPRITE[(hairItem || {}).shape] ?? 5;
@@ -594,7 +610,15 @@ const Avatar = (() => {
   };
 
   const APRONS={apron:(ctx,it)=>{ctx.strokeStyle=it.c[1]||'#fff1c9';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(179,211);ctx.quadraticCurveTo(173,177,200,177);ctx.quadraticCurveTo(227,177,221,211);ctx.stroke();ctx.beginPath();ctx.moveTo(176,202);ctx.lineTo(224,202);ctx.lineTo(231,249);ctx.lineTo(255,329);ctx.quadraticCurveTo(200,344,145,329);ctx.lineTo(169,249);ctx.closePath();ctx.save();ctx.clip();fab(ctx,it,145,202,255,340);paintStickers(ctx,designOf(it));ctx.restore();ctx.strokeStyle=it.c[1]||'#fff1c9';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(154,250);ctx.lineTo(246,250);ctx.stroke();return [145,177,255,340];}};
-  const ACC = { apron:APRONS, back: BACK, hat: HATS, glasses: GLASSES, ears: EARS, neck: NECKS, hand: HAND, pet: PETS, mk_eyes: MAKEUP, mk_lips: MAKEUP, mk_blush: MAKEUP, mk_face: MAKEUP };
+  function waistArt(ctx,it){
+    ctx.beginPath();ctx.roundRect(151,241,98,13,5);fab(ctx,it,151,241,249,254);
+    ctx.strokeStyle=it.c[1];ctx.lineWidth=3;ctx.strokeRect(193,242,14,11);
+    if(it.shape==='beltbag'){ctx.beginPath();ctx.roundRect(207,249,49,38,12);fab(ctx,it,207,249,256,287);ctx.strokeStyle=it.c[1];ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(215,258);ctx.lineTo(248,258);ctx.stroke();return [150,240,257,288];}
+    if(it.shape==='leash'){ctx.strokeStyle=it.c[1];ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(246,255,4,7,0,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=it.c[0];ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(246,260);ctx.bezierCurveTo(279,315,230,336,233,297);ctx.quadraticCurveTo(233,272,246,260);ctx.stroke();return [150,240,270,325];}
+    return [150,240,250,255];
+  }
+  const WAIST={belt:waistArt,beltbag:waistArt,leash:waistArt};
+  const ACC = { waist:WAIST, apron:APRONS, back: BACK, hat: HATS, glasses: GLASSES, ears: EARS, neck: NECKS, hand: HAND, pet: PETS, mk_eyes: MAKEUP, mk_lips: MAKEUP, mk_blush: MAKEUP, mk_face: MAKEUP };
   function drawAcc(ctx, it, geo) {
     if (!it) return null;
     const fn = ACC[it.cat] && ACC[it.cat][it.shape];
@@ -649,6 +673,7 @@ const Avatar = (() => {
     }
     ctx.restore();
     drawAcc(ctx,get('apron'),geo);
+    drawAcc(ctx,get('waist'),geo);
     // 4. haar dat over de schouders valt
     if(look.hairParts)HairParts.paint(ctx,look,'sides');else drawLayer(ctx, `H${hi}_low`, hairDesign(look));
 

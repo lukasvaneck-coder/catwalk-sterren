@@ -564,7 +564,7 @@
     const slots = cat.slots || [cat.id];
     const designLink = slot => {
       if (!ClothingDesigns.TYPES.some(t => t.id === slot)) return;
-      const create = h('button', { class: 'design-closet-link', type: 'button' }, '✂️ Maak je eigen ' + ({ top: 'top', bottom: 'broek of rok', dress: 'jurk', shoes: 'schoenen of hakjes', hat: 'haarband, kroon of muts', ears: 'oorbellen' }[slot]) + ' <span>＋</span>');
+      const create = h('button', { class: 'design-closet-link', type: 'button' }, '✂️ Maak je eigen ' + ({ waist:'heupaccessoire', top: 'top', bottom: 'broek of rok', dress: 'jurk', shoes: 'schoenen of hakjes', hat: 'haarband, kroon of muts', ears: 'oorbellen' }[slot]) + ' <span>＋</span>');
       create.onclick = () => openDesigner(slot); grid.appendChild(create);
     };
     slots.forEach(slot => {

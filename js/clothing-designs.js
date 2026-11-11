@@ -5,6 +5,7 @@ const ClothingDesigns = (() => {
     { id: 'top', name: 'Top', emoji: '👕', shapes: [
       ['tshirt', 'T-shirt', ['casual', 'school'], 0], ['sweater', 'Trui', ['casual', 'school', 'winter'], 0],
       ['blouse', 'Blouse', ['school', 'chic'], 1], ['hoodie', 'Vest met capuchon', ['casual', 'sport'], 0],
+      ['bare_left', 'Linkerschouder bloot', ['casual', 'feest'], 1], ['bare_right', 'Rechterschouder bloot', ['casual', 'feest'], 1], ['bare_both', 'Beide schouders bloot', ['zomer', 'feest'], 1],
     ] },
     { id: 'bottom', name: 'Broek / rok', emoji: '👖', shapes: [
       ['pants', 'Lange broek', ['casual', 'school'], 0], ['wideleg', 'Wijde pijpen', ['casual', 'chic'], 1],
@@ -14,12 +15,14 @@ const ClothingDesigns = (() => {
     { id: 'dress', name: 'Jurk', emoji: '👗', shapes: [
       ['aline', 'A-lijnjurk', ['casual', 'feest'], 1], ['ballgown', 'Baljurk', ['chic', 'prinses', 'feest'], 3],
       ['princess', 'Prinsessenjurk', ['prinses', 'sprookje', 'feest'], 2],
+      ['bare_left', 'Linkerschouder bloot', ['casual', 'feest'], 1], ['bare_right', 'Rechterschouder bloot', ['casual', 'feest'], 1], ['bare_both', 'Beide schouders bloot', ['zomer', 'feest'], 1],
     ] },
     { id: 'shoes', name: 'Schoenen & hakjes', emoji: '👠', shapes: [
       ['sneaker', 'Sneakers', ['casual', 'school', 'sport'], 0], ['boot', 'Laarzen', ['casual', 'winter'], 1],
       ['rainboot', 'Regenlaarzen', ['regen'], 0], ['pumps', 'Hakjes', ['chic', 'feest'], 2],
       ['strappy', 'Hakjes met bandje', ['chic', 'feest', 'dans'], 2], ['bowheels', 'Hakjes met strik', ['feest', 'prinses', 'chic'], 2],
     ] },
+    { id:'waist',name:'Rond je heupen',emoji:'👝',stickers:false,accent:true,shapes:[['belt','Heupriem',['casual'],0],['beltbag','Heuptasje',['casual','sport'],1],['leash','Hondenlijn aan riem (opgerold)',['casual'],1]] },
     { id:'apron',name:'Schort',emoji:'🧑‍🍳',shapes:[['apron','Keukenschort',['casual'],0]] },
     // Hoofdjes en oorbellen zijn klein: geen stickers, en de tweede kleur zit altijd in de details.
     { id: 'hat', name: 'Op je hoofd', emoji: '👑', stickers: false, accent: true, shapes: [

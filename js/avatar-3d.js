@@ -98,6 +98,7 @@ const Avatar3D=(()=>{
   function accessory(item,p,hair){
    if(item.cat==='hat'&&hatModel(item))return;
    if(item.cat==='apron'){apronModel(item);return;}
+   if(item.cat==='waist'){waistModel(item);return;}
    const source=Avatar.accessory(item,p.look,hair);
    if(item.cat==='ears'){
     for(const side of [-1,1]){const o=accessoryMesh(item,source,side<0?[0,200]:[200,400]);if(!o)continue;const art=o.userData.art,scale=Math.min(1,.13/art.h,.095/art.w);o.scale.setScalar(scale);o.position.set(0,-art.h*scale/2,-.004);attach(anchors[side<0?'ear-left':'ear-right'],o,item);sphere(o,material(item.c?.[1]||item.c?.[0]),0,art.h/2,0,.012/scale);}
@@ -141,6 +142,30 @@ const Avatar3D=(()=>{
    if(item.cat==='pet'){const scale=Math.min(1,.4/art.h);o.scale.setScalar(scale);o.position.set(.48,art.h*scale/2,.12);attach(body,o,item);return;}
    attach(body,o,item);
   }
+  function waistModel(item){
+   const g=new T.Group();attach(anchors.waist,g,item);const fabric=cloth(item),trim=material(item.c[1]||'#fff1c9');
+   const belt=mesh(g,new T.CylinderGeometry(.175,.185,.045,40,1,true),fabric,0,.045,0);belt.scale.z=.74;belt.name='waist-belt';
+   const buckle=mesh(g,new T.TorusGeometry(.021,.005,6,16),trim,0,.045,.135);buckle.scale.x=1.3;
+   if(item.shape==='beltbag'){
+    sphere(g,fabric,.125,-.035,.12,.105,.075,.065).name='hip-pouch';
+    cord(g,trim,[[.045,-.012,.163],[.12,-.005,.184],[.203,-.012,.158]],.005);
+    sphere(g,trim,.175,-.025,.176,.009,.018,.006);
+   }
+   if(item.shape==='leash'){
+    const clip=mesh(g,new T.TorusGeometry(.018,.004,6,16),trim,.171,-.015,.035);clip.rotation.y=Math.PI/2;
+    cord(g,fabric,[[.172,-.02,.035],[.205,-.07,.08],[.224,-.2,.10],[.16,-.255,.105],[.11,-.20,.105],[.14,-.07,.07],[.172,-.02,.035]],.012).name='coiled-leash';
+   }
+  }
+  function shoulderGarment(item,fabric,skin){
+   const skinTorso=mesh(body,new T.LatheGeometry(torsoProfile.map(([r,y])=>new T.Vector2(r,y)),32,Math.PI),skin);skinTorso.scale.z=.72;skinTorso.name='bare-shoulder-skin';
+   const vertices=[],uv=[],indices=[];
+   for(let row=0;row<=16;row++)for(let col=0;col<=48;col++){
+    const a=col/48*TAU,x=Math.sin(a),edge=item.shape==='bare_both'?.835:.902+(item.shape==='bare_left'?-1:1)*x*.074,t=row/16,y=.57+t*(edge-.57),r=torsoRadius(y)+.004;
+    vertices.push(r*x,y,r*.72*Math.cos(a));uv.push(col/48,(y-.57)/.41);
+    if(row<16&&col<48){const k=row*49+col;indices.push(k,k+1,k+49,k+1,k+50,k+49);}
+   }
+   const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geometry.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();const garment=mesh(body,geometry,fabric);garment.name='shoulder-garment';fabric.side=T.DoubleSide;
+  }
   function apronModel(item){
    const geometry=new T.BufferGeometry(),positions=[],uv=[],indices=[],rows=24,cols=16;
    for(let row=0;row<=rows;row++){const y=.95-row/rows*.57,w=y>.68?.095+(.95-y)*.1:.13+(.68-y)*.26;
@@ -176,9 +201,11 @@ const Avatar3D=(()=>{
    const fabric=cloth(top||{cat:'top',c:['#ffffff']}),sleeveFabric=top?.stickers?.length?cloth({...top,stickers:[]}):fabric,legFabric=cloth(bottom||{cat:'bottom',c:['#f4f4f8']}),shoeFabric=shoes?cloth(shoes):skin;
    const dress=get('dress'),trouserDress=dress&&['jumpsuit','onesie','overall'].includes(dress.shape),skirtItem=dress&&!trouserDress&&dress.shape!=='swimsuit'?dress:!dress&&['skirt','pleated','tutu'].includes(bottom?.shape)?bottom:null;
    const width=.88+Math.max(0,Math.min(100,p.look.build??40))/100*.3;body.scale.set(width,1,1);
-   const torso=mesh(body,new T.LatheGeometry(torsoProfile.map(([r,y])=>new T.Vector2(r,y)),32,Math.PI),fabric);torso.scale.z=.72;torso.name='torso';const torsoUV=torso.geometry.attributes.uv,torsoVertices=torso.geometry.attributes.position;for(let i=0;i<torsoUV.count;i++)torsoUV.setY(i,(torsoVertices.getY(i)-.57)/.41);cylinder(body,skin,0,1.005,0,.075,.085,.12);
+   if(top?.shape?.startsWith('bare_'))shoulderGarment(top,fabric,skin);
+   else {const torso=mesh(body,new T.LatheGeometry(torsoProfile.map(([r,y])=>new T.Vector2(r,y)),32,Math.PI),fabric);torso.scale.z=.72;torso.name='torso';const torsoUV=torso.geometry.attributes.uv,torsoVertices=torso.geometry.attributes.position;for(let i=0;i<torsoUV.count;i++)torsoUV.setY(i,(torsoVertices.getY(i)-.57)/.41);}
+   cylinder(body,skin,0,1.005,0,.075,.085,.12);
    const hipMaterial=trouserDress||dress?.shape==='swimsuit'||top?.full?fabric:legFabric;const hips=mesh(body,new T.LatheGeometry([[.095,.47],[.15,.49],[.177,.53],[.172,.56],[.155,.605]].map(([r,y])=>new T.Vector2(r,y)),32,Math.PI),hipMaterial);hips.scale.z=.70;hips.name='hips';
-   if(top?.c?.[1])cylinder(body,material(top.c[1]),0,.96,0,.09,.11,.035,.85);
+   if(top?.c?.[1]&&!top.shape?.startsWith('bare_'))cylinder(body,material(top.c[1]),0,.96,0,.09,.11,.035,.85);
    if(['hoodie','puffer','coat','wintercoat','raincoat'].includes(top?.shape)){sphere(body,fabric,0,.95,-.12,.2,.12,.13);if(top.shape==='puffer')for(let i=0;i<3;i++)cylinder(body,fabric,0,.62+i*.1,0,.21,.21,.085,.73);}
    if(['blouse','trackjacket','hoodie','coat','puffer','raincoat'].includes(top?.shape))cord(body,material(top.c?.[1]||'#fff0db'),[[0,.62,.128],[0,.78,.137],[0,.91,.145],[0,.96,.115]],.006);
    if(skirtItem){const long=['ballgown','mermaid'].includes(skirtItem.shape),wide=['ballgown','princess','tutu'].includes(skirtItem.shape),h=long?.58:.34;longSkirt=long;skirtFit={h,bottom:wide?.39:long?.36:.28};skirt=cylinder(body,dress?fabric:legFabric,0,.6-h/2,0,.18,wide?.39:long?.36:.28,h,.8);skirt.name='skirt';}
@@ -188,7 +215,7 @@ const Avatar3D=(()=>{
     const foot=sphere(leg,shoeFabric,0,-.435,.04,.09,.065,.15);foot.name='shoe';if(shoes?.shape==='sneaker'){const trim=material(shoes.c[1]||'#fff8e9');box(leg,trim,0,-.48,.04,.17,.025,.24);for(let i=0;i<3;i++)box(leg,trim,0,-.38,.025+i*.035,.095,.01,.012);}if(shoes&&/boot|monster|bunny/.test(shoes.shape))cylinder(leg,shoeFabric,0,-.34,0,.09,.085,.17);if(shoes&&/heel|pump|strappy/.test(shoes.shape)){box(leg,shoeFabric,0,-.48,-.05,.06,.08,.06);}
     const arm=anchor(body,'shoulder-'+side,side*.189,.90,0);arm.rotation.z=side*.1;limbs.push({group:arm,kind:'arm',side});
     cylinder(arm,skin,0,-.16,0,.055,.045,.31);sphere(arm,skin,0,-.34,0,.055,.065,.05);
-    const sleeve=top&&!['tank','crop','bikini','swimsuit','sundress'].includes(top.shape);sphere(arm,sleeve?sleeveFabric:skin,0,-.012,0,sleeve?.075:.058,sleeve?.074:.058,sleeve?.073:.056).name='shoulder-joint';anchor(arm,'hand-'+side,0,-.34,.015);if(sleeve){const longSleeve=/sweater|hoodie|jacket|coat|blouse|puffer|turtleneck|onesie/.test(top.shape);cylinder(arm,sleeveFabric,0,longSleeve?-.13:-.065,0,.074,.065,longSleeve?.29:.15);}
+    const bare=top?.shape==='bare_both'||top?.shape==='bare_left'&&side===1||top?.shape==='bare_right'&&side===-1;const sleeve=top&&!bare&&!['tank','crop','bikini','swimsuit','sundress'].includes(top.shape);sphere(arm,sleeve?sleeveFabric:skin,0,-.012,0,sleeve?.075:.058,sleeve?.074:.058,sleeve?.073:.056).name='shoulder-joint';anchor(arm,'hand-'+side,0,-.34,.015);if(sleeve){const longSleeve=/sweater|hoodie|jacket|coat|blouse|puffer|turtleneck|onesie/.test(top.shape);cylinder(arm,sleeveFabric,0,longSleeve?-.13:-.065,0,.074,.065,longSleeve?.29:.15);}
    }
    head=anchor(body,'head',0,1.2,0);anchor(head,'ear-left',-.253,-.055,.006);anchor(head,'ear-right',.253,-.055,.006);anchor(body,'chest',0,0,0);anchor(body,'back',0,.85,-.14);anchor(body,'waist',0,.57,0);const skull=mesh(head,new T.SphereGeometry(1,64,48),skin);skull.name='skull';skull.scale.set(.25,.27,.23);const sv=skull.geometry.attributes.position;for(let i=0;i<sv.count;i++)sv.setX(i,sv.getX(i)*FaceFeatures.jaw(p.look.face,sv.getY(i)*.27));sv.needsUpdate=true;skull.geometry.computeVertexNormals();for(const side of [-1,1])sphere(head,skin,side*.244,-.025,-.005,.036,.054,.032);
    faceModel(p,eye.color.getStyle(),hair);
