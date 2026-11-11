@@ -1,7 +1,7 @@
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict'), path = require('node:path');
 const root = path.join(__dirname, '..');
 const ctx = vm.createContext({ localStorage: { setItem() {} } });
-for (const file of ['data', 'hair-parts', 'kitchen-rules', 'town-rules', 'clothing-designs', 'color-challenges', 'learning-challenges', 'parkour-rules']) {
+for (const file of ['data', 'hair-parts', 'face-features', 'kitchen-rules', 'town-rules', 'clothing-designs', 'color-challenges', 'learning-challenges', 'parkour-rules']) {
   vm.runInContext(fs.readFileSync(path.join(root, `js/${file}.js`), 'utf8'), ctx);
 }
 let game = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');

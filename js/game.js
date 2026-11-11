@@ -39,6 +39,7 @@
   function migrate(p) {
     ClothingDesigns.restore(p);
     p.look = p.look || {};
+    Object.assign(p.look,FaceFeatures.normalize(p.look));
     if(p.look.hairParts)p.look.hairParts=HairParts.normalize(p.look.hairParts);
     if(p.look.customHair)p.look.customHair=HairParts.normalize(p.look.customHair);
     p.look.hairCollection=HairParts.collection(p.look);
@@ -195,7 +196,7 @@
       else if(['haircut','haircolor','haircollection'].includes(id)){
         openCreate(P);
         if(id==='haircut')$('#hair-create').click();
-        else {const target=$(id==='haircolor'?'#hair-swatches':'#hair-collection');target.scrollIntoView({block:'center'});const button=target.querySelector('button');if(button)button.focus({preventScroll:true});}
+        else {document.querySelector(`[data-salon-tab=${id==='haircolor'?'color':'hair'}]`)?.click();const target=$(id==='haircolor'?'#hair-swatches':'#hair-collection');target.scrollIntoView({block:'center'});const button=target.querySelector('button');if(button)button.focus({preventScroll:true});}
       }
       else if(id==='jury'){startGame(P);goJury();}
       else {openDesigner();if(id==='cooking')$('[data-design-theme="cooking"]').click();if(id==='collection')$('.design-library-heading').scrollIntoView({block:'start'});}
@@ -305,9 +306,9 @@
   /* ---------- model maken / aanpassen ---------- */
   function openCreate(profile) {
     ui.createReturn = document.body.dataset.screen;
-    ui.editMode = !!profile;
+    ui.editMode = !!profile;ui.salonPanel='';$('#screen-create').classList.toggle('salon-editor',!!profile);
     ui.temp = profile
-      ? { skin: profile.look.skin, eyes: profile.look.eyes, face: profile.look.face, build: profile.look.build, hairColor: profile.look.hairColor, hairParts: profile.look.hairParts?HairParts.normalize(profile.look.hairParts):null, customHair: profile.look.customHair?HairParts.normalize(profile.look.customHair):null, hairCollection:HairParts.collection(profile.look), activeHairId:profile.look.activeHairId||null, hairStyle: profile.outfit.hair || 'hair_lang', name: profile.name }
+      ? { ...FaceFeatures.normalize(profile.look), skin: profile.look.skin, eyes: profile.look.eyes, face: profile.look.face, build: profile.look.build, hairColor: profile.look.hairColor, hairParts: profile.look.hairParts?HairParts.normalize(profile.look.hairParts):null, customHair: profile.look.customHair?HairParts.normalize(profile.look.customHair):null, hairCollection:HairParts.collection(profile.look), activeHairId:profile.look.activeHairId||null, hairStyle: profile.outfit.hair || 'hair_lang', name: profile.name }
       : { skin: 's2', eyes: 'e1', face: 'ovaal', build: 40, hairStyle: 'hair_lang', hairColor: 'bruin', name: '' };
     $('#create-title').textContent = profile ? 'Pas je uiterlijk aan' : 'Maak je model';
     $('#create-done').textContent = profile ? 'Opslaan ✨' : 'Klaar! ✨';
@@ -319,10 +320,16 @@
   }
   function renderCreate(previewOnly = false) {
     const t = ui.temp;
+    if(ui.editMode){
+      const screen=$('#screen-create'),options=screen.querySelector('.options');
+      let dock=screen.querySelector('.salon-dock');if(!dock){dock=document.createElement('nav');dock.className='salon-dock';dock.setAttribute('aria-label','Uiterlijk aanpassen');dock.innerHTML=[['hair','💇','Kapsels'],['face','🙂','Gezicht'],['color','🎨','Haarkleur'],['name','🏷️','Naam']].map(([id,icon,name])=>`<button type="button" data-salon-tab="${id}" aria-pressed="false"><span>${icon}</span>${name}</button>`).join('');screen.append(dock);const close=document.createElement('button');close.type='button';close.id='salon-panel-close';close.className='btn ghost';close.textContent='✕';close.setAttribute('aria-label','Keuzes sluiten');options.prepend(close);}
+      const select=id=>{ui.salonPanel=id;screen.dataset.panel=id;options.classList.toggle('salon-tray-open',!!id);screen.querySelectorAll('.options>.field').forEach((el,i)=>el.classList.toggle('salon-field-active',({name:[0],face:[1,2,3],hair:[4],color:[5]})[id]?.includes(i)||false));dock.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.salonTab===id)));options.scrollTop=0;requestAnimationFrame(()=>FashionPreview.layout('create-preview'));};
+      dock.querySelectorAll('button').forEach(b=>b.onclick=()=>select(ui.salonPanel===b.dataset.salonTab?'':b.dataset.salonTab));$('#salon-panel-close').onclick=()=>select('');select(ui.salonPanel||'');
+    }
     const styles = ui.editMode ? ITEMS.filter(i => i.cat === 'hair' && owned(i)) : ITEMS.filter(i => i.cat === 'hair' && i.lvl <= 1);
     const lvl = ui.editMode ? P.level : 1;
     const outfit = ui.editMode ? { ...P.outfit, hair: t.hairStyle } : { hair: t.hairStyle, top: 'top_tshirt_blauw', bottom: 'bot_jeans', shoes: 'sh_sneakers' };
-    if(ui.createReturn==='screen-fashion-room')FashionPreview.mount($('#create-preview'),{look:t,outfit});
+    if(ui.editMode)FashionPreview.mount($('#create-preview'),{look:t,outfit});
     else $('#create-preview').innerHTML = Avatar.render(t, outfit, { bg: false });
     if (previewOnly) return;
     swatches($('#skin-swatches'), SKINS.map(s => ({ id: s.id, c: s.c, title: 'Huidskleur' })), t.skin, id => { t.skin = id; renderCreate(); });
@@ -330,13 +337,17 @@
     $('#hair-custom-status').textContent=t.hairParts?'Voorbeeld: je eigen kapsel. Sla je uiterlijk op om het te dragen.':'';
     $('#hair-own').hidden=!t.customHair;$('#hair-own').onclick=()=>{t.hairParts=HairParts.normalize(t.customHair);renderCreate();};
     t.hairCollection=HairParts.collection(t);
-    const editHair=entry=>HairStudio.open(t,outfit,(parts,info)=>{
+    const editHair=entry=>HairStudio.open({...t,_level:lvl},outfit,(parts,info)=>{
+      Object.assign(t,info.look||{});
+      if(info.faceOnly){renderCreate();return;}
       const item={id:info.id||'hair_'+crypto.randomUUID(),name:info.name,parts:{...parts}};
       const index=t.hairCollection.findIndex(x=>x.id===item.id);
       if(index<0)t.hairCollection.push(item);else t.hairCollection[index]=item;
       t.hairParts=parts;t.customHair={...parts};t.activeHairId=item.id;renderCreate();
     },entry);
     $('#hair-create').onclick=()=>editHair(null);
+    let faceButton=$('#face-create');if(!faceButton){faceButton=document.createElement('button');faceButton.id='face-create';faceButton.className='btn mint';faceButton.textContent='🙂 Mijn gezicht maken';$('#eye-swatches').after(faceButton);}
+    faceButton.onclick=()=>HairStudio.open({...t,_level:lvl},outfit,(parts,info)=>{Object.assign(t,info.look);renderCreate();},null,'face');
     let library=$('#hair-collection');
     if(!library){library=document.createElement('div');library.id='hair-collection';$('#hair-styles').before(library);}
     library.replaceChildren();
@@ -946,7 +957,7 @@
     $('#btn-puzzle').onclick = openColorAtelier;
     $('#create-done').onclick = () => {
       const name = $('#name-input').value.trim().slice(0, 16) || 'Ster';
-      const look = { skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor, hairParts:ui.temp.hairParts?HairParts.normalize(ui.temp.hairParts):null, customHair:ui.temp.customHair?HairParts.normalize(ui.temp.customHair):null, hairCollection:HairParts.collection(ui.temp), activeHairId:ui.temp.activeHairId||null };
+      const look = { ...FaceFeatures.normalize(ui.temp), skin: ui.temp.skin, eyes: ui.temp.eyes, face: ui.temp.face, build: ui.temp.build, hairColor: ui.temp.hairColor, hairParts:ui.temp.hairParts?HairParts.normalize(ui.temp.hairParts):null, customHair:ui.temp.customHair?HairParts.normalize(ui.temp.customHair):null, hairCollection:HairParts.collection(ui.temp), activeHairId:ui.temp.activeHairId||null };
       if (ui.editMode) { const previous={name:P.name,look:P.look,hair:P.outfit.hair};P.name = name; P.look = look; P.outfit.hair = ui.temp.hairStyle; if(!save()){P.name=previous.name;P.look=previous.look;P.outfit.hair=previous.hair;toast('Opslaan is niet gelukt. Je wijzigingen staan nog in het voorbeeld.');return;} if(ui.createReturn==='screen-fashion-room')openFashionRoom(ui.fashionRoom||'modehuis');else if(ui.createReturn==='screen-world')enterWorld(P);else startGame(P); }
       else { const p = newProfile(name, look, ui.temp.hairStyle); DB.profiles.push(p); save(); enterWorld(p); }
     };
