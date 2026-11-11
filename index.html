@@ -13,6 +13,8 @@
 <link rel="stylesheet" href="css/designer.css">
 <link rel="stylesheet" href="css/town.css">
 <link rel="stylesheet" href="css/town-activities.css">
+<link rel="stylesheet" href="css/kitchen.css">
+<link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
 <div id="app">
@@ -25,7 +27,6 @@
     </div>
     <p class="eyebrow">WIE GAAT ER SPELEN?</p>
     <div id="profiles" class="profiles"></div>
-    <button class="btn violet big" id="btn-duel" type="button" hidden>⚔️ Samen spelen: duel!</button>
     <p class="footer-note">Jouw outfits, sterren en munten blijven op dit apparaat bewaard. <span>✦</span></p>
     <button class="btn ghost sm" data-settings type="button">⚙️ Instellingen</button>
   </section>
@@ -40,7 +41,7 @@
         <div class="field"><span>Huidskleur</span><div id="skin-swatches" class="swatches"></div></div>
         <div class="field"><span>Ogen</span><div id="eye-swatches" class="swatches"></div></div>
         <div class="field"><label for="build-range">Postuur</label><div class="slider-row"><span>dun</span><input type="range" id="build-range" min="0" max="100" step="1" value="40"><span>dik</span></div></div>
-        <div class="field"><span>Kapsel</span><div id="hair-styles" class="mini-grid"></div></div>
+        <div class="field"><span>Kapsel</span><button class="btn mint" type="button" id="hair-create">✂️ Zelf een kapsel maken</button><button class="btn ghost" type="button" id="hair-own" hidden>Mijn eigen kapsel gebruiken</button><p id="hair-custom-status" role="status"></p><div id="hair-styles" class="mini-grid"></div></div>
         <div class="field"><span>Haarkleur</span><div id="hair-swatches" class="swatches"></div></div>
         <div class="row wrap">
           <button class="btn ghost" id="create-cancel" type="button">Terug</button>
@@ -106,6 +107,7 @@
     <main class="room">
       <div class="stage card">
         <div id="stage"></div>
+        <button class="btn ghost sm" id="btn-fashion-room" type="button">← Modehuis</button>
         <div class="stage-tools">
           <button class="btn ghost sm" id="btn-random" type="button" aria-label="Verras me" title="Verras me"><span aria-hidden="true">🎲</span><span class="tool-label">Verras me</span></button>
           <button class="btn ghost sm" id="btn-photo" type="button" aria-label="Foto" title="Foto"><span aria-hidden="true">📸</span><span class="tool-label">Foto</span></button>
@@ -123,10 +125,12 @@
     </footer>
   </section>
 
+  <section id="screen-fashion-room" class="screen" hidden><main id="fashion-room"></main></section>
   <section id="screen-parkour" class="screen" hidden><main id="parkour"></main></section>
   <section id="screen-speeltuin" class="screen" hidden><main id="speeltuin"></main></section>
   <section id="screen-designer" class="screen" hidden><main id="designer"></main></section>
   <section id="screen-town-activities" class="screen" hidden><div id="town-activities"></div></section>
+  <section id="screen-kitchen" class="screen" hidden><main id="kitchen"></main></section>
 </div>
 <div id="overlay" class="overlay" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>
@@ -138,19 +142,36 @@
 <script src="js/learning-challenges.js"></script>
 <script src="assets/doll-manifest.js"></script>
 <script src="js/bg.js"></script>
+<script src="js/hair-parts.js"></script>
 <script src="js/avatar.js"></script>
 <script src="js/designer.js"></script>
 <script src="js/town-rules.js"></script>
 <script src="js/village-art.js"></script>
+<script src="js/vendor/three.min.js"></script>
+<script src="js/avatar-3d.js"></script>
+<script src="js/fashion-room.js"></script>
+<script src="js/fashion-preview.js"></script>
+<script src="js/world-3d.js"></script>
 <script src="js/world.js"></script>
+<script src="js/activity-room-3d.js"></script>
 <script src="js/town-activities.js"></script>
 <script src="js/parkour-rules.js"></script>
+<script src="js/touch-controls.js"></script>
+<script src="js/parkour-3d.js"></script>
 <script src="js/parkour.js"></script>
 <script src="js/speeltuin-rules.js"></script>
 <script src="js/klimrek-rules.js"></script>
 <script src="js/ballenbak-rules.js"></script>
 <script src="js/speeltuin-extra.js"></script>
+<script src="js/speeltuin-3d.js"></script>
 <script src="js/speeltuin.js"></script>
+<script src="js/kitchen-rules.js"></script>
+
+<script src="js/kitchen-3d.js"></script>
+<script src="js/kitchen-room.js"></script>
+<script src="js/supermarket.js"></script>
+<script src="js/kitchen.js"></script>
+<script src="js/hair-studio.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

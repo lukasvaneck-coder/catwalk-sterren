@@ -3,13 +3,12 @@ const Parkour = (() => {
   const R=ParkourRules, $=s=>document.querySelector(s);
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const seconds=n=>`${n.toFixed(1)} s`;
-  let profile, callbacks={}, selected='school', state=null, frame=0, last=0, paused=false, active=false, sprites=[];
+  let profile, callbacks={}, selected='school', state=null, frame=0, last=0, paused=false, active=false;
   const keys=new Set();let controls=null, canvasObserver=null;
-  let view={width:960,height:540};
   const dadLook={skin:'s3',eyes:'e1',hairColor:'donker',build:65};
   const slots=[['top','Bovenkleding'],['bottom','Onderkleding'],['dress','Jurk / pak'],['shoes','Schoenen'],['hat','Hoedje'],['neck','Sieraad'],['bag','Tas'],['hand','In de hand'],['back','Op de rug'],['glasses','Bril'],['ears','Oorbellen'],['pet','Huisdier']];
-  function show(p, cb) {
-    hide();profile=p;callbacks=cb;active=true;
+  function show(p, cb, courseId) {
+    hide();profile=p;callbacks=cb;active=true;if(R.courses.some(c=>c.id===courseId))selected=courseId;
     profile.parkour=profile.parkour||{records:{}};profile.parkour.records=profile.parkour.records||{};
     profile.parkour.dadOutfit=profile.parkour.dadOutfit||{hair:'hair_kort',top:'top_tshirt_blauw',bottom:'bot_jeans',shoes:'sh_sneakers'};
     window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);
@@ -17,7 +16,7 @@ const Parkour = (() => {
     lobby();
   }
   function hide() {
-    document.body.classList.remove('in-race');canvasObserver?.disconnect();
+    document.body.classList.remove('in-race');canvasObserver?.disconnect();Parkour3D.dispose();
     active=false;cancelAnimationFrame(frame);frame=0;keys.clear();state=null;controls?.abort();
     window.removeEventListener('keydown',keyDown);window.removeEventListener('keyup',keyUp);
     window.removeEventListener('blur',autoPause);document.removeEventListener('visibilitychange',visibility);
@@ -34,17 +33,18 @@ const Parkour = (() => {
     }).join('');
   }
   function lobby() {
-    document.body.classList.remove('in-race');canvasObserver?.disconnect();
+    document.body.classList.remove('in-race');canvasObserver?.disconnect();Parkour3D.dispose();
     cancelAnimationFrame(frame);state=null;keys.clear();controls?.abort();
     window.scrollTo(0,0);
     const course=R.courses.find(c=>c.id===selected), root=$('#parkour');
-    root.innerHTML=`<div class="pk-heading"><div><p class="eyebrow">CATWALK STERREN · SPORTCLUB</p><h1>Op je plaatsen… klaar… stijl!</h1><p>Kies je baan, trek je snelste outfit aan en verdien sterren.</p></div><button class="btn ghost" id="pk-exit">🏡 Dorp</button></div>
+    root.innerHTML=`<div class="pk-heading"><div><p class="eyebrow">CATWALK STERREN · SPORTCLUB</p><h1>Op je plaatsen… klaar… stijl!</h1><p>Kies je baan, trek je snelste outfit aan en verdien sterren.</p></div><button class="btn ghost" id="pk-exit">← Raceclub</button></div>
       <div class="pk-courses">${R.courses.map(c=>{const rec=profile.parkour.records[c.id];return `<button class="pk-course ${selected===c.id?'selected':''}" data-course="${c.id}" aria-pressed="${selected===c.id}"><span class="pk-icon">${c.icon}</span><b>${c.name}</b><small>${rec?`${'⭐'.repeat(rec.stars)} · record ${seconds(rec.best)}`:'Nog geen record'}</small></button>`;}).join('')}</div>
       <div class="pk-lobby"><section class="card pk-brief"><p class="eyebrow">JOUW VOLGENDE RACE</p><h2>${course.icon} ${course.name}</h2><p>${course.desc}</p><div class="pk-times">${timing(course)}</div><p class="pk-note">Na ${course.times[2]} seconden is de tijd op. Je kunt altijd opnieuw proberen. Meer sterren = een hogere beoordeling en meer XP en munten.</p>
       <div id="pk-player-score">${scoreHtml(profile.outfit)}</div><p class="pk-note">Boven 25% · onder 25% · schoenen 35% · accessoires 15%. Een jurk telt voor boven én onder. Je uiterlijk heeft geen invloed.</p>
-      <button class="btn big" id="pk-start">🏁 Start de race</button><p class="pk-note">Pijltjes / WASD = lopen · spatie = springen · Enter = sprinten tegen papa · P / Escape = pauze. Ook met schermknoppen.</p></section>
+      <button class="btn big" id="pk-start">🏁 Start de race</button><p class="pk-note">Sleep de stuurknop om te lopen. Tik op Spring om te springen, of steeds op Sprint tegen papa. Met Pauze neem je even rust.</p></section>
       <section class="card pk-wardrobe"><h2>👟 Jouw race-outfit</h2><div class="pk-doll" id="pk-player-doll">${Avatar.render(profile.look,profile.outfit,{bg:false})}</div><div class="pk-selects">${outfitForm(profile.outfit,'player')}</div><p class="pk-note">Je kiest uit je eigen kast. Sneakers lopen sneller dan hakjes; sportkleding helpt en zware accessoires remmen af. Geen accessoires geeft 6/10.</p></section></div>
       ${selected==='dad'?`<section class="card pk-dad"><h2>👨 Kleed papa aan</h2><p>Papa gebruikt dezelfde kledingregels. Geef hem sneakers voor een grotere uitdaging, of hakjes voor een grappige race!</p><div class="pk-doll" id="pk-dad-doll">${Avatar.render(dadLook,profile.parkour.dadOutfit,{bg:false})}</div><div id="pk-dad-score">${scoreHtml(profile.parkour.dadOutfit)}</div><div class="pk-selects">${outfitForm(profile.parkour.dadOutfit,'dad')}</div></section>`:''}`;
+    FashionPreview.mount($('#pk-player-doll'),profile);if(selected==='dad')FashionPreview.mount($('#pk-dad-doll'),{look:dadLook,outfit:profile.parkour.dadOutfit});
     $('#pk-exit').onclick=()=>{hide();callbacks.exit();};
     root.querySelectorAll('[data-course]').forEach(b=>b.onclick=()=>{selected=b.dataset.course;lobby();});
     root.querySelectorAll('select').forEach(el=>el.onchange=()=>{
@@ -54,7 +54,7 @@ const Parkour = (() => {
       if(el.value&&['top','bottom'].includes(el.dataset.slot))delete outfit.dress;
       root.querySelectorAll(`select[data-owner="${who}"]`).forEach(s=>s.value=outfit[s.dataset.slot]||'');
       $(`#pk-${who}-score`).innerHTML=scoreHtml(outfit);
-      $(`#pk-${who}-doll`).innerHTML=Avatar.render(who==='dad'?dadLook:profile.look,outfit,{bg:false});callbacks.save();
+      FashionPreview.mount($(`#pk-${who}-doll`),{look:who==='dad'?dadLook:profile.look,outfit});callbacks.save();
     });
     $('#pk-start').onclick=start;
   }
@@ -65,15 +65,17 @@ const Parkour = (() => {
     }
     state=R.create(selected,profile.outfit,profile.parkour.dadOutfit,ITEM_BY_ID);paused=false;keys.clear();
     document.body.classList.add('in-race');
-    sprites=[Avatar.compose(profile.look,profile.outfit), ...state.npcs.map((n,i)=>Avatar.compose(selected==='dad'?dadLook:{...profile.look,hairColor:i?'rood':'blond'},selected==='dad'?profile.parkour.dadOutfit:{hair:i?'hair_staartjes':'hair_staart',top:i?'top_tshirt_rood':'top_tshirt_groen',bottom:'bot_jeans',shoes:'sh_sneakers'}))];
+    FashionPreview.pause();
+    const runnerProfiles=[profile,...state.npcs.map((n,i)=>({look:selected==='dad'?dadLook:{...profile.look,hairColor:i?'rood':'blond'},outfit:selected==='dad'?profile.parkour.dadOutfit:{hair:i?'hair_staartjes':'hair_staart',top:i?'top_tshirt_rood':'top_tshirt_groen',bottom:'bot_jeans',shoes:'sh_sneakers'}}))];
     $('#parkour').innerHTML=`<div class="pk-race-head"><button class="btn ghost sm" id="pk-back">← Banen</button><b>${state.course.icon} ${state.course.name}</b><button class="btn ghost sm" id="pk-pause">⏸ Pauze</button></div>
       <div class="pk-live"><strong id="pk-clock">0.0 s</strong><span id="pk-live-stars">⭐⭐⭐</span><span id="pk-progress">Klaar voor de start</span><span class="pk-outfit-bonus">Outfit +${Math.round(state.stats.bonus)}%</span></div>
-      <div class="pk-times">${timing(state.course)}</div><div class="pk-canvas-wrap"><canvas id="pk-canvas" width="960" height="540" tabindex="0" aria-label="Raceveld. Gebruik de loopknoppen en Spring, of pijltjestoetsen en spatie."></canvas><div id="pk-pause-panel" hidden><h2>Even pauze</h2><p>De klok staat stil.</p><div class="pk-times">${timing(state.course)}</div><button class="btn" id="pk-resume">Verder rennen</button></div></div>
-      <p id="pk-message" class="pk-message" role="status">${selected==='dad'?'Tik steeds opnieuw op Sprint of Enter!':'Volg de route naar de geblokte finish.'}</p>
-      <div class="pk-controls"><div class="pk-arrows" ${selected==='dad'?'hidden':''}><button data-move="up" aria-label="Omhoog">↑</button><button data-move="left" aria-label="Links">←</button><button data-move="down" aria-label="Omlaag">↓</button><button data-move="right" aria-label="Rechts">→</button></div><button class="btn mint" id="pk-jump" ${selected==='dad'?'hidden':''}>Spring ⤴ <small>spatie</small></button><button class="btn" id="pk-sprint" ${selected!=='dad'?'hidden':''}>⚡ Sprint! <small>tik / Enter</small></button><label id="pk-energy-label" ${selected!=='dad'?'hidden':''}>Sprintmeter <meter id="pk-energy" min="0" max="1" value="0"></meter></label></div><div id="pk-result" role="status"></div>`;
+      <div class="pk-times">${timing(state.course)}</div><div class="pk-canvas-wrap"><canvas id="pk-canvas" width="960" height="540" tabindex="0" aria-label="Raceveld. Stuur met de stuurknop en tik op Spring."></canvas><div id="pk-countdown" aria-live="polite"></div><div id="pk-direction"></div><svg id="pk-map" aria-label="Overzicht van de baan"></svg><div id="pk-pause-panel" hidden><h2>Even pauze</h2><p>De klok staat stil.</p><div class="pk-times">${timing(state.course)}</div><button class="btn" id="pk-resume">Verder rennen</button></div></div>
+      <p id="pk-message" class="pk-message" role="status">${selected==='dad'?'Tik steeds opnieuw op Sprint!':'Volg de route naar de geblokte finish.'}</p>
+      <div class="pk-controls"><div id="pk-stick" class="touch-stick" role="group" aria-label="Stuurknop: sleep om te lopen" ${selected==='dad'?'hidden':''}><span></span></div><div class="pk-arrows" ${selected==='dad'?'hidden':''}><button data-move="up" aria-label="Omhoog">↑</button><button data-move="left" aria-label="Links">←</button><button data-move="down" aria-label="Omlaag">↓</button><button data-move="right" aria-label="Rechts">→</button></div><button class="btn mint" id="pk-jump" ${selected==='dad'?'hidden':''}>Spring ⤴</button><button class="btn" id="pk-sprint" ${selected!=='dad'?'hidden':''}>⚡ Sprint!</button><label id="pk-energy-label" ${selected!=='dad'?'hidden':''}>Sprintmeter <meter id="pk-energy" min="0" max="1" value="0"></meter></label></div><div id="pk-result" role="status"></div>`;
     $('#pk-back').onclick=lobby;$('#pk-pause').onclick=()=>setPaused(!paused);$('#pk-resume').onclick=()=>setPaused(false);
     $('#pk-jump').onclick=()=>{if(!paused)R.jump(state);};$('#pk-sprint').onclick=()=>{if(!paused)R.tap(state);};
     controls=new AbortController();
+    TouchControls.stick($('#pk-stick'), keys, controls.signal, ()=>!paused);
     // Een tweede vinger geeft geen click terwijl een looppijl ingedrukt blijft.
     $('#pk-jump').addEventListener('pointerdown',e=>{
       if(e.pointerType==='touch'||e.pointerType==='pen'){e.preventDefault();if(!paused)R.jump(state);}
@@ -82,6 +84,8 @@ const Parkour = (() => {
       b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.move);},{signal:controls.signal});
       for(const type of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(type,()=>keys.delete(b.dataset.move),{signal:controls.signal});
     });
+    if(!Parkour3D.mount($('#pk-canvas'),state,runnerProfiles,()=>setPaused(true))){lobby();const message=document.createElement('p');message.setAttribute('role','alert');message.textContent='Het 3D-raceveld kon niet starten. Probeer de race opnieuw.';$('#parkour').prepend(message);return;}
+    initMap();
     canvasObserver?.disconnect();
     canvasObserver=new ResizeObserver(()=>{if(state&&$('#pk-canvas')){resizeCanvas();draw();}});
     canvasObserver.observe($('#pk-canvas'));
@@ -90,6 +94,7 @@ const Parkour = (() => {
   }
   function setPaused(value) {
     if(!state||state.finished)return;
+    if(!value&&Parkour3D.debug().lost){$('#pk-message').textContent='Het 3D-beeld herstelt nog. De race blijft gepauzeerd.';return;}
     paused=value;keys.clear();$('#pk-pause-panel').hidden=!paused;$('#pk-pause').textContent=paused?'▶ Verder':'⏸ Pauze';
     last=performance.now();
   }
@@ -122,7 +127,7 @@ const Parkour = (() => {
     $('#pk-live-stars').textContent='⭐'.repeat(R.starsFor(state.time,state.course))||'Tijd op';
     $('#pk-progress').textContent=state.course.id==='tag'?`Vlaggen ${state.checkpoint}/5`: `${Math.min(100,Math.round(state.player.x/state.finish.x*100))}%`;
     $('#pk-energy').value=state.energy;
-    const text=state.countdown>0?`Start over ${Math.ceil(state.countdown)}…`:state.freeze>0?`${state.notice} Nog ${Math.ceil(state.freeze)} s.`:state.course.id==='dad'?'Blijf tikken om te sprinten!':state.jump>0?'Hop!':state.course.id==='tag'?(state.checkpoint<5?`Pak vlag ${state.checkpoint+1} en ontwijk je vriendinnen.`:'Alle vlaggen! Nu naar de finish.'):view.portrait?'Houd een pijl vast. Tik op Spring.':'Spatie of Spring = springen. P = pauze.';
+    const text=state.countdown>0?`Start over ${Math.ceil(state.countdown)}…`:state.freeze>0?`${state.notice} Nog ${Math.ceil(state.freeze)} s.`:state.course.id==='dad'?'Blijf tikken om te sprinten!':state.jump>0?'Hop!':state.course.id==='tag'?(state.checkpoint<5?`Pak vlag ${state.checkpoint+1} en ontwijk je vriendinnen.`:'Alle vlaggen! Nu naar de finish.'):'Sleep de stuurknop. Tik op Spring.';
     if($('#pk-message').textContent!==text)$('#pk-message').textContent=text;
     $('#pk-jump').disabled=paused||state.cooldown>0||state.freeze>0||state.countdown>0;
     $('#pk-sprint').disabled=paused||state.countdown>0;
@@ -143,82 +148,19 @@ const Parkour = (() => {
     $('#pk-retry').onclick=start;$('#pk-outfit').onclick=lobby;
     $('#pk-result').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   }
-  function resizeCanvas() {
-    const canvas=$('#pk-canvas'), width=canvas.clientWidth, height=canvas.clientHeight;
-    if(!width||!height)return;
-    const portrait=matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
-    const ratio=width/height;
-    const worldWidth=portrait?Math.max(420,Math.min(640,ratio*540)):960;
-    view={width:worldWidth,height:worldWidth/ratio,portrait};
-    const dpr=Math.min(devicePixelRatio||1,2);
-    const pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);
-    if(canvas.width!==pixelWidth||canvas.height!==pixelHeight){canvas.width=pixelWidth;canvas.height=pixelHeight;}
+  function resizeCanvas(){Parkour3D.resize();}
+  function initMap(){
+    const map=$('#pk-map');map.hidden=!['gym','tag'].includes(selected);map.style.display=map.hidden?'none':'';
+    map.setAttribute('viewBox',`0 0 ${state.course.length} ${state.course.height}`);
+    map.innerHTML=`<rect width="100%" height="100%" fill="#fff8e8"/>${state.walls.map(w=>`<rect x="${w.x}" y="${w.y}" width="${w.w}" height="${w.h}" fill="#87a976"/>`).join('')}${state.flags.map((f,i)=>`<circle data-map-flag="${i}" cx="${f.x}" cy="${f.y}" r="20" fill="#bc9bce"/>`).join('')}<circle cx="${state.finish.x}" cy="${state.finish.y}" r="20" fill="#5b5273"/><circle id="pk-map-player" r="22" fill="#ec528d"/>`;
   }
-  function draw() {
-    const canvas=$('#pk-canvas'), g=canvas.getContext('2d'), s=state;
-    const {width,height}=view;
-    const camera=(world,visible,position,anchor,pad=0)=>world+2*pad<=visible?(world-visible)/2:Math.max(-pad,Math.min(world-visible+pad,position-visible*anchor));
-    const cameraX=camera(s.course.length,width,s.player.x,.32);
-    const cameraY=camera(s.course.height,height,s.player.y,.58,view.portrait?28:0);
-    g.setTransform(canvas.width/width,0,0,canvas.height/height,0,0);
-    g.clearRect(0,0,width,height);g.fillStyle=selected==='rain'?'#a9c7c5':'#b6db95';g.fillRect(0,0,width,height);
-    g.save();g.translate(-cameraX,-cameraY);
-    // Grass details, trees and houses decorate the edges, leaving the track clear.
-    g.font='26px "Segoe UI Emoji",sans-serif';g.textAlign='center';
-    for(let x=30;x<s.course.length;x+=150){g.fillText(x%300===30?'🌳':'🌼',x,55);if(selected!=='gym')g.fillText('🌷',x+40,520);}
-    if(selected!=='gym'&&selected!=='tag') {
-      g.fillStyle=selected==='rain'?'#c2cbd5':'#f3dfb5';g.fillRect(0,120,s.course.length,350);
-      g.strokeStyle='#ffffffaa';g.lineWidth=3;g.setLineDash([22,20]);g.beginPath();g.moveTo(0,285);g.lineTo(s.course.length,285);g.stroke();g.setLineDash([]);
-      for(let x=160;x<s.course.length-150;x+=400){g.fillStyle='#aa8655';g.font='bold 22px system-ui';g.fillText('→',x,445);}
-    }
-    if(selected==='gym') {
-      g.fillStyle='#f6e3b8';g.fillRect(0,0,s.course.length,s.course.height);
-      s.walls.forEach(w=>{g.fillStyle='#527d4e';g.fillRect(w.x+2,w.y+6,w.w-4,w.h-4);g.fillStyle='#75a762';g.fillRect(w.x+2,w.y+2,w.w-4,w.h-10);});
-      g.font='bold 15px system-ui';g.fillStyle='#584369';g.fillText('SCHOOL',96,83);g.fillText('GYM',s.finish.x,s.finish.y-55);
-    }
-    s.obstacles.forEach((o,i)=>{
-      if(o.kind==='road'){
-        g.fillStyle='#6d7481';g.fillRect(o.x,0,o.w,540);
-        g.fillStyle='#ffffff';for(let y=235;y<350;y+=20)g.fillRect(o.x+4,y,o.w-8,10);
-        g.font='bold 16px system-ui';g.fillStyle='#6d4355';g.fillText('KIJK UIT',o.x-55,220);
-        const car=R.carAt(s,i);g.fillStyle=i?'#c876ae':'#ef9771';g.beginPath();g.roundRect(car.x,car.y,car.w,car.h,16);g.fill();
-        g.fillStyle='#c8edff';g.fillRect(car.x+10,car.y+18,car.w-20,25);g.fillStyle='#3d3f52';g.fillRect(car.x-4,car.y+16,6,22);g.fillRect(car.x+car.w-2,car.y+16,6,22);
-      } else if(o.kind==='puddle') {
-        g.fillStyle='#6daacb';g.beginPath();g.ellipse(o.x+o.w/2,o.y+o.h/2,o.w/2+6,o.h/2,0,0,Math.PI*2);g.fill();
-        g.strokeStyle='#c2eaf8';g.lineWidth=3;g.beginPath();g.ellipse(o.x+o.w/2,o.y+o.h/2,o.w/3,o.h/3,0,0,Math.PI*2);g.stroke();
-      } else {g.fillStyle='#a47451';g.fillRect(o.x,o.y,10,o.h);g.fillRect(o.x+o.w-10,o.y,10,o.h);g.fillStyle='#eee0bf';g.fillRect(o.x,o.y+10,o.w,17);g.fillRect(o.x,o.y+65,o.w,17);}
-    });
-    s.flags.forEach((f,i)=>{g.globalAlpha=i<s.checkpoint?.3:1;g.fillStyle=i===s.checkpoint?'#ffce52':'#f7f3ff';g.beginPath();g.arc(f.x,f.y,25,0,Math.PI*2);g.fill();g.fillStyle='#62488b';g.font='bold 22px system-ui';g.fillText(i<s.checkpoint?'✓':String(i+1),f.x,f.y+8);g.globalAlpha=1;});
-    const f=s.finish;
-    for(let y=-35;y<35;y+=14)for(let x=-14;x<14;x+=14){g.fillStyle=((y+35)/14+(x+14)/14)%2?'#fff':'#665078';g.fillRect(f.x+x,f.y+y,14,14);}
-    g.font='bold 16px system-ui';g.fillStyle='#493653';g.fillText('FINISH',f.x,f.y-50);
-    const runners=[...s.npcs.map((n,i)=>({p:n,img:sprites[i+1],name:n.name})),{p:s.player,img:sprites[0],name:profile.name,player:true}].sort((a,b)=>a.p.y-b.p.y);
-    for(const r of runners) {
-      const hop=r.player&&s.jump>0?Math.sin((.8-s.jump)/.8*Math.PI)*40:0;
-      g.fillStyle='#40395730';g.beginPath();g.ellipse(r.p.x,r.p.y+1,18,7,0,0,7);g.fill();
-      g.save();if(r.player&&s.immune>0)g.globalAlpha=.55+.3*Math.sin(s.time*18);
-      g.drawImage(r.img,r.p.x-39,r.p.y-91-hop,78,96);g.restore();
-      g.font='bold 13px system-ui';g.textAlign='center';const name=r.name.slice(0,16), w=g.measureText(name).width+14;
-      g.fillStyle=r.player?'#7453b9':'#ffffffdf';g.beginPath();g.roundRect(r.p.x-w/2,r.p.y-103-hop,w,20,8);g.fill();g.fillStyle=r.player?'white':'#584566';g.fillText(name,r.p.x,r.p.y-89-hop);
-    }
-    g.restore();
-    if(selected==='rain'){g.strokeStyle='#52789550';g.lineWidth=2;for(let i=0;i<65;i++){const x=(i*73+s.time*35)%width,y=(i*97+s.time*230)%height;g.beginPath();g.moveTo(x,y);g.lineTo(x-6,y+16);g.stroke();}}
-    if(s.countdown>0){g.fillStyle='#40305a66';g.fillRect(0,0,width,height);g.fillStyle='white';g.textAlign='center';g.font='bold 80px system-ui';g.fillText(Math.ceil(s.countdown),width/2,height/2+28);}
-    // Direction cue remains visible even when the finish is beyond the camera.
-    if(s.countdown<=0&&!s.finished){const target=s.flags[s.checkpoint]||s.finish;g.fillStyle='#ffffffed';g.beginPath();g.roundRect(width-229,14,215,38,16);g.fill();g.fillStyle='#62488b';g.font='bold 15px system-ui';g.textAlign='center';const dx=target.x-s.player.x,dy=target.y-s.player.y;g.fillText(`${Math.abs(dx)>Math.abs(dy)?dx>0?'→':'←':dy>0?'↓':'↑'} ${s.flags[s.checkpoint]?'Volgende vlag':'Naar de finish'} · ${Math.round(Math.hypot(dx,dy)/10)} m`,width-121.5,39);}
-    if(width<800&&['gym','tag'].includes(selected))drawMap(g,s,s.player.x-cameraX,s.player.y-cameraY);
+  function draw(){
+    Parkour3D.draw(state);
+    const count=$('#pk-countdown');count.textContent=state.countdown>0?Math.ceil(state.countdown):'';count.hidden=state.countdown<=0;
+    const target=state.flags[state.checkpoint]||state.finish,dx=target.x-state.player.x,dy=target.y-state.player.y;
+    $('#pk-direction').textContent=`${Math.abs(dx)>Math.abs(dy)?dx>0?'→':'←':dy>0?'↓':'↑'} ${state.flags[state.checkpoint]?'Volgende vlag':'Finish'} · ${Math.round(Math.hypot(dx,dy)/10)} m`;
+    const dot=$('#pk-map-player');if(dot){dot.setAttribute('cx',state.player.x);dot.setAttribute('cy',state.player.y);}
+    document.querySelectorAll('[data-map-flag]').forEach(n=>n.setAttribute('fill',+n.dataset.mapFlag<state.checkpoint?'#d9d1df':+n.dataset.mapFlag===state.checkpoint?'#eab73e':'#bc9bce'));
   }
-  function drawMap(g,s,playerX,playerY) {
-    const scale=Math.min(112/s.course.length,70/s.course.height);
-    // Houd het kaartje uit de buurt van de speler en de richtingsaanwijzer.
-    const nearMap=playerX+45>view.width-134&&playerY+8>view.height-92&&playerY-125<view.height-10;
-    const x=nearMap?10:view.width-134,y=nearMap?10:view.height-92;
-    g.save();g.fillStyle='#ffffffed';g.beginPath();g.roundRect(x,y,124,82,10);g.fill();
-    g.translate(x+6,y+6);g.scale(scale,scale);
-    g.fillStyle='#75a762';s.walls.forEach(w=>g.fillRect(w.x,w.y,w.w,w.h));
-    for(const [i,f] of s.flags.entries()){g.fillStyle=i<s.checkpoint?'#d7d0df':i===s.checkpoint?'#e3a10d':'#8873a8';g.beginPath();g.arc(f.x,f.y,3/scale,0,Math.PI*2);g.fill();}
-    g.fillStyle='#49365e';g.fillRect(s.finish.x-3/scale,s.finish.y-3/scale,6/scale,6/scale);
-    g.fillStyle='#ff4d92';g.beginPath();g.arc(s.player.x,s.player.y,4/scale,0,Math.PI*2);g.fill();g.restore();
-  }
-  return {show,hide};
+  return {show,hide,debug:()=>({selected,paused,active,state:state?JSON.parse(JSON.stringify(state)):null,view:Parkour3D.debug()})};
 })();

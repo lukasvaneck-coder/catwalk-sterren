@@ -18,12 +18,12 @@ const SpeeltuinExtra = (() => {
     { id: 'klimrek', icon: '🧗', sprite: ASSETS.has('klimrek.png') ? 'klimrek' : 'toren', name: 'Klimrek-doolhof',
       desc: 'Klim door het doolhof naar de golvende glijbaan rechtsboven. Pak onderweg de letters: dat is de code voor de extra lange glijbaan! Het klimrek verandert soms. Op de glijbaan spring je over de jongetjes die naar boven klimmen.',
       rules: ['⭐ Beneden gekomen', '⭐ Code goed = extra lange glijbaan', '⭐ Hoogstens één jongetje geraakt'],
-      help: 'Pijltjes of WASD, veeg of tik naar een vakje = klimmen. Op de glijbaan: spatie, tik of Spring = springen. P = pauze.',
+      help: 'Veeg of tik naar een vakje om te klimmen. Tik op de glijbaan of op Spring om te springen. Tik op Pauze voor een rustmoment.',
       modes: [['klein', '▶ Makkelijk', 'Letters in elke volgorde'], ['groot', '▶ Woordpuzzel', 'Leg zelf het woord']] },
     { id: 'ballenbak', icon: '🎯', sprite: ASSETS.has('doelbak.png') ? 'doelbak' : 'bal', name: 'Ballenbak-mikken',
-      desc: 'Veeg de bal omhoog, net als in Pokémon Go. In de bak is 1 punt, op het hoofd van papa of mama 2 punten! Je hebt 45 seconden. Drie keer achter elkaar mis? Dan komt er een ballenregen en ben je 3 seconden kwijt.',
+      desc: 'Tik op een doel of veeg de bal omhoog. In de bak is 1 punt, op het hoofd van papa of mama 2 punten! Je hebt 45 seconden. Drie keer achter elkaar mis? Dan komt er een ballenregen en ben je 3 seconden kwijt.',
       rules: ['⭐⭐⭐ 30 punten', '⭐⭐ 16 punten', '⭐ 6 punten'], unit: 'punten',
-      help: 'Veeg met je vinger of muis omhoog: hoe harder, hoe verder. Of mik met de pijltjes en gooi met spatie. P = pauze.',
+      help: 'Tik op de bak of op papa of mama om te mikken. Je kunt ook omhoog vegen: een snelle veeg gaat verder. Tik op Pauze voor een rustmoment.',
       parents: [['papa', '👨 Papa'], ['mama', '👩 Mama']] },
   ];
   const ball = (g, x, y, r, c) => {
@@ -49,10 +49,10 @@ const SpeeltuinExtra = (() => {
   }
   const klimrek = {
     minWidth: 640, moveKeys: dirKeys, canvasClass: 'run',
-    label: 'Klimrek-doolhof. Klim met de pijltjes of tik naar een vakje. Op de glijbaan druk je op spatie om te springen.',
+    label: 'Klimrek-doolhof. Veeg of tik naar een vakje. Tik op de glijbaan om te springen.',
     create(seed, opts) { boyDolls = BOYS.map(b => Avatar.compose(b.look, b.outfit)); panelPhase = ''; answer = []; return K.create(seed, opts.mode); },
     controls: () => `<div class="pk-arrows st-pad"><button data-move="up" aria-label="Omhoog" type="button">↑</button><button data-move="left" aria-label="Links" type="button">←</button><button data-move="down" aria-label="Omlaag" type="button">↓</button><button data-move="right" aria-label="Rechts" type="button">→</button></div>
-      <button class="btn mint" id="st-jump" type="button" hidden>Spring ⤴ <small>spatie</small></button>`,
+      <button class="btn mint" id="st-jump" type="button" hidden>Spring ⤴</button>`,
     press: s => K.press(s),
     nudge: (s, dir) => K.queue(s, dir),
     step: (s, dt, input) => K.step(s, dt, input),
@@ -91,7 +91,7 @@ const SpeeltuinExtra = (() => {
         progress: slide ? `${Math.min(100, Math.round(sl.x / sl.length * 100))}%` : (s.long ? 'Extra lang!' : 'Doolhof'),
         message: s.countdown > 0 ? `Start over ${Math.ceil(s.countdown)}…` : s.noticeTime > 0 ? s.notice
           : K.warning(s) ? 'Let op! Het klimrek gaat veranderen…'
-          : slide ? 'Tik of spatie = springen over de jongetjes!'
+          : slide ? 'Tik om over de jongetjes te springen!'
           : K.allLetters(s) ? 'Alle letters! Klim naar de glijbaan rechtsboven ↗' : 'Zoek de letters en klim naar de glijbaan rechtsboven ↗',
         jump: slide,
       };
@@ -274,7 +274,7 @@ const SpeeltuinExtra = (() => {
   }
   const ballenbak = {
     minWidth: 640, canvasClass: 'tramp', moveKeys: dirKeys,
-    label: 'Ballenbak-mikken. Veeg omhoog om te gooien, of mik met de pijltjes en gooi met spatie.',
+    label: 'Ballenbak-mikken. Veeg de bal omhoog om te gooien.',
     create(seed, opts, profile) {
       const who = opts.parent === 'mama' ? MAMA : { ...PAPA, outfit: profile?.parkour?.dadOutfit || PAPA.outfit };
       parentDoll = Avatar.compose(who.look, who.outfit);
@@ -284,7 +284,7 @@ const SpeeltuinExtra = (() => {
       drag = null; aim = { x: 0, d: B.BB.bak.d, shown: false };
       return B.create(seed, opts.parent);
     },
-    controls: () => `<button class="btn mint" id="st-jump" type="button">Gooi 🎯 <small>spatie</small></button>`,
+    controls: () => `<button class="btn mint" id="st-jump" type="button">Gooi 🎯</button>`,
     press(s) { aim.shown = true; return B.throwBall(s, aim.x, aim.d); },
     input(keys) { return { left: keys.has('left'), right: keys.has('right'), up: keys.has('up'), down: keys.has('down') }; },
     step(s, dt, input) {
@@ -327,7 +327,7 @@ const SpeeltuinExtra = (() => {
       return { main: `${Math.max(0, Math.ceil(B.BB.duration - s.time))} s`, mainLabel: 'Tijd', stars: `🎯 ${s.score} ${s.score === 1 ? 'punt' : 'punten'}`,
         progress: `Raak ${s.hits}/${s.throws}`,
         message: s.countdown > 0 ? `Start over ${Math.ceil(s.countdown)}…` : s.rain > 0 ? `Ballenregen! Nog ${Math.ceil(s.rain)} s wachten…`
-          : s.noticeTime > 0 ? s.notice : `Veeg omhoog naar de bak (1 punt) of ${s.parent === 'mama' ? 'mama' : 'papa'}s hoofd (2 punten)!`,
+          : s.noticeTime > 0 ? s.notice : `Tik of veeg naar de bak (1 punt) of ${s.parent === 'mama' ? 'mama' : 'papa'}s hoofd (2 punten)!`,
         jump: true, jumpDisabled: !B.canThrow(s) };
     },
     ui() {},

@@ -27,16 +27,16 @@ const Speeltuin = (() => {
   const keys = new Set();
   const extra = () => X.adapters[game];
 
-  function show(p, callbacks) {
+  function show(p, callbacks, selectedGame) {
     hide(); profile = p; cb = callbacks || {}; active = true;
     profile.speeltuin = profile.speeltuin || { records: {} };
     profile.speeltuin.records = profile.speeltuin.records || {};
     window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp);
     window.addEventListener('blur', autoPause); document.addEventListener('visibilitychange', visibility);
-    lobby();
+    lobby();if(selectedGame)document.querySelector(`[data-play="${selectedGame}"]`)?.closest('.st-game')?.scrollIntoView({block:'start'});
   }
   function hide() {
-    document.body.classList.remove('in-speeltuin'); observer?.disconnect(); listeners?.abort();
+    document.body.classList.remove('in-speeltuin'); observer?.disconnect(); listeners?.abort();Speeltuin3D.dispose();
     active = false; cancelAnimationFrame(frame); frame = 0; keys.clear(); state = null;
     window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp);
     window.removeEventListener('blur', autoPause); document.removeEventListener('visibilitychange', visibility);
@@ -49,12 +49,12 @@ const Speeltuin = (() => {
     return `${'⭐'.repeat(rec.stars) || 'Nog geen ster'} · record ${rec.best} ${g.unit || (rec.best === 1 ? 'ster' : 'sterren') + ' gevangen'}`;
   }
   function lobby() {
-    document.body.classList.remove('in-speeltuin'); observer?.disconnect(); listeners?.abort();
+    document.body.classList.remove('in-speeltuin'); observer?.disconnect(); listeners?.abort();Speeltuin3D.dispose();
     cancelAnimationFrame(frame); state = null; keys.clear();
     window.scrollTo(0, 0);
     $('#speeltuin').innerHTML = `
-      <div class="pk-heading"><div><p class="eyebrow">CATWALK STERREN · BINNENSPEELTUIN</p><h1>🛝 Springen, stuiteren, sterren vangen!</h1><p>Kies een spelletje. De sterren die je verdient tellen mee voor je level.</p></div><button class="btn ghost" id="st-exit" type="button">🏡 Dorp</button></div>
-      <div class="st-hero" role="img" aria-label="De speelhal met een ballenbak, regenboog, klimmuur en een klimrek met glijbaan"></div>
+      <div class="pk-heading"><div><p class="eyebrow">CATWALK STERREN · BINNENSPEELTUIN</p><h1>🛝 Springen, stuiteren, sterren vangen!</h1><p>Kies een spelletje. De sterren die je verdient tellen mee voor je level.</p></div><button class="btn ghost" id="st-exit" type="button">← Speelhal</button></div>
+      <div id="st-lobby-doll" aria-label="Jouw 3D-poppetje"></div>
       <div class="st-games">${allGames().map(g => `
         <section class="card st-game">
           <img src="assets/speeltuin/${g.sprite}.png" alt="" width="128" height="${g.sprite === 'trampoline' ? 64 : 128}">
@@ -63,12 +63,13 @@ const Speeltuin = (() => {
             <p>${g.desc}</p>
             <div class="pk-times">${g.rules.map(r => `<span>${r}</span>`).join('')}</div>
             <p class="pk-note">${recordText(g)}</p>
-            <p class="pk-note">${g.help || (g.id === 'springbaan' ? 'Spatie, pijltje omhoog, tik op het speelveld of de Spring-knop = springen. In de lucht nog een keer = dubbele sprong.' : 'Pijltjes of A/D = naar links en rechts. Spatie of Spring precies als je de mat raakt = hoger. P = pauze.')}</p>
+            <p class="pk-note">${g.help || (g.id === 'springbaan' ? 'Tik op het speelveld of op Spring. Tik in de lucht nog een keer voor een dubbele sprong.' : 'Sleep de stuurknop naar links of rechts. Tik op Spring precies als je de mat raakt om hoger te komen. Tik op Pauze voor een rustmoment.')}</p>
             ${g.parents ? `<div class="st-choice" role="group" aria-label="Op wie mik je?">${g.parents.map(([id, label]) => `<button class="btn ghost sm" type="button" data-parent="${id}" aria-pressed="${(profile.speeltuin.parent || 'papa') === id}">${label}</button>`).join('')}</div>` : ''}
             ${g.modes ? `<div class="st-modes">${g.modes.map(([mode, label, sub]) => `<button class="btn big" data-play="${g.id}" data-mode="${mode}" type="button">${label}<small>${sub}</small></button>`).join('')}</div>`
               : `<button class="btn big" data-play="${g.id}" type="button">▶ Spelen</button>`}
           </div>
         </section>`).join('')}</div>`;
+    FashionPreview.mount($('#st-lobby-doll'),profile);
     $('#st-exit').onclick = () => { hide(); cb.exit?.(); };
     document.querySelectorAll('[data-parent]').forEach(b => b.onclick = () => {
       profile.speeltuin.parent = b.dataset.parent; cb.save?.();
@@ -84,33 +85,37 @@ const Speeltuin = (() => {
     if (!Avatar.isReady()) { const b = $(`[data-play="${game}"]`); if (b) b.textContent = 'Het poppetje laadt nog… probeer zo opnieuw'; return; }
     const A = extra(), seed = (Date.now() % 100000) + 1;
     state = A ? A.create(seed, options, profile) : R.create(game, seed); paused = false; keys.clear(); popups = []; seen = 0;
-    doll = Avatar.compose(profile.look, profile.outfit);
+    FashionPreview.pause();
     const g = allGames().find(x => x.id === game), tramp = game === 'trampoline';
     document.body.classList.add('in-speeltuin');
     $('#speeltuin').innerHTML = `
       <div class="pk-race-head"><button class="btn ghost sm" id="st-back" type="button">← Spelletjes</button><b>${g.icon} ${g.name}</b><button class="btn ghost sm" id="st-pause" type="button">⏸ Pauze</button></div>
       <div class="pk-live"><strong id="st-main" aria-label="${tramp ? 'Tijd' : 'Hartjes'}"></strong><span id="st-stars"></span><span id="st-progress"></span></div>
-      <div class="pk-canvas-wrap"><canvas id="st-canvas" class="${A ? A.canvasClass : tramp ? 'tramp' : 'run'}" width="960" height="540" tabindex="0" aria-label="${A ? A.label : tramp ? 'Trampoline. Stuur met de pijltjes en druk op Spring als je de mat raakt.' : 'Springbaan. Druk op Spring of tik op het speelveld om over de hindernissen te springen.'}"></canvas>
-        <div id="st-panel" class="card st-panel" role="dialog" aria-live="polite" hidden></div>
+      <div class="pk-canvas-wrap"><canvas id="st-canvas" class="${A ? A.canvasClass : tramp ? 'tramp' : 'run'}" width="960" height="540" tabindex="0" aria-label="${A ? A.label : tramp ? 'Trampoline. Sleep de stuurknop en tik op Spring als je de mat raakt.' : 'Springbaan. Druk op Spring of tik op het speelveld om over de hindernissen te springen.'}"></canvas>
+        <div id="st-countdown" aria-live="polite"></div><div id="st-panel" class="card st-panel" role="dialog" aria-live="polite" hidden></div>
         <div id="st-pause-panel" hidden><h2>Even pauze</h2><p>Het spel staat stil.</p><button class="btn" id="st-resume" type="button">Verder spelen</button></div></div>
       <p id="st-message" class="pk-message" role="status"></p>
       <div class="pk-controls st-controls">
         ${A ? A.controls(state) : `${tramp ? '<div class="pk-arrows"><button data-move="left" aria-label="Links" type="button">←</button><button data-move="right" aria-label="Rechts" type="button">→</button></div>' : ''}
-        <button class="btn mint" id="st-jump" type="button">Spring ⤴ <small>spatie</small></button>`}
+        <button class="btn mint" id="st-jump" type="button">Spring ⤴</button>`}
       </div>
       <div id="st-result" role="status"></div>`;
     $('#st-back').onclick = lobby; $('#st-pause').onclick = () => setPaused(!paused); $('#st-resume').onclick = () => setPaused(false);
     listeners = new AbortController(); const signal = listeners.signal;
-    const press = e => { e?.preventDefault(); if (paused) return; if (A) A.press(state); else if (R.press(state) && game === 'springbaan') Sound.play('klik'); };
+    const press = e => { e?.preventDefault(); if (paused) return; if(game==='ballenbak')Speeltuin3D.press(state);else if (A) A.press(state); else if (R.press(state) && game === 'springbaan') Sound.play('klik'); };
     // pointerdown (niet click): een tweede vinger werkt terwijl de andere een pijl vasthoudt
     $('#st-jump').addEventListener('pointerdown', press, { signal });
     $('#st-jump').addEventListener('click', e => { if (e.detail === 0) press(e); }, { signal });   // toetsenbord op de knop
-    if (A) A.bind($('#st-canvas'), signal, kit);
+    if (A) Speeltuin3D.bind($('#st-canvas'),signal,()=>state,()=>paused);
     else if (!tramp) $('#st-canvas').addEventListener('pointerdown', press, { signal });
     document.querySelectorAll('.st-controls [data-move]').forEach(b => {
       b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); keys.add(b.dataset.move); if (!paused) A?.nudge?.(state, b.dataset.move); }, { signal });
       for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(type, () => keys.delete(b.dataset.move), { signal });
     });
+    if(game==='trampoline'||game==='klimrek'){
+      const pad=$('.st-controls .pk-arrows');if(pad){pad.outerHTML='<div id="st-stick" class="touch-stick" role="group" aria-label="Stuurknop: sleep om te bewegen"><span></span></div>';TouchControls.stick($('#st-stick'),keys,signal,()=>!paused);}
+    }
+    if(!Speeltuin3D.mount($('#st-canvas'),state,profile,()=>setPaused(true))){lobby();const message=document.createElement('p');message.setAttribute('role','alert');message.textContent='Het 3D-speelveld kon niet starten. Probeer het spel opnieuw.';$('#speeltuin').prepend(message);return;}
     observer?.disconnect();
     observer = new ResizeObserver(() => { if (state && $('#st-canvas')) { resize(); draw(); } });
     observer.observe($('#st-canvas'));
@@ -119,6 +124,7 @@ const Speeltuin = (() => {
   }
   function setPaused(value) {
     if (!state || state.finished) return;
+    if(!value&&Speeltuin3D.debug().lost)return;
     paused = value; keys.clear(); $('#st-pause-panel').hidden = !paused; $('#st-pause').textContent = paused ? '▶ Verder' : '⏸ Pauze';
     last = performance.now();
   }
@@ -168,7 +174,7 @@ const Speeltuin = (() => {
       $('#st-stars').textContent = h.stars; $('#st-progress').textContent = h.progress;
       if ($('#st-message').textContent !== h.message) $('#st-message').textContent = h.message;
       $('#st-jump').hidden = !h.jump; $('#st-jump').disabled = paused || s.countdown > 0 || !!h.jumpDisabled;
-      if ($('.st-pad')) $('.st-pad').hidden = !h.pad;
+      if ($('#st-stick')) $('#st-stick').hidden = !h.pad;
       return;
     }
     $('#st-main').textContent = tramp ? `${Math.max(0, Math.ceil(R.TRAMP.duration - s.time))} s` : '❤️'.repeat(s.hearts) + '🤍'.repeat(3 - s.hearts);
@@ -176,7 +182,7 @@ const Speeltuin = (() => {
     $('#st-progress').textContent = tramp ? `Niveau ${s.level}/5` : `${Math.min(100, Math.round(s.player.x / s.length * 100))}%`;
     const text = s.countdown > 0 ? `Start over ${Math.ceil(s.countdown)}…`
       : s.noticeTime > 0 ? s.notice
-      : tramp ? (timingNow() ? 'Nu! Druk op Spring!' : view.portrait ? 'Stuur met ← →. Druk op Spring als je de mat raakt.' : 'Stuur met ← →. Spatie als je de mat raakt!')
+      : tramp ? (timingNow() ? 'Nu! Druk op Spring!' : 'Sleep de stuurknop. Tik op Spring als je de mat raakt.')
       : s.player.h > 0 ? 'Hop! In de lucht nog een keer = dubbele sprong' : 'Spring over de blokken, pionnen en ballen!';
     if ($('#st-message').textContent !== text) $('#st-message').textContent = text;
     $('#st-jump').disabled = paused || s.countdown > 0;
@@ -212,15 +218,7 @@ const Speeltuin = (() => {
   }
 
   /* ---------------------------------------------------------------- tekenen */
-  function resize() {
-    const canvas = $('#st-canvas'), w = canvas.clientWidth, h = canvas.clientHeight;
-    if (!w || !h) return;
-    const ratio = w / h, minW = extra()?.minWidth || (game === 'trampoline' ? 720 : 640);
-    view = { width: Math.max(minW, 540 * ratio), portrait: matchMedia('(max-width: 760px) and (orientation: portrait)').matches };
-    view.height = view.width / ratio;
-    const dpr = Math.min(devicePixelRatio || 1, 2), pw = Math.round(w * dpr), ph = Math.round(h * dpr);
-    if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
-  }
+  function resize(){Speeltuin3D.resize();}
   const groundY = () => view.height - 66;                       // springbaan: waar de voeten staan
   const matY = () => view.height - 100;                         // trampoline: bovenkant van de springmat
   const trampX = () => (view.width - R.TRAMP.width) / 2;
@@ -313,7 +311,7 @@ const Speeltuin = (() => {
     g.restore();
     if (s.countdown <= 0 && s.player.x < 600) {                        // korte uitleg in beeld bij de start
       g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.roundRect(view.width / 2 - 150, 18, 300, 40, 16); g.fill();
-      g.fillStyle = '#62488b'; g.font = 'bold 16px system-ui'; g.textAlign = 'center'; g.fillText('Tik of spatie = springen ⤴', view.width / 2, 44);
+      g.fillStyle = '#62488b'; g.font = 'bold 16px system-ui'; g.textAlign = 'center'; g.fillText('Tik om te springen ⤴', view.width / 2, 44);
     }
     countdown(g);
   }
@@ -355,12 +353,9 @@ const Speeltuin = (() => {
     countdown(g);
   }
 
-  function draw() {
-    const canvas = $('#st-canvas'); if (!canvas || !state) return;
-    const g = canvas.getContext('2d');
-    g.setTransform(canvas.width / view.width, 0, 0, canvas.height / view.height, 0, 0);
-    g.clearRect(0, 0, view.width, view.height);
-    if (extra()) extra().draw(g, state, kit); else if (game === 'springbaan') drawRun(g); else drawTramp(g);
+  function draw(){
+    if(!state||!$('#st-canvas'))return;Speeltuin3D.draw(state);
+    const count=$('#st-countdown');count.hidden=state.countdown<=0;count.textContent=state.countdown>0?Math.ceil(state.countdown):'';
   }
   // tekenhulpjes voor de spellen uit speeltuin-extra.js
   const kit = {

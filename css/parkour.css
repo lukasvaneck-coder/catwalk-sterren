@@ -47,3 +47,6 @@
   #pk-pause-panel h2,#pk-pause-panel p{margin:0}
   #pk-pause-panel .pk-times{justify-content:center;margin:4px 0;color:var(--ink2)}
 }
+
+#pk-countdown{position:absolute;inset:0;display:grid;place-items:center;font-size:72px;font-weight:bold;background:#40305a55;color:white;pointer-events:none}#pk-direction{position:absolute;right:10px;top:10px;background:#fff8e8ed;border-radius:14px;padding:8px 12px;font-size:12px;font-weight:bold;pointer-events:none}#pk-map{position:absolute;left:10px;bottom:10px;width:125px;height:72px;border:3px solid #fff8e8;border-radius:10px;pointer-events:none;opacity:.9}#pk-player-doll.fashion-preview,#pk-dad-doll.fashion-preview{height:190px}.pk-doll.fashion-preview canvas{height:100%;width:100%}
+@media(min-width:761px) and (min-height:501px){body.in-race{overflow:hidden}.in-race #app{height:100dvh;min-height:0;padding:0;max-width:none}.in-race #screen-parkour{height:100%;min-height:0}.in-race #parkour{height:100%;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto auto;gap:6px;padding:10px}.in-race .pk-times,.in-race .pk-live,.in-race .pk-message{margin:0}.in-race .pk-canvas-wrap{min-height:0}.in-race #pk-canvas{height:100%;max-height:none;aspect-ratio:auto}.in-race #pk-result:empty{display:none}.in-race .pk-controls{min-height:90px}}

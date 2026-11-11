@@ -20,8 +20,10 @@ const ClothingDesigns = (() => {
       ['rainboot', 'Regenlaarzen', ['regen'], 0], ['pumps', 'Hakjes', ['chic', 'feest'], 2],
       ['strappy', 'Hakjes met bandje', ['chic', 'feest', 'dans'], 2], ['bowheels', 'Hakjes met strik', ['feest', 'prinses', 'chic'], 2],
     ] },
+    { id:'apron',name:'Schort',emoji:'🧑‍🍳',shapes:[['apron','Keukenschort',['casual'],0]] },
     // Hoofdjes en oorbellen zijn klein: geen stickers, en de tweede kleur zit altijd in de details.
     { id: 'hat', name: 'Op je hoofd', emoji: '👑', stickers: false, accent: true, shapes: [
+      ['chefhat', 'Koksmuts', ['casual'], 0],
       ['hairband', 'Haarband', ['casual', 'school'], 0], ['bigbow', 'Grote strik', ['feest', 'casual'], 1],
       ['tiara', 'Tiara', ['prinses', 'chic', 'feest'], 2], ['royal', 'Kroon', ['prinses', 'sprookje', 'chic'], 3],
       ['beanie', 'Muts', ['winter', 'warm'], 0], ['beret', 'Baret', ['chic', 'casual'], 1],

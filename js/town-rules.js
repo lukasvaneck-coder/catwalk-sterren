@@ -2,6 +2,8 @@
 const TownRules = (() => {
   const WIDTH = 2480, HEIGHT = 1760, CELL = 32, SPEED = 210, VERSION = 2;
   const HOUSES = [
+    { id:'keuken', x:800, y:200, w:230, h:160, icon:'🍳', name:'Thuiskeuken', sub:'Samen het avondeten maken', color:'#88a67b', zone:'Modeplein' },
+    { id:'supermarkt', x:1200, y:200, w:240, h:160, icon:'🛒', name:'Buurtsuper', sub:'Boodschappen voor thuis', color:'#d9ac62', zone:'Modeplein' },
     { id:'kleedkamer', x:400, y:470, w:250, h:220, icon:'👗', name:'Modehuis', sub:'Aankleden & de jury', color:'#d986b0', zone:'Modeplein' },
     { id:'atelier', x:810, y:450, w:230, h:210, icon:'✂️', name:'Naaiatelier', sub:'Je eigen kleding maken', color:'#ca9976', zone:'Modeplein' },
     { id:'winkel', x:1210, y:450, w:230, h:210, icon:'🛍️', name:'Sterrenwinkel', sub:'Nieuwe spullen uitzoeken', color:'#d8ae60', zone:'Modeplein' },
@@ -9,7 +11,6 @@ const TownRules = (() => {
     { id:'race', x:2120, y:520, w:290, h:235, icon:'🏁', name:'Raceclub', sub:'Vijf raceparcoursen', color:'#ce795c', zone:'Speelbuurt' },
     { id:'salon', x:320, y:1000, w:220, h:210, icon:'🪞', name:'Spiegelsalon', sub:'Je uiterlijk aanpassen', color:'#bda1ce', zone:'Modeplein' },
     { id:'puzzel', x:750, y:990, w:240, h:220, icon:'🎨', name:'Kleurenhuis', sub:'Kleuren combineren', color:'#73a68d', zone:'Modeplein' },
-    { id:'duel', x:1150, y:960, w:230, h:220, icon:'⚔️', name:'Duelhuis', sub:'Een modeduel met z’n tweeën', color:'#9a8ac3', zone:'Modeplein' },
     { id:'speeltuin', x:2110, y:1070, w:320, h:260, icon:'🛝', name:'Binnenspeeltuin', sub:'Springbaan & trampoline', color:'#63a9ab', zone:'Speelbuurt' },
     { id:'foto', x:420, y:1460, w:230, h:215, icon:'📸', name:'Fotostudio', sub:'Je outfit op de foto', color:'#b594b7', zone:'Wandelpark' },
     { id:'knuffel', x:940, y:1490, w:250, h:210, icon:'🐾', name:'Knuffelhuis', sub:'Vriendjes kiezen & verzorgen', color:'#b8a071', zone:'Wandelpark' },
@@ -21,7 +22,7 @@ const TownRules = (() => {
     [[1300,620],[1420,620],[1420,1120],[2280,1120],[2280,620]],
     [[600,1110],[600,1600],[2280,1600],[2280,1120]], [[1420,1120],[1420,1600]],
     [[180,1110],[180,1600],[600,1600]], [[1420,960],[1920,960],[1920,1120]],
-    ...HOUSES.map(h => [[h.x,h.y],[h.x,h.y<650?620:h.y<1150?1110:1600]]),
+    ...HOUSES.map(h => h.y<250?[[h.x,h.y],[h.x,h.y+20],[h.x-160,h.y+20],[h.x-160,620]]:[[h.x,h.y],[h.x,h.y<650?620:h.y<1150?1110:1600]]),
   ];
   const POND = { x:1680, y:940, rx:172, ry:152 };
   const START = { x:950, y:710 };
@@ -44,7 +45,7 @@ const TownRules = (() => {
     { id:'garden', name:'Een dorp vol bloemen', icon:'🌷', who:'Fleur', desc:'Geef de drie bloembakken water. Loop naar een bloembak en pak je gieter!', goals:NODES.filter(n=>n.kind==='garden').map(n=>n.id), stars:2 },
     { id:'ribbons', name:'Lintjes voor het feest', icon:'🎀', who:'Noor', desc:'Breng Noors feestlintjes naar het Naaiatelier, de Sterrenclub en de Rozenzaal. Ga bij elk gebouw naar binnen.', goals:['atelier','disco','balzaal'], stars:2 },
     { id:'buttons', name:'Bo’s verdwenen knopen', icon:'🧵', who:'Bo', desc:'Zoek vijf gouden knopen in de buurten van het dorp. Ze liggen buiten, langs paden en tussen de bloemen.', goals:NODES.filter(n=>n.kind==='buttons').map(n=>n.id), stars:3 },
-    { id:'explorer', name:'Mijn dorpspaspoort', icon:'🗺️', who:'Het dorp', desc:'Bezoek alle dertien gebouwen. Iedere eerste stap naar binnen levert een stempel op.', goals:HOUSES.map(h=>h.id), stars:3 },
+    { id:'explorer', name:'Mijn dorpspaspoort', icon:'🗺️', who:'Het dorp', desc:`Bezoek alle ${HOUSES.length} gebouwen. Iedere eerste stap naar binnen levert een stempel op.`, goals:HOUSES.map(h=>h.id), stars:3 },
   ];
   const finite = v => typeof v === 'number' && Number.isFinite(v);
   function walkable(x,y) {

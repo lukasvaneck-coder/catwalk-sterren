@@ -6,9 +6,9 @@ const ParkourRules = (() => {
     { id: 'gym', icon: '🏃‍♀️', name: 'Samen naar de gym', times: [11, 16, 25], length: 1216, height: 576,
       desc: 'Vind de weg door het doolhof naar de gym. Je vriendinnen rennen ook! Heggen houden je tegen, ook als je springt. Jouw tijd bepaalt je sterren.' },
     { id: 'dad', icon: '👨', name: 'Sneller dan papa', times: [13, 18, 27], length: 2600, height: 540,
-      desc: 'Je loopt vanzelf. Druk steeds opnieuw op Sprint of Enter om je sprintmeter te vullen. Ingedrukt houden telt niet. Kleed papa hieronder ook aan!' },
+      desc: 'Je loopt vanzelf. Tik steeds opnieuw op Sprint om je sprintmeter te vullen. Ingedrukt houden telt niet. Kleed papa hieronder ook aan!' },
     { id: 'rain', icon: '🌧️', name: 'Voor de bui thuis', times: [21, 30, 44], length: 2800, height: 540,
-      desc: 'Ren naar huis! Spring over de plassen en lage hekjes, of loop eromheen. Natte voeten kosten 2 seconden. Spring met spatie of de springknop.' },
+      desc: 'Ren naar huis! Spring over de plassen en lage hekjes, of loop eromheen. Natte voeten kosten 2 seconden. Tik op de springknop.' },
     { id: 'tag', icon: '🌼', name: 'Tikkertje op het gras', times: [14, 22, 34], length: 960, height: 540,
       desc: 'Verzamel de vijf vlaggetjes in volgorde en ga naar de finish. Ontwijk de bewegende vriendinnen! Getikt worden kost 2 seconden; tijdens een sprong kunnen ze je niet tikken.' },
   ];

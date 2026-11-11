@@ -53,3 +53,15 @@
   .in-speeltuin .st-pad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,44px);gap:4px}
   .in-speeltuin .st-pad button{width:52px;min-height:44px}
 }
+
+#st-countdown{position:absolute;inset:0;display:grid;place-items:center;font-size:72px;font-weight:bold;color:white;background:#40305755;pointer-events:none}#st-lobby-doll{height:220px;background:#e5efdf;border-radius:24px;max-width:440px;margin:0 auto 18px}.st-controls #st-stick{flex-shrink:0}
+@media(min-width:761px) and (min-height:501px){body.in-speeltuin{overflow:hidden}.in-speeltuin #app{height:100dvh;min-height:0;padding:0;max-width:none}.in-speeltuin #screen-speeltuin{height:100%;min-height:0}.in-speeltuin #speeltuin{height:100%;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto auto;gap:6px;padding:10px}.in-speeltuin .pk-live,.in-speeltuin .pk-message{margin:0}.in-speeltuin .pk-canvas-wrap{min-height:0}.in-speeltuin #st-canvas{height:100%;max-height:none;aspect-ratio:auto}.in-speeltuin #st-result:empty{display:none}.in-speeltuin .st-controls{min-height:105px}}
+#st-pause-panel{z-index:5}
+
+/* A thumbstick and jump button must share even a 320px portrait viewport. */
+@media(max-width:760px) and (orientation:portrait){
+ .in-speeltuin #speeltuin{grid-template-columns:minmax(0,1fr)}
+ .in-speeltuin .st-controls{min-width:0}
+ .in-speeltuin #st-jump{min-width:0}
+ .in-speeltuin .pk-race-head b{overflow-wrap:anywhere}
+}
