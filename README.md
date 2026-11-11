@@ -306,3 +306,10 @@ Mobiele regressie: `tools/test-salon-fullscreen.js` controleert drie schermforma
 De gezichtskenmerken staan iets lager op het hoofd, inclusief neus, make-up en brillen. De haarbasis laat meer ruimte boven de wenkbrauwen en bij de slapen. In de salon zijn onder **Gezicht → Haarlijn** een ronde, hoge en puntige haarlijn te kiezen; deze keuze wordt met het uiterlijk bewaard. De rechte en schuine pony volgen nu als gebogen haarstukken het voorhoofd; de krullenpony sluit daarop aan. Ook bestaande standaardkapsels met een pony gebruiken de nieuwe vorm.
 
 Het aankleden in het modehuis gebruikt nu een schermvullende 3D-paspop met een inklapbare kledingkast. De camera houdt het hele poppetje zichtbaar boven het paneel of ernaast in liggende stand. Alle kleding- en accessoirecategorieën blijven beschikbaar; foto, verrassen en uitkleden staan in het menu. Opdracht en jury blijven bereikbaar onderin. `tools/test-wardrobe-fullscreen.js` controleert vier schermformaten, haarlijnopslag, ponyvoorbeelden, kleding/accessoires en menu's.
+
+### Blote schouders en heupaccessoires ontwerpen
+In het naaiatelier hebben **Top** en **Jurk** elk drie extra vormen: linkerschouder bloot, rechterschouder bloot en beide schouders bloot. Links/rechts is vanuit het poppetje gezien. De 3D-kleding heeft een aangepaste halslijn en alleen een mouw op de bedekte schouder; de 2D-miniaturen en foto's gebruiken dezelfde silhouetten.
+
+**Rond je heupen** bevat een heupriem, heuptasje en opgerolde hondenlijn aan de riem. Beide kleuren en stofpatronen zijn aanpasbaar; deze kleine accessoires hebben geen stickers. Ze gebruiken een eigen outfitplek, zodat ze kleding en handaccessoires niet vervangen, en staan in de kledingkast onder **Heupen**. De hondenlijn is een opgerold accessoire, geen nieuwe hond-uitlaatactiviteit.
+
+Controles: `tools/test-shoulder-waist-designs.js` bewaart en herlaadt alle negen varianten en controleert de 3D-geometrie en heupbevestiging tijdens lopen. `tools/review-shoulder-waist.js` maakt een overzicht van alle varianten van voren en opzij in een loopstand. Beide gebruiken de lokale testserver op poort 4175.
